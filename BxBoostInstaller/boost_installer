@@ -37,20 +37,20 @@ EOF
 function boost_installer_parse_cl()
 {
     while [ -n "$1" ]; do
-	token="$1"
-	if [ "x${token:0:1}" = "x-" ]; then
-	    opt="${token}"
-	    if [ ${opt} = "--help" ]; then
-		boost_installer_usage
-		bxiw_exit 0
-	    else
-		bxiw_message "error" "Unsupported option '${opt}'!"
-		return 1
-	    fi
-	else
-	    arg="${token}"
-	fi
-	shift 1
+        token="$1"
+        if [ "x${token:0:1}" = "x-" ]; then
+            opt="${token}"
+            if [ ${opt} = "--help" ]; then
+                boost_installer_usage
+                bxiw_exit 0
+            else
+                bxiw_message "error" "Unsupported option '${opt}'!"
+                return 1
+            fi
+        else
+            arg="${token}"
+        fi
+        shift 1
     done
     return 0
 }
@@ -61,74 +61,74 @@ function boost_installer_prepare()
     _bxiw_prepare_pre
  
     if [ ${bxiw_with_gui} = true ]; then
-	
-	local _do_rebuild_repr="FALSE"
-	if [ ${bxiw_do_rebuild} = true ]; then
-	    _do_rebuild_repr="TRUE"
-	fi
-	
-	local _remove_build_dir_repr="FALSE"
-	if [ ${bxiw_remove_build_dir} = true ]; then
-	    _remove_build_dir_repr="TRUE"
-	fi
-	
-	local _remove_tarballs_repr="FALSE"
-	if [ ${bxiw_remove_tarballs} = true ]; then
-	    _remove_tarballs_repr="TRUE"
-	fi
-	
-	local _system_install_repr="FALSE"
-	if [ ${bxiw_system_install} = true ]; then
-	    _system_install_repr="TRUE"
-	fi
+        
+        local _do_rebuild_repr="FALSE"
+        if [ ${bxiw_do_rebuild} = true ]; then
+            _do_rebuild_repr="TRUE"
+        fi
+        
+        local _remove_build_dir_repr="FALSE"
+        if [ ${bxiw_remove_build_dir} = true ]; then
+            _remove_build_dir_repr="TRUE"
+        fi
+        
+        local _remove_tarballs_repr="FALSE"
+        if [ ${bxiw_remove_tarballs} = true ]; then
+            _remove_tarballs_repr="TRUE"
+        fi
+        
+        local _system_install_repr="FALSE"
+        if [ ${bxiw_system_install} = true ]; then
+            _system_install_repr="TRUE"
+        fi
 
-	which yad > /dev/null 2>&1
-	if [ $? -ne 0 ]; then
-	    bxiw_message "[warning] yad is not installed! No GUI!"
-	else
-	    local _choices=$(yad --width=500 \
-				 --form \
-				 --title "${bxiw_package_name} installer options" \
-				 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
-				 --field="Working directory:CDIR" "${bxiw_work_dir}" \
-				 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
-				 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
-				 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
-				 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
-				 --field="System installation:CHK" "$_system_install_repr}" \
-		  )
-	    if [ "x${_choices}" = "x" ]; then
-		bxiw_message "info" "Cancelled dialog!"
-		return 1
-	    fi
-	    bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
-	    bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
-	    bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
-	    _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
-	    if [ ${_do_rebuild_repr} == "TRUE" ]; then
-		bxiw_do_rebuild=true
-	    else
-		bxiw_do_rebuild=false
-	    fi
-	    _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
-	    if [ ${_remove_build_dir_repr} == "TRUE" ]; then
-		bxiw_remove_build_dir=true
-	    else
-		bxiw_remove_build_dir=false
-	    fi
-	    _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
-	    if [ ${_remove_tarballs_repr} == "TRUE" ]; then
-		bxiw_remove_tarballs=true
-	    else
-		bxiw_remove_tarballs=false
-	    fi
-	    _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
-	    if [ ${_system_install_repr} == "TRUE" ]; then
-		bxiw_system_install=true
-	    else
-		bxiw_system_install=false
-	    fi
-	fi
+        which yad > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            bxiw_message "[warning] yad is not installed! No GUI!"
+        else
+            local _choices=$(yad --width=500 \
+                                 --form \
+                                 --title "${bxiw_package_name} installer options" \
+                                 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
+                                 --field="Working directory:CDIR" "${bxiw_work_dir}" \
+                                 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
+                                 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+                                 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+                                 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+                                 --field="System installation:CHK" "$_system_install_repr}" \
+                  )
+            if [ "x${_choices}" = "x" ]; then
+                bxiw_message "info" "Cancelled dialog!"
+                return 1
+            fi
+            bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+            bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
+            bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
+            _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
+            if [ ${_do_rebuild_repr} == "TRUE" ]; then
+                bxiw_do_rebuild=true
+            else
+                bxiw_do_rebuild=false
+            fi
+            _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
+            if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+                bxiw_remove_build_dir=true
+            else
+                bxiw_remove_build_dir=false
+            fi
+            _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
+            if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+                bxiw_remove_tarballs=true
+            else
+                bxiw_remove_tarballs=false
+            fi
+            _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
+            if [ ${_system_install_repr} == "TRUE" ]; then
+                bxiw_system_install=true
+            else
+                bxiw_system_install=false
+            fi
+        fi
     fi
     
     # Prepare:
@@ -142,10 +142,10 @@ function boost_installer_get_tarball()
 {
     local _boost_version="$1"
     if [ "x${_boost_version}" = "x1.68.0" ]; then
-	echo "boost_$(echo ${_boost_version} | tr '.' '_').tar.bz2"
+        echo "boost_$(echo ${_boost_version} | tr '.' '_').tar.bz2"
     else
-	echo >&2 "[error] Unsupported version '${_boost_version}'!"
-	return 1
+        echo >&2 "[error] Unsupported version '${_boost_version}'!"
+        return 1
     fi
     return 0
 }
@@ -164,50 +164,50 @@ function boost_installer_get_url()
 function boost_installer_set_system_dependencies()
 {
     if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
-	bxiw_system_packages_build="build-essential \
-   	  	    make \
-        	    pkg-config \
-        	    dpkg-dev \
-       	    	    wget \
-   		    g++ \
-		    gcc \
-		    binutils \
-		    python python-dev libpython2.7 \
-		    autotools-dev \
-		    libicu-dev \
-		    bzip2 \
-		    libbz2-1.0 libbz2-dev\
+        bxiw_system_packages_build="build-essential \
+                    make \
+                    pkg-config \
+                    dpkg-dev \
+                    wget \
+                    g++ \
+                    gcc \
+                    binutils \
+                    python python-dev libpython2.7 \
+                    autotools-dev \
+                    libicu-dev \
+                    bzip2 \
+                    libbz2-1.0 libbz2-dev\
                     zlib1g zlib1g-dev \
-       	    	    libxml2 libxml2-dev \
- 		    "
-	bxiw_system_packages_run="\
-		g++ \
-		python libpython2.7 \
-		zlib1g \
-		bzip2 \
-		libxml2 \
-		"	
-	if [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
-	    bxiw_system_packages_build="${bxiw_system_packages_build} \
-		    libicu60 \
-	    "
-	    bxiw_system_packages_run="${bxiw_system_packages_run} \
-		    libicu60 \
-	    "
-	elif [ "x${bxiw_os_distrib_release}" = "x16.04" ]; then
-	    bxiw_system_packages_build="${bxiw_system_packages_build} \
-		    libicu55 \
-	    "
-	    bxiw_system_packages_run="${bxiw_system_packages_run} \
-		    libicu55 \
-	    "
-	fi
-	if [ ${bxiw_with_package} == true ]; then
-	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
-	fi
-	if [ ${bxiw_with_gui} == true ]; then
-	    bxiw_system_packages_build="${bxiw_system_packages_build} yad"
-	fi
+                    libxml2 libxml2-dev \
+                    "
+        bxiw_system_packages_run="\
+                g++ \
+                python libpython2.7 \
+                zlib1g \
+                bzip2 \
+                libxml2 \
+                "       
+        if [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
+            bxiw_system_packages_build="${bxiw_system_packages_build} \
+                    libicu60 \
+            "
+            bxiw_system_packages_run="${bxiw_system_packages_run} \
+                    libicu60 \
+            "
+        elif [ "x${bxiw_os_distrib_release}" = "x16.04" ]; then
+            bxiw_system_packages_build="${bxiw_system_packages_build} \
+                    libicu55 \
+            "
+            bxiw_system_packages_run="${bxiw_system_packages_run} \
+                    libicu55 \
+            "
+        fi
+        if [ ${bxiw_with_package} == true ]; then
+            bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
+        fi
+        if [ ${bxiw_with_gui} == true ]; then
+            bxiw_system_packages_build="${bxiw_system_packages_build} yad"
+        fi
     # elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
     # elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
     fi
@@ -221,7 +221,7 @@ function boost_installer_print()
     bxiw_log_info "Boost librairies : "
     local _libs=$(echo ${boost_libs} | tr ',' ' ')
     for _bl in ${_libs}; do
-	bxiw_log_info "   - ${_bl}"
+        bxiw_log_info "   - ${_bl}"
     done
     return 0
 }
@@ -233,8 +233,8 @@ function boost_installer_download()
     local _boost_url=$(boost_installer_get_url ${bxiw_package_version})
     bxiw_download_file ${_boost_url} ${_boost_tarball}
     if [ $? -ne 0 ]; then
-	bxiw_message "error" "Could not download the '${_boost_tarball}' file!"
-	return 1
+        bxiw_message "error" "Could not download the '${_boost_tarball}' file!"
+        return 1
     fi
     return  0
 }
@@ -248,8 +248,8 @@ function boost_installer_install()
     bxiw_message "info" "BOOST version is                : '${bxiw_package_version}'"
     bxiw_message "info" "BOOST source directory is       : '${_boost_source_dir}'"
     if [ ! -d ${_boost_source_dir} ]; then
-	bxiw_message "info" "Unpacking source directory..."
-	tar xjf ${bxiw_cache_dir}/${_boost_tarball}
+        bxiw_message "info" "Unpacking source directory..."
+	tar xjzf ${bxiw_cache_dir}/${_boost_tarball}
 	if [ $? -ne 0 ]; then
 	    bxiw_message "error" "Source directory has not been unpacked."
 	    cd ${_boost_opwd}
