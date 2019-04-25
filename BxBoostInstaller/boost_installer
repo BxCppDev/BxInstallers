@@ -155,7 +155,8 @@ function boost_installer_get_url()
 {
     local _boost_version="$1"
     local _boost_tarball=$(boost_installer_get_tarball ${_boost_version})
-    echo "https://sourceforge.net/projects/boost/${_boost_version}/${_boost_tarball}/download"
+    echo "https://dl.bintray.com/boostorg/release/${_boost_version}/source/${_boost_tarball}"
+    # echo "https://sourceforge.net/projects/boost/${_boost_version}/${_boost_tarball}/download"
     return 0
 }
 
