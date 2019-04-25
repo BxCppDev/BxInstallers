@@ -6,10 +6,8 @@ BxInstallers
 :date: 2019-04-25
 
 
-.. abstract::
-
-   Install scripts for semi-automated installation of
-   some software libraries of interest.
+BxInstallers provides some build/install scripts for semi-automated installation of
+some software libraries of interest. This is useful for testing, mostly on Ubuntu Linux.
 
    
 
