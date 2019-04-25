@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+### https://stackoverflow.com/questions/880227/what-is-the-minimum-i-have-to-do-to-create-an-rpm-file
+
+src_dir=$(pwd)
+
+tmp_dir="/tmp/${USER}/g4datasets.d"
+
+if [ ! -d ${tmp_dir} ]; then
+    mkdir -p ${tmp_dir}  
+fi 
+
+package_name="g4datasets-installer"
+package_version="10.5"
+
+pkg_dir=${tmp_dir}/${package_name}-${package_version}/rpmbuild
+if [ -d ${pkg_dir} ]; then
+    rm -fr ${pkg_dir}
+fi
+mkdir -p ${pkg_dir}
+cd ${pkg_dir}
+
+mkdir BUILD BUILDROOT RPMS SOURCES SPECS SRPMS
+
+cat > SPECS/.specs <<EOF
+Summary: Geant4 datasets installer
+Name: ${package_name}
+Version: ${package_version}
+Release: 1
+Group: Science
+License: MIT
+BuildArch : noarch
+BuildRequires : bash
+BuildRequires : wget
+BuildRoot: %{_topdir}/BUILD/%{name}-%{version}-%{release}
+
+%description
+%{summary}
+
+%prep
+rm -rf $RPM_BUILD_ROOT
+mkdir -p $RPM_BUILD_ROOT/opt/bxsoftware/%{name}-%{version}
+mkdir -p $RPM_BUILD_ROOT/etc
+
+
+EOF

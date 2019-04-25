@@ -1,0 +1,488 @@
+#!/usr/bin/env bash
+
+in_debian_package=false
+
+check_in_debian_package="$1"
+if [ "x${check_in_debian_package}" == "x--debian-package" ]; then
+    in_debian_package=true
+    shift 1
+fi
+
+bxiw_app_name="g4datasets_installer"
+bxiw_app_saved_opwd=$(pwd)
+bxiw_package_name="g4datasets"
+bxiw_default_package_version="10.5"
+if [ ${in_debian_package} == false ]; then
+    if [ ! -f "$(pwd)/.bxwi_g4datasets.locate" ]; then
+	echo >&2 "[error] Please run from the Geant4 datasets installer directory!"
+	exit 1
+    fi
+    source $(pwd)/../lib/libbxiw.bash
+    bxiw_app_installer_prefix="$(pwd)"
+    bxiw_package_version=
+else
+    echo >&2 "[info] Installation from Debian package..."
+    bxiw_package_version="${bxiw_default_package_version}"
+    if [ ! -f "/usr/share/g4datasets-installer/lib/libbxiw.bash" ]; then
+	echo >&2 "[error] Cannot find the '/usr/share/g4datasets-installer/lib/libbxiw.bash' file! Abort!"
+	exit 1
+    fi
+    source /usr/share/g4datasets-installer/lib/libbxiw.bash
+    bxiw_system_install=true
+fi
+__bxiw_disable_package=true
+bxiw_package_version=
+bxiw_remove_build_dir=true
+g4datasets_list=
+
+function g4datasets_installer_usage()
+{
+    cat<<EOF
+
+g4datasets_installer - Geant4 datasets installer
+
+Synopsis:
+
+    g4datasets_installer [OPTION]...
+
+Options:
+
+  --help               Print this help then exit
+EOF
+    _bxiw_usage_options
+    cat<<EOF
+  --datasets-list path Set the list of datasets
+EOF
+    echo ""
+    return 0
+}
+
+
+function g4datasets_installer_parse_cl()
+{
+    bxiw_log_trace_entering "g4datasets_installer_parse_cl"
+    bxiw_log_trace "arg='$@'"
+    while [ -n "$1" ]; do
+	token="$1"
+	bxiw_log_trace "token='${token}'"
+	if [ "x${token:0:1}" = "x-" ]; then
+	    opt="${token}"
+	    if [ "${opt}" = "--help" ]; then
+		g4datasets_installer_usage
+		bxiw_log_trace "Usage exit."
+		bxiw_exit 0
+	    elif [ ${opt} = "--datasets-list" ]; then
+		shift 1
+		g4datasets_list="$1"
+	    else
+		bxiw_log_error "Unsupported option '${opt}'!"
+		return 1
+	    fi
+	else
+	    arg="${token}"
+	fi
+	shift 1
+    done
+    bxiw_log_trace_exiting "g4datasets_installer_parse_cl"
+    return 0
+}
+
+function g4datasets_installer_prepare()
+{
+    _bxiw_prepare_pre
+   
+    if [ ${bxiw_with_gui} = true ]; then
+	
+	local _do_rebuild_repr="FALSE"
+	if [ ${bxiw_do_rebuild} = true ]; then
+	    _do_rebuild_repr="TRUE"
+	fi
+	
+	local _remove_build_dir_repr="FALSE"
+	if [ ${bxiw_remove_build_dir} = true ]; then
+	    _remove_build_dir_repr="TRUE"
+	fi
+	
+	local _remove_tarballs_repr="FALSE"
+	if [ ${bxiw_remove_tarballs} = true ]; then
+	    _remove_tarballs_repr="TRUE"
+	fi
+	
+	local _system_install_repr="FALSE"
+	if [ ${bxiw_system_install} = true ]; then
+	    _system_install_repr="TRUE"
+	fi
+
+	which yad > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    bxiw_message "[warning] yad is not installed! No GUI!"
+	else
+	    local _choices=$(yad --width=500 \
+				 --form \
+				 --title "${bxiw_package_name} installer options" \
+				 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
+				 --field="Working directory:CDIR" "${bxiw_work_dir}" \
+				 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
+				 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+				 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+				 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+				 --field="System installation:CHK" "$_system_install_repr}" \
+		  )
+	    if [ "x${_choices}" = "x" ]; then
+		bxiw_log_info "Cancelled dialog!"
+		return 1
+	    fi
+	    bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+	    bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
+	    bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
+	    _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
+	    if [ ${_do_rebuild_repr} == "TRUE" ]; then
+		bxiw_do_rebuild=true
+	    else
+		bxiw_do_rebuild=false
+	    fi
+	    _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
+	    if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+		bxiw_remove_build_dir=true
+	    else
+		bxiw_remove_build_dir=false
+	    fi
+	    _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
+	    if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+		bxiw_remove_tarballs=true
+	    else
+		bxiw_remove_tarballs=false
+	    fi
+	    _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
+	    if [ ${_system_install_repr} == "TRUE" ]; then
+		bxiw_system_install=true
+	    else
+		bxiw_system_install=false
+	    fi
+	fi
+    fi
+
+    if [ ${in_debian_package} == true ]; then
+	if [ "x${bxiw_app_installer_prefix}" == "x" ]; then
+	    bxiw_app_installer_prefix="/usr/share/g4datasets-installer"
+	fi
+    fi
+
+    if [ "x${g4datasets_list}" = "x" ]; then
+	g4datasets_list="${bxiw_app_installer_prefix}/resources/${bxiw_package_version}/g4datasets.lis"
+    fi
+     
+    # Prepare:
+    _bxiw_prepare_post
+
+    bxiw_log_info "Geant4 datasets tag directory is : '${bxiw_tag_dir}'"
+   if [ ${in_debian_package} == true ]; then
+	if [ -d ${bxiw_tag_dir} ]; then
+	    rm -f ${bxiw_tag_dir}/*.tag 
+	fi
+    fi
+     
+    return 0
+}
+
+
+function g4datasets_installer_get_tarball()
+{
+    local _g4datasets
+    _version="$1"
+    shift 1
+    echo "clhep-${_g4datasets_version}.tgz"
+    return 0
+}
+
+
+function g4datasets_installer_get_url()
+{
+    echo "https://cern.ch/geant4-data/datasets"
+    return 0
+}
+
+
+function g4datasets_installer_set_system_dependencies()
+{
+    bxiw_system_packages_build="wget tar"
+    bxiw_system_packages_run="wget tar"
+    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+	if [ ${bxiw_with_package} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
+	fi
+	if [ ${bxiw_with_gui} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} yad"
+	fi
+	# if [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
+	    
+	# fi
+    # elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
+    # 	bxiw_system_packages_build="wget"
+    # elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+    # 	bxiw_system_packages_build="wget"
+    fi
+    return 0
+}
+
+
+function g4datasets_installer_print()
+{
+    bxiw_print
+    bxiw_log_info "g4datasets_list          = '${g4datasets_list}'"
+    return 0
+}
+
+
+function g4datasets_installer_download()
+{
+    bxiw_log_trace "g4datasets_installer_download: entering..."
+    local _g4datasets_do_download=false
+    if [ ! -f ${bxiw_tag_downloaded} ]; then
+	bxiw_log_info "Geant4 datasets downloaded is needed."
+	_g4datasets_do_download=true
+    else
+	bxiw_log_info "Geant4 datasets download is already done."
+    fi
+    
+    if [ ${_g4datasets_do_download} == true ]; then
+	local _g4datasets_opwd=$(pwd)
+	local _g4datasets_url=$(g4datasets_installer_get_url)
+	bxiw_log_info "_g4datasets_url   = '$_{g4datasets_url}'..."
+	bxiw_log_info "g4datasets_list   = '${g4datasets_list}'..."
+	local _g4datasets_names=$(cat ${g4datasets_list} | cut -d ' ' -f1)
+	bxiw_log_info "_g4datasets_names = '${_g4datasets_names}'..."
+	for _g4dataset_name in ${_g4datasets_names}; do
+	    bxiw_log_info "Downloading dataset '${_g4dataset_name}' tarball from '${_g4datasets_url}'..."
+	    local _g4dataset_record=$(cat ${g4datasets_list} | grep ^${_g4dataset_name} | tr -s '[[:space:]]')
+	    bxiw_log_info "Dataset record: '${_g4dataset_record}'"
+	    local _g4dataset_version=$(echo ${_g4dataset_record} | cut -d ' ' -f2)
+	    local _g4dataset_tarball=$(echo ${_g4dataset_record} | cut -d ' ' -f3)
+	    local _g4dataset_dir=$(echo ${_g4dataset_record} | cut -d ' ' -f4)
+	    bxiw_log_info "Dataset version : '${_g4dataset_version}'"
+	    bxiw_log_info "Dataset tarball : '${_g4dataset_tarball}'"
+	    bxiw_log_info "Dataset dir     : '${_g4dataset_dir}'"
+	    bxiw_download_file "${_g4datasets_url}/${_g4dataset_tarball}" "${_g4dataset_tarball}"
+	    if [ $? -ne 0 ]; then
+		bxiw_message "error" "Could not download the '${_g4dataset_tarball}' file!"
+		return 1
+	    fi
+	done
+	touch ${bxiw_tag_downloaded}
+	cd ${_g4datasets_opwd}
+    fi
+    return  0
+}
+
+
+function g4datasets_installer_build()
+{
+    local _g4datasets_opwd=$(pwd)
+    local _g4datasets_names=$(cat ${g4datasets_list} | cut -d ' ' -f1)
+    bxiw_log_info "Geant4 datasets build directory is : '${bxiw_build_dir}'"
+
+    # Build:
+    local _g4datasets_do_build=false
+    if [ ! -f ${bxiw_tag_built} ]; then
+	bxiw_log_info "Geant4 datasets build is needed."
+	_g4datasets_do_build=true
+    else
+	bxiw_log_info "Geant4 datasets build is already done."
+	if [ ${bxiw_do_rebuild} == true ]; then
+	    bxiw_log_info "Forcing Geant4 datasets rebuild..."
+	    _g4datasets_do_build=true
+	fi
+    fi
+
+    if [ ${_g4datasets_do_build} == true ]; then
+	bxiw_log_info "Building Geant4 datasets..."
+ 	if [ ! -d ${bxiw_build_dir}/bin ]; then
+	    mkdir -p ${bxiw_build_dir}/bin
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Cannot create the '${bxiw_build_dir}/bin' directory!"
+		cd ${_g4datasets_opwd}
+ 		return 1
+	    fi
+	    bxiw_log_info "Geant4 datasets build directory '${bxiw_build_dir}/bin' is created."
+	fi
+	if [ ! -f ${bxiw_build_dir}/bin/g4datasets-config ]; then
+	    cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_version}/g4datasets-config.in | \
+		sed \
+		    -e "s@__G4DATASETS_INSTALL_DIR__@${bxiw_install_dir}@g" \
+		    -e "s@__G4DATASETS_VERSION__@${bxiw_package_version}@g" \
+		    -e "s@__G4DATASETS_SETUP_DIR__@${bxiw_setup_dir}@g" \
+		    > ${bxiw_build_dir}/bin/g4datasets-config
+ 	  
+	fi
+ 	if [ ! -d ${bxiw_build_dir}/data ]; then
+	    mkdir -p ${bxiw_build_dir}/data
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Cannot create the '${bxiw_build_dir}/data' directory!"
+		cd ${_g4datasets_opwd}
+ 		return 1
+	    fi
+	    bxiw_log_info "Geant4 datasets build directory '${bxiw_build_dir}/data' is created."
+	fi
+	for _g4dataset_name in ${_g4datasets_names}; do
+	    bxiw_log_info "Processing dataset '${_g4dataset_name}' from '${_g4datasets_url}'..."
+	    local _g4dataset_record=$(cat ${g4datasets_list} | grep ^${_g4dataset_name} | tr -s '[[:space:]]')
+	    bxiw_log_info "Dataset record: '${_g4dataset_record}'"
+	    local _g4dataset_version=$(echo ${_g4dataset_record} | cut -d ' ' -f2)
+	    local _g4dataset_tarball=$(echo ${_g4dataset_record} | cut -d ' ' -f3)
+	    local _g4dataset_dir=$(echo ${_g4dataset_record} | cut -d ' ' -f4)
+	    local _g4dataset_full_dir="${bxiw_build_dir}/data/${_g4dataset_dir}"
+	    bxiw_log_info "Dataset version : '${_g4dataset_version}'"
+	    bxiw_log_info "Dataset tarball : '${_g4dataset_tarball}'"
+	    bxiw_log_info "Dataset dir     : '${_g4dataset_dir}'"
+	    if [ ! -f ${bxiw_cache_dir}/${_g4dataset_tarball} ]; then
+		echo >&2 "[error] Cannot find the '${_g4dataset_tarball}' file in the '${cache_dir}' directory!"
+		cd ${_g4datasets_opwd}
+ 		return 1
+	    fi
+	    cd ${bxiw_build_dir}/data
+	    if [ ! -d ${_g4dataset_full_dir} ]; then
+		echo >&2 "[info] Unpacking dataset tarball '${_g4dataset_tarball}'..."
+		tar xzf ${bxiw_cache_dir}/${_g4dataset_tarball}
+		if [ $? -ne 0 ]; then
+		    bxiw_log_error "Cannot unpack the '${_g4dataset_tarball}' file in the '${bxiw_build_dir}' directory!"
+		    cd ${_g4datasets_opwd}
+ 		    return 1
+		else
+		    bxiw_log_info "Source directory has been unpacked."
+		fi
+		bxiw_log_info "Dataset tarball '${_g4dataset_tarball}' has been unpacked."
+		if [ -f ${bxiw_cache_dir}/${_g4dataset_tarball} ]; then
+		    if [ ${bxiw_remove_tarballs} == true ]; then
+			echo >&2 "[info] Removing dataset tarball '${_g4dataset_tarball}'."
+			rm -f ${bxiw_cache_dir}/${_g4dataset_tarball}
+		    fi
+		fi
+	    else
+		bxiw_log_info "Dataset unpacked directory already exists."
+	    fi
+	done
+	touch ${bxiw_tag_built}
+    else
+	bxiw_log_info "Do not process Geant4 datasets."
+    fi
+    return 0
+}
+
+
+function g4datasets_installer_install()
+{
+    # Installation:
+    local _g4datasets_do_install=false
+    if [ ! -f ${bxiw_tag_installed} ]; then
+	bxiw_log_info "Geant4 datasets installation is needed."
+	_g4datasets_do_install=true
+    else
+	bxiw_log_info "Geant4 datasets installation is already done."
+	if [ ${bxiw_do_reinstall} == true ]; then
+	    _g4datasets_do_install=true
+	    bxiw_log_info "Forcing Geant4 datasets installation..."
+	fi
+    fi
+    if [ ${bxiw_no_install} == true ]; then
+	_g4datasets_do_install=false
+    fi
+
+    if [ ${_g4datasets_do_install} == true ]; then
+	bxiw_log_info "Installing Geant4 datasets..."
+	bxiw_log_info "Geant4 datasets installation directory is : '${bxiw_install_dir}'"
+	if [ ! -d ${bxiw_install_dir}/bin ]; then
+	    mkdir -p ${bxiw_install_dir}/bin
+	fi
+	cp -f ${bxiw_build_dir}/bin/g4datasets-config ${bxiw_install_dir}/bin/
+	chmod a+x ${bxiw_install_dir}/bin/g4datasets-config
+	tree -L 1 ${bxiw_install_dir}/bin
+	if [ ! -d ${bxiw_install_dir}/share/Geant4Datasets-${bxiw_package_version}/data/ ]; then
+	    mkdir -p ${bxiw_install_dir}/share/Geant4Datasets-${bxiw_package_version}/
+	fi
+	cp -af ${bxiw_build_dir}/data ${bxiw_install_dir}/share/Geant4Datasets-${bxiw_package_version}/
+	if [ $? -ne 0 ]; then
+    	    bxiw_message "error" "Geant4 datasets installation failed!"
+    	    return 1
+	else
+	    tree -L 2 ${bxiw_install_dir}/share/Geant4Datasets-${bxiw_package_version}/
+	    touch ${bxiw_tag_installed}
+    	    bxiw_log_info "Geant4 datasets is installed."
+	    if [ ${bxiw_remove_build_dir} == true ]; then
+		if [ -d ${bxiw_build_dir} ]; then
+    		    bxiw_log_info "Removing Geant4 datasets build data directory..."
+		    rm -fr ${bxiw_build_dir}
+		    rm -f ${bxiw_tag_built}
+		fi
+	    fi
+	fi
+    else
+	bxiw_log_info "Do not install Geant4 datasets."
+    fi
+    return  0
+}
+
+
+function g4datasets_installer_setup()
+{
+    bxiw_log_trace "g4datasets_installer_setup: entering..."
+    local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}.bash"
+    bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_version}/${bxiw_package_name}.bash.in | \
+	sed \
+	    -e "s@__G4DATASETS_INSTALL_DIR__@${bxiw_install_dir}@g" \
+	    -e "s@__G4DATASETS_VERSION__@${bxiw_package_version}@g" \
+	    > ${_bxsoftware_setup_script}
+    return  0
+}
+
+bxiw_detect_os
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Unsupported OS!"
+fi
+
+bxiw_env
+bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
+bxiw_log_trace "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+g4datasets_installer_parse_cl ${bxiw_app_cl_remaining_argv}
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Command line parse error!"
+fi
+
+g4datasets_installer_prepare
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Preparation failed!"
+fi
+
+g4datasets_installer_set_system_dependencies
+
+g4datasets_installer_print
+
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "System dependencies installation failed!"
+fi
+
+g4datasets_installer_download
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Source archive download failed!"
+fi
+
+g4datasets_installer_build
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Build failed!"
+fi
+
+g4datasets_installer_install
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Installation failed!"
+fi
+
+g4datasets_installer_setup
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Setup failed!"
+fi
+
+bxiw_exit 0
+
+# end

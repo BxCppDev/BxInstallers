@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+
+src_dir=$(pwd)
+
+tmp_dir="/tmp/${USER}/bxg4datasets-installer.d"
+
+if [ ! -d ${tmp_dir} ]; then
+    mkdir -p ${tmp_dir}  
+fi 
+
+package_name="bxg4datasets-installer"
+package_version="10.5"
+
+# while [ -n "$1" ]; do
+#     tok="$1"
+#     if [ "${tok}" == "--version" ]; then
+# 	shift 1
+# 	package_version="$1"
+#     fi
+#     shift 1
+# done
+
+pkg_dir=${tmp_dir}/${package_name}-${package_version}/pkg-debian
+if [ -d ${pkg_dir} ]; then
+    rm -fr ${pkg_dir}
+fi
+mkdir -p ${pkg_dir}
+cd ${pkg_dir}
+
+mkdir -p usr/share/g4datasets-installer
+mkdir -p usr/share/g4datasets-installer/lib/
+mkdir -p usr/share/g4datasets-installer/bin/
+mkdir -p usr/share/g4datasets-installer/resources/${package_version}/
+
+cp ${src_dir}/g4datasets_installer                              usr/share/g4datasets-installer/bin/
+chmod a+r etc/share/g4datasets-installer/bin/g4datasets_installer
+cp ${src_dir}/resources/${package_version}/g4datasets.lis       usr/share/g4datasets-installer/resources/${package_version}/
+cp ${src_dir}/resources/${package_version}/g4datasets.bash.in   usr/share/g4datasets-installer/resources/${package_version}/
+cp ${src_dir}/resources/${package_version}/g4datasets-config.in usr/share/g4datasets-installer/resources/${package_version}/
+cp ${src_dir}/../lib/libbxiw.bash                               usr/share/g4datasets-installer/lib/
+
+cat>etc/share/g4datasets-installer/README.txt<<EOF
+Geant4 Datasets Installer (version ${package_version})
+
+Maintained by: François Mauger <mauger@lpccaen.in2p3.fr>
+EOF
+
+
+mkdir DEBIAN
+
+touch DEBIAN/conffiles
+
+touch DEBIAN/control
+
+cat>DEBIAN/control <<EOF
+Package: ${package_name}
+Version: ${package_version}
+Architecture: all
+Essential: no
+Section: science
+Priority: optional
+Depends: bash,wget (>=1.17),tar (>=1.28)
+Maintainer: François Mauger
+Email-Address   : mauger@lpccaen.in2p3.fr
+Date  : $(LANG=C date)
+Installed-Size: 20
+Description: The Bayeux Geant4 datasets installer.
+EOF
+
+find . -type f ! -regex '.*?debian-binary.*' ! -regex '.*?DEBIAN.*' -printf '%P ' | xargs md5sum > DEBIAN/md5sums
+
+cat>DEBIAN/postinst<<EOF
+#!/bin/bash
+echo >&2 "Installing Geant4 datasets (${package_version}) this may take a while ... "
+
+bash /usr/share/g4datasets-installer/bin/g4datasets_installer \
+  --debian-package \
+  --remove-build-dir 
+if [ $? -ne 0 ]; then
+   exit 1
+fi 
+# --remove-tarballs
+if [ -d /var/bxsoftware/work.d/g4datasets-${package_version} ]; then
+  rm -fr /var/bxsoftware/work.d/g4datasets-${package_version}  
+fi
+cat /usr/share/g4datasets-installer/resources/${package_version}/g4datasets-config.in | \
+  sed \
+    -e "s@__G4DATASETS_INSTALL_PREFIX__@/usr@g" \
+    -e "s@__G4DATASETS_VERSION__@${package_version}@g" \
+    -e "s@__G4DATASETS_SETUP_DIR__@/etc/bxsoftware@g" \
+> /usr/bin/g4datasets-config
+chmod a+rx /usr/bin/g4datasets-config 
+
+exit 0
+EOF
+
+cat>DEBIAN/prerm<<EOF
+#!/bin/bash
+
+if [ -f /etc/bxsoftware/modules/g4datasets.bash ]; then
+   echo >&2 "Removing Geant4 datasets setup file '/etc/bxsoftware/modules/g4datasets.bash'..."
+   rm -f /etc/bxsoftware/modules/g4datasets.bash 
+fi
+
+if [ -f /usr/bin/g4datasets-config ]; then
+   echo >&2 "Removing Geant4 datasets config script '/usr/bin/g4datasets-config'..."
+   rm -f /usr/bin/g4datasets-config 
+fi
+
+if [ -d /usr/share/Geant4Datasets-${package_version}/data ]; then
+    echo >&2 "Removing Geant4 datasets installation directory '/usr/share/Geant4Datasets-${package_version}/data'..."
+    rm -fr /usr/share/Geant4Datasets-${package_version}/data
+fi 
+
+if [ -d /usr/share/Geant4Datasets-${package_version} ]; then
+    echo >&2 "Removing Geant4 datasets installation directory '/usr/share/Geant4Datasets-${package_version}'..."
+    rm -fr /usr/share/Geant4Datasets-${package_version}
+fi 
+
+exit 0
+EOF
+
+chmod 755 DEBIAN/prerm
+chmod 755 DEBIAN/postinst
+
+cd ${src_dir}
+
+dpkg -b ${pkg_dir} bxg4datasets-installer_${package_version}_all.deb
+dpkg -c bxg4datasets-installer_${package_version}_all.deb
+cp bxg4datasets-installer_${package_version}_all.deb /var/tmp/
+
+if [ -d ${pkg_dir} ]; then
+    rm -fr ${pkg_dir}
+fi
+
+exit 0

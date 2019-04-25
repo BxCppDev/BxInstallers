@@ -1,0 +1,19 @@
+# -*- mode: shell-script; -*-
+
+function camp_setup()
+{
+    local _bx_camp_version="__CAMP_VERSION__"
+    local _bx_camp_install_dir="__CAMP_INSTALL_DIR__"
+    if [ -n "${BX_CAMP_INSTALL_DIR}" ]; then
+	echo >&2 "[warning] camp_setup: CAMP version ${BX_CAMP_VERSION} is already setup !"   
+	return 1
+    fi
+    export BX_CAMP_INSTALL_DIR="${_bx_camp_install_dir}"
+    export BX_CAMP_VERSION="${_bx_camp_version}"
+    echo >&2 "[info] camp_setup: CAMP version ${_bx_camp_version} is now setup !"
+    return 0
+}
+export -f camp_setup
+
+# end
+

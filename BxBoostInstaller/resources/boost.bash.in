@@ -1,0 +1,17 @@
+# -*- mode: shell-script; -*-
+
+function boost_setup()
+{
+    local _bx_boost_version="__BOOST_VERSION__"
+    local _bx_boost_install_dir="__BOOST_INSTALL_DIR__"
+    if [ -n "${BX_BOOST_INSTALL_DIR}" ]; then
+	echo >&2 "[warning] boost_setup: BOOST version ${BX_BOOST_VERSION} is already setup !"   
+	return 1
+    fi
+    export BX_BOOST_INSTALL_DIR="${_bx_boost_install_dir}"
+    export BX_BOOST_VERSION="${_bx_boost_version}"
+    echo >&2 "[info] boost_setup: BOOST version ${_bx_boost_version} is now setup !"
+    return 0
+}
+export -f boost_setup
+

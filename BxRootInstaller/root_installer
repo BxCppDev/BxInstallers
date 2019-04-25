@@ -1,0 +1,689 @@
+#!/usr/bin/env bash
+
+if [ ! -f "$(pwd)/.bxwi_root.locate" ]; then
+    echo >&2 "[error] Please run from the ROOT installer directory!"
+    exit 1
+fi
+source $(pwd)/../lib/libbxiw.bash
+bxiw_app_name="root_installer"
+bxiw_app_saved_opwd=$(pwd)
+bxiw_app_installer_prefix="$(pwd)"
+bxiw_package_name="root"
+bxiw_default_package_version="6.16.00"
+bxiw_package_version=
+
+root_system_tbb=false
+
+function root_installer_usage()
+{
+    cat<<EOF
+
+root_installer - ROOT library installer
+
+Synopsis:
+
+    root_installer [OPTION]...
+
+Options:
+
+  --help               Print this help then exit
+EOF
+    _bxiw_usage_options
+    cat<<EOF
+  --system-tbb         Use system TBB
+EOF
+    echo ""
+    return 0
+}
+
+
+function root_installer_parse_cl()
+{
+    while [ -n "$1" ]; do
+        token="$1"
+        if [ "x${token:0:1}" = "x-" ]; then
+            opt="${token}"
+            if [ ${opt} = "--help" ]; then
+                root_installer_usage
+                bxiw_exit 0
+            elif [ ${opt} = "--system-tbb" ]; then
+                root_system_tbb=true
+            else
+                bxiw_message "error" "Unsupported option '${opt}'!"
+                return 1
+            fi
+        else
+            arg="${token}"
+        fi
+        shift 1
+    done
+    return 0
+}
+
+function root_installer_prepare()
+{
+    _bxiw_prepare_pre
+ 
+    if [ ${bxiw_with_gui} = true ]; then
+        
+        local _do_rebuild_repr="FALSE"
+        if [ ${bxiw_do_rebuild} = true ]; then
+            _do_rebuild_repr="TRUE"
+        fi
+        
+        local _remove_build_dir_repr="FALSE"
+        if [ ${bxiw_remove_build_dir} = true ]; then
+            _remove_build_dir_repr="TRUE"
+        fi
+        
+        local _remove_tarballs_repr="FALSE"
+        if [ ${bxiw_remove_tarballs} = true ]; then
+            _remove_tarballs_repr="TRUE"
+        fi
+        
+        local _system_install_repr="FALSE"
+        if [ ${bxiw_system_install} = true ]; then
+            _system_install_repr="TRUE"
+        fi
+
+        which yad > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            bxiw_message "[warning] yad is not installed! No GUI!"
+        else
+            local _choices=$(yad --width=500 \
+                                 --form \
+                                 --title "${bxiw_package_name} installer options" \
+                                 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
+                                 --field="Working directory:CDIR" "${bxiw_work_dir}" \
+                                 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
+                                 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+                                 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+                                 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+                                 --field="System installation:CHK" "$_system_install_repr}" \
+                  )
+            if [ "x${_choices}" = "x" ]; then
+                bxiw_message "info" "Cancelled dialog!"
+                return 1
+            fi
+            bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+            bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
+            bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
+            _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
+            if [ ${_do_rebuild_repr} == "TRUE" ]; then
+                bxiw_do_rebuild=true
+            else
+                bxiw_do_rebuild=false
+            fi
+            _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
+            if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+                bxiw_remove_build_dir=true
+            else
+                bxiw_remove_build_dir=false
+            fi
+            _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
+            if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+                bxiw_remove_tarballs=true
+            else
+                bxiw_remove_tarballs=false
+            fi
+            _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
+            if [ ${_system_install_repr} == "TRUE" ]; then
+                bxiw_system_install=true
+            else
+                bxiw_system_install=false
+            fi
+        fi
+    fi
+    
+    # Prepare:
+    _bxiw_prepare_post
+     
+    return 0
+}
+
+
+function root_installer_get_tarball()
+{
+    local _root_version="$1"
+    shift 1
+    local _root_patch=""
+    if [ "x${_root_version}" = "x6.16.00" ]; then
+        echo "root_v${_root_version}.source.tar.gz"
+    else
+        echo >&2 "[error] Unsupported version '${_root_version}'!"
+        return 1
+    fi
+    return 0
+}
+
+
+function root_installer_get_url()
+{
+    local _root_version="$1"
+    shift 1
+    local _root_tarball=$(root_installer_get_tarball ${_root_version})
+    echo "https://root.cern/download/${_root_tarball}"
+    return 0
+}
+
+
+function root_installer_set_system_dependencies()
+{
+    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+        bxiw_system_packages_build="cmake \
+                    ninja-build \
+                    make \
+                    pkg-config \
+                    dpkg-dev \
+                    wget \
+                    g++ \
+                    gcc \
+                    binutils \
+                    libfreetype6-dev \
+                    libgsl-dev gsl-bin \
+                    libbz2-dev  \
+                    zlib1g-dev \
+                    libreadline-dev \
+                    libxml2-dev \
+                    libsqlite3-dev \
+                    libssl-dev\
+                    libx11-dev \
+                    libxext-dev \
+                    libxft-dev \
+                    libxpm-dev \
+                    libpng-dev \
+                    libjpeg-dev \
+                    libgif-dev \
+                    python python-dev \
+                    libpython2.7 libpython2.7-dev \
+                    python-numpy-dev \
+                    libafterimage-dev \
+                    libtiff5-dev \
+                    liblzma-dev \
+                    liblz4-dev \
+                    libfftw3-dev \
+                    libgraphviz-dev \
+                    libftgl-dev \
+                    libglew-dev \
+                    libpcre3-dev \
+                    "
+        if [ ${bxiw_with_package} == true ]; then
+            bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
+        fi
+        if [ ${bxiw_with_gui} == true ]; then
+            bxiw_system_packages_build="${bxiw_system_packages_build} yad"
+        fi
+        bxiw_system_packages_run="\
+                    libfreetype6-dev \
+                    libgsl-dev gsl-bin \
+                    libbz2-dev  \
+                    zlib1g-dev \
+                    libreadline-dev \
+                    libxml2-dev \
+                    libsqlite3-dev \
+                    libssl-dev\
+                    libx11-dev \
+                    libxext-dev \
+                    libxft-dev \
+                    libxpm-dev \
+                    libpng-dev \
+                    libjpeg-dev \
+                    libgif-dev \
+                    python python-dev \
+                    libpython2.7 libpython2.7-dev \
+                    python-numpy-dev \
+                    libafterimage-dev \
+                    libtiff5-dev \
+                    liblzma-dev \
+                    liblz4-dev \
+                    libfftw3-dev \
+                    libgraphviz-dev \
+                    libftgl-dev \
+                    libglew-dev \
+                    libpcre3-dev \
+                    "
+        if [ ${root_system_tbb} == true ]; then
+            bxiw_system_packages_build="${bxiw_system_packages_build} libtbb-dev libtbb2-dbg"   
+            bxiw_system_packages_run="${bxiw_system_packages_run}     libtbb-dev libtbb2-dbg"   
+        fi
+
+        if [ "x${bxiw_os_distrib_release}" = "x16.04" ]; then
+            # bxiw_system_packages_build="${bxiw_system_packages_build} libpng12-0 libpng12-dev"
+            # bxiw_system_packages_build="${bxiw_system_packages_build} libgles2-mesa"
+            # bxiw_system_packages_build="${bxiw_system_packages_build} llvm-dev"
+            # bxiw_system_packages_build="${bxiw_system_packages_build} libllvm3.8"
+
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libgsl2"
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libreadline6"
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libssl1.0.0"
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libpng12-0 libpng12-dev"
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libgles2-mesa"
+            # bxiw_system_packages_run="${bxiw_system_packages_run} llvm-dev"
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libllvm3.8"
+            bxiw_pass
+        elif [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
+            # bxiw_system_packages_build="${bxiw_system_packages_build} libgsl23 libgslcblas0"      
+            # bxiw_system_packages_build="${bxiw_system_packages_build} libreadline7"       
+            # bxiw_system_packages_build="${bxiw_system_packages_build} libssl1.1"
+            # bxiw_system_packages_build="${bxiw_system_packages_build} libpng16-16 libpng-dev"
+            # bxiw_system_packages_build="${bxiw_system_packages_build} libgles2-mesa libopengl0 libglvnd-dev"
+            # bxiw_system_packages_build="${bxiw_system_packages_build} libllvm6.0"
+            # bxiw_system_packages_build="${bxiw_system_packages_build} llvm-dev"
+
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libgsl23 libgslcblas0"          
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libreadline7"           
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libssl1.1"
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libpng16-16 libpng-dev"
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libgles2-mesa libopengl0 libglvnd-dev"
+            # bxiw_system_packages_run="${bxiw_system_packages_run} libllvm6.0"
+            # bxiw_system_packages_run="${bxiw_system_packages_run} llvm-dev"
+            bxiw_pass
+        fi
+    elif [ "x${bxiw_os_distrib_id}" = "xCentOS" || "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+        bxiw_system_packages_build="cmake \
+                    ninja-build \
+                    make \
+                    wget \
+                    gcc-g++ \
+                    gcc \
+                    binutils \
+                    libX11-devel \
+                    libXpm-devel \
+                    libXft-devel \
+                    libXext-devel \
+                    python \
+                    redhat-lsb-core \
+                    openssl-devel \
+                    pcre-devel \
+                    mesa-libGL-devel \
+                    mesa-libGLU-devel \
+                    glew-devel \
+                    ftgl-devel \
+                    fftw-devel \
+                    graphviz-devel \
+                    python-devel \
+                    python-numpy-devel \
+                    libxml2-devel \
+                    gsl-static \
+                    "
+        bxiw_system_packages_run="cmake \
+                    ninja-build \
+                    make \
+                    gcc-g++ \
+                    gcc \
+                    binutils \
+                    libX11-devel \
+                    libXpm-devel \
+                    libXft-devel \
+                    libXext-devel \
+                    python \
+                    redhat-lsb-core \
+                    openssl-devel \
+                    pcre-devel \
+                    mesa-libGL-devel \
+                    mesa-libGLU-devel \
+                    glew-devel \
+                    ftgl-devel \
+                    fftw-devel \
+                    graphviz-devel \
+                    python-devel \
+                    python-numpy-devel \
+                    libxml2-devel \
+                    gsl-static \
+                    "
+        bxiw_pass
+    fi
+    return 0
+}
+
+
+function root_installer_print()
+{
+    bxiw_print
+    return 0
+}
+
+
+function root_installer_download()
+{
+    local _root_tarball=$(root_installer_get_tarball ${bxiw_package_version})
+    local _root_url=$(root_installer_get_url ${bxiw_package_version})
+    bxiw_log_info "Tarball : '${_root_tarball}'"
+    if [ ! -f ${bxiw_tag_downloaded} ]; then
+        bxiw_download_file ${_root_url} ${_root_tarball}
+        if [ $? -ne 0 ]; then
+            bxiw_log_error "Could not download the '${_root_tarball}' file!"
+            return 1
+        fi
+        touch ${bxiw_tag_downloaded}
+    else
+        bxiw_log_info "Tarball '${_root_tarball}' was already downloaded."
+    fi
+    return  0
+}
+
+
+function root_installer_install()
+{
+    local _root_opwd=$(pwd)
+    local _root_tarball=$(root_installer_get_tarball ${bxiw_package_version})
+    cd ${bxiw_cache_dir}
+    local _root_source_dir="$(pwd)/root-${bxiw_package_version}"
+    bxiw_message "info" "ROOT version is                : '${bxiw_package_version}'"
+    bxiw_message "info" "ROOT source directory is       : '${_root_source_dir}'"
+    if [ ! -d ${_root_source_dir} ]; then
+        bxiw_message "info" "Unpacking source directory..."
+        tar xzf ${bxiw_cache_dir}/${_root_tarball}
+        if [ $? -ne 0 ]; then
+            bxiw_message "error" "Source directory has not been unpacked."
+            cd ${_root_opwd}
+            return 1
+        else
+            bxiw_message "info" "Source directory has been unpacked."
+        fi
+    else
+        bxiw_message "info" "Source directory was already unpacked."
+    fi
+
+    cd ${bxiw_build_dir}
+    bxiw_message "info" "ROOT build directory is        : '${bxiw_build_dir}'"
+    bxiw_message "info" "ROOT tag directory is          : '${bxiw_tag_dir}'"
+    bxiw_message "info" "ROOT installation directory is : '${bxiw_install_dir}'"
+    
+    # Configuration:
+    local _root_do_config=false
+    if [ ! -f ${bxiw_tag_configured} ]; then
+        bxiw_message "info" "ROOT configuration is needed."
+        _root_do_config=true
+    else
+        bxiw_message "info" "ROOT configuration is already done."
+        if [ ${bxiw_do_reconfigure} == true ]; then
+            bxiw_message "info" "Forcing ROOT reconfiguration..."
+            _root_do_configure=true
+        fi
+    fi
+
+    if [ ${_root_do_config} == true ]; then
+        bxiw_message "info" "ROOT configuration..."
+        if [ ${root_system_tbb} == true ]; then
+            tbb_opts="-Dbuiltin_tbb=OFF -DTBB_ROOT_DIR=/usr"
+        else
+            tbb_opts="-Dbuiltin_tbb=ON"
+        fi
+        cmake  \
+            -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
+            -DCMAKE_BUILD_TYPE:STRING="Release" \
+            -Dalien=OFF \
+            -Dastiff=OFF \
+            -Dbonjour=OFF \
+            -Dcastor=OFF \
+            -Dchirp=OFF \
+            -Ddavix=OFF \
+            -Ddcache=OFF \
+            -Dfitsio=OFF \
+            -Dfortran=OFF \
+            -Dgfal=OFF \
+            -Dglite=OFF \
+            -Dgviz=OFF \
+            -Dhdfs=OFF \
+            -Dkrb5=OFF \
+            -Dldap=OFF \
+            -Dmonalisa=OFF \
+            -Dmysql=OFF \
+            -Dodbc=OFF \
+            -Doracle=OFF \
+            -Dpgsql=OFF \
+            -Dpythia6=OFF \
+            -Dpythia8=OFF \
+            -Dqt=OFF \
+            -Drfio=OFF \
+            -Dsapdb=OFF \
+            -Dsrp=OFF \
+            -Dunuran=OFF \
+            -Dcxx11=ON \
+            -Dfail-on-missing=ON \
+            -Dgnuinstall=ON \
+            -Dexplicitlink=ON \
+            -Drpath=ON \
+            -Dsoversion=ON \
+            -Dasimage=ON \
+            -Dbuiltin_afterimage=OFF \
+            -Dbuiltin_clang=ON \
+            -Dbuiltin_fftw3=OFF \
+            -Dbuiltin_ftgl=OFF \
+            -Dbuiltin_freetype=OFF \
+            -Dbuiltin_llvm=ON \
+            -Droofit=ON \
+            -Dgdml=ON \
+            -Dminuit2=ON \
+            ${tbb_opts} \
+            -Dsqlite=ON \
+            -Dssl=ON \
+            -Dmathmore=ON \
+            -Dxrootd=OFF \
+            -Dvdt=OFF \
+            -Dpython=ON \
+            -DPYTHON_EXECUTABLE="$(which python2)" \
+            -DPYTHON_INCLUDE_DIR="/usr/include/python2.7" \
+            -DPYTHON_LIBRARY="/usr/lib/x86_64-linux-gnu/libpython2.7.so" \
+            -G Ninja \
+            ${_root_source_dir}
+        if [ $? -ne 0 ]; then
+            bxiw_message "error" "ROOT configuration failed!"
+            cd ${_root_opwd}
+            return 1
+        else
+            touch ${bxiw_tag_configured}
+            bxiw_message "info" "ROOT is configured."
+        fi
+    else
+        bxiw_message "info" "Do not configure ROOT."
+    fi
+
+    # cd ${_root_opwd}
+    # return 1
+    
+    # Build:
+    local _root_do_build=false
+    if [ ! -f ${bxiw_tag_built} ]; then
+        bxiw_message "info" "ROOT build is needed."
+        _root_do_build=true
+    else
+        bxiw_message "info" "ROOT build is already done."
+        if [ ${bxiw_do_rebuild} == true ]; then
+            bxiw_message "info" "Forcing ROOT rebuild..."
+            _root_do_build=true
+        fi
+    fi
+
+    if [ ${_root_do_build} == true ]; then
+        bxiw_message "info" "Building ROOT..."
+        local _root_nbprocs=${bxiw_nbprocs}
+        if [ ${_root_nbprocs} -gt 2 ]; then
+            let _root_nbprocs=${bxiw_nbprocs}
+        else
+            _root_nbprocs=1 
+        fi
+        bxiw_message "info" "#procs = ${_root_nbprocs}"
+        cmake --build . -- -j ${_root_nbprocs}
+        if [ $? -ne 0 ]; then
+            bxiw_message "error" "ROOT build failed!"
+            cd ${_root_opwd}
+            return 1
+        else
+            touch ${bxiw_tag_built}
+            bxiw_message "info" "ROOT is built."
+        fi
+    else
+        bxiw_message "info" "Do not build ROOT."
+    fi
+
+    # cd ${_root_opwd}
+    # return 1
+
+    # Installation:
+    local _root_do_install=false
+    if [ ! -f ${bxiw_tag_installed} ]; then
+        bxiw_message "info" "ROOT installation is needed."
+        _root_do_install=true
+    else
+        bxiw_message "info" "ROOT installation is already done."
+        if [ ${bxiw_do_reinstall} == true ]; then
+            _root_do_install=true
+            bxiw_message "info" "Forcing ROOT installation..."
+        fi
+    fi
+    if [ ${bxiw_no_install} == true ]; then
+        _root_do_install=false
+    fi
+
+    if [ ${_root_do_install} == true ]; then
+        local _root_do_package=false
+        if [ ${bxiw_with_package} == true ]; then
+            _root_do_package=true
+        fi
+        if [ ${_root_do_package} == true ]; then
+            if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+                bxiw_message "info" "Building a binary package for ROOT..."
+                root_installer_makedebpack
+            else
+                bxiw_message "error" "Cannot pack ROOT for '${bxiw_os_distrib_id}'!"
+                cd ${_root_opwd}
+                return 1
+            fi
+        else
+            bxiw_message "info" "Installing ROOT..."
+            ninja install
+            if [ $? -ne 0 ]; then
+                bxiw_message "error" "ROOT installation failed!"
+                cd ${_root_opwd}
+                return 1
+            else
+                touch ${bxiw_tag_installed}
+                bxiw_message "info" "ROOT is installed."
+            fi
+        fi
+    else
+        bxiw_message "info" "Do not install ROOT."
+    fi
+    cd ${_root_opwd}
+    return  0
+}
+
+
+function root_installer_makedebpack()
+{
+    local _root_build_dir="${bxiw_build_dir}"
+    cd ${_root_build_dir}
+    mkdir -p ${_root_build_dir}/doc-pak
+    touch ${_root_build_dir}/description-pak
+    cat>${_root_build_dir}/description-pak<<EOF
+ROOT Library (Bayeux edition)
+
+This is a binary version for ${bxiw_os_distrib_id} ${bxiw_os_distrib_release} 
+usable with the Bayeux software suite.
+EOF
+ 
+    local _arch="amd64"
+    local _root_do_package=true
+    local _root_pkg_filename="bx${bxiw_package_name}_${bxiw_package_version}-${bxiw_pkg_release}_${_arch}.deb"
+    if [ -f ${package_dir}/${_root_pkg_filename} ]; then
+        bxiw_message "info" "Package '${_root_pkg_filename}' exists in '${bxiw_package_dir}'."
+        _root_do_package=false
+    fi
+    local _root_requires="${bxiw_system_packages_run}"
+    _root_requires_list=$(echo ${_root_requires} | tr ' ' ',')
+    _root_conflicts_list=""
+    bxiw_message "info" "Requires : ${_root_requires_list}!"    
+    if [ ${_root_do_package} == true ]; then
+        if [ "x${bxiw_os_arch}" != "xx86_64" ]; then
+            bxiw_message "error" "Unsupported architecture ${bxiw_os_arch}!"    
+            return 1
+        fi
+        sudo checkinstall \
+             --type="debian" \
+             --install="no" \
+             --fstrans="no" \
+             --pkgname="bx${bxiw_package_name}" \
+             --pkgversion="${bxiw_package_version}" \
+             --pkgrelease=${bxiw_pkg_release} \
+             --pkglicense="GPL-3" \
+             --pkgsource="$(root_installer_get_url ${bxiw_package_version})" \
+             --maintainer="${bxiw_pkg_maintener_email}" \
+             --provides="bx${bxiw_package_name}" \
+             --requires="${_root_requires_list}" \
+             --conflicts="${_root_conflicts_list}" \
+             --backup="no" \
+             --pakdir="${bxiw_package_dir}" \
+             --default \
+             ninja install
+        if [ $? -ne 0 ]; then
+            bxiw_message "error" "Debian binary package build failed!"  
+            return 1
+        fi
+    fi   
+    return 0
+}
+
+
+function root_installer_setup()
+{
+    bxiw_log_trace "root_installer_setup: entering..."
+    local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}.bash"
+    bxiw_message "info" "Installing setup script '${_bxsoftware_setup_script}'..."
+    cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
+        sed \
+            -e "s@__ROOT_INSTALL_DIR__@${bxiw_install_dir}@g" \
+            -e "s@__ROOT_VERSION__@${bxiw_package_version}@g" \
+            > ${_bxsoftware_setup_script}
+    return  0
+}
+
+bxiw_detect_os
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Unsupported OS!"
+fi
+
+bxiw_env
+bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
+bxiw_message "info" "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+root_installer_parse_cl ${bxiw_app_cl_remaining_argv}
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Command line parse error!"
+fi
+
+root_installer_prepare
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Preparation failed!"
+fi
+
+root_installer_set_system_dependencies
+
+root_installer_print
+
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "System dependencies installation failed!"
+fi
+
+root_installer_download
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Source archive download failed!"
+fi
+
+root_installer_install
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Installation failed!"
+fi
+
+if [ ${bxiw_with_package} == false ]; then
+    root_installer_setup
+    if [ $? -ne 0 ]; then
+      bxiw_exit 1 "Setup failed!"
+    fi
+fi
+
+bxiw_exit 0
+
+# end

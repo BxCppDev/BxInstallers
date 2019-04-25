@@ -1,0 +1,18 @@
+# -*- mode: shell-script; -*-
+
+function clhep_setup()
+{
+    local _bx_clhep_version="__CLHEP_VERSION__"
+    local _bx_clhep_install_dir="__CLHEP_INSTALL_DIR__"
+    if [ -n "${BX_CLHEP_INSTALL_DIR}" ]; then
+	echo >&2 "[warning] clhep_setup: CLHEP version ${BX_CLHEP_VERSION} is already setup !"   
+	return 1
+    fi
+    export BX_CLHEP_INSTALL_DIR="${_bx_clhep_install_dir}"
+    export BX_CLHEP_VERSION="${_bx_clhep_version}"
+    export PATH="${BX_CLHEP_INSTALL_DIR}/bin:${PATH}"
+    echo >&2 "[info] clhep_setup: CLHEP version ${_bx_clhep_version} is now setup !"
+    return 0
+}
+export -f clhep_setup
+

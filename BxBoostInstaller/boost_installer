@@ -1,0 +1,518 @@
+#!/usr/bin/env bash
+
+if [ ! -f "$(pwd)/.bxwi_boost.locate" ]; then
+    echo >&2 "[error] Please run from the Boost installer directory!"
+    exit 1
+fi
+source ../lib/libbxiw.bash
+bxiw_app_name="boost_installer"
+bxiw_app_saved_opwd=$(pwd)
+bxiw_app_installer_prefix="$(pwd)"
+bxiw_package_name="boost"
+bxiw_default_package_version="1.68.0"
+bxiw_package_version=
+boost_libs="atomic,chrono,date_time,filesystem,graph,iostreams,locale,log,math,program_options,python,random,regex,serialization,signals,system,thread"
+
+
+function boost_installer_usage()
+{
+    cat<<EOF
+
+boost_installer - Boost library installer
+
+Synopsis:
+
+    boost_installer [OPTION]...
+
+Options:
+
+  --help              Print this help then exit
+EOF
+    _bxiw_usage_options
+    echo ""
+    return 0
+}
+
+
+function boost_installer_parse_cl()
+{
+    while [ -n "$1" ]; do
+	token="$1"
+	if [ "x${token:0:1}" = "x-" ]; then
+	    opt="${token}"
+	    if [ ${opt} = "--help" ]; then
+		boost_installer_usage
+		bxiw_exit 0
+	    else
+		bxiw_message "error" "Unsupported option '${opt}'!"
+		return 1
+	    fi
+	else
+	    arg="${token}"
+	fi
+	shift 1
+    done
+    return 0
+}
+
+
+function boost_installer_prepare()
+{
+    _bxiw_prepare_pre
+ 
+    if [ ${bxiw_with_gui} = true ]; then
+	
+	local _do_rebuild_repr="FALSE"
+	if [ ${bxiw_do_rebuild} = true ]; then
+	    _do_rebuild_repr="TRUE"
+	fi
+	
+	local _remove_build_dir_repr="FALSE"
+	if [ ${bxiw_remove_build_dir} = true ]; then
+	    _remove_build_dir_repr="TRUE"
+	fi
+	
+	local _remove_tarballs_repr="FALSE"
+	if [ ${bxiw_remove_tarballs} = true ]; then
+	    _remove_tarballs_repr="TRUE"
+	fi
+	
+	local _system_install_repr="FALSE"
+	if [ ${bxiw_system_install} = true ]; then
+	    _system_install_repr="TRUE"
+	fi
+
+	which yad > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    bxiw_message "[warning] yad is not installed! No GUI!"
+	else
+	    local _choices=$(yad --width=500 \
+				 --form \
+				 --title "${bxiw_package_name} installer options" \
+				 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
+				 --field="Working directory:CDIR" "${bxiw_work_dir}" \
+				 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
+				 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+				 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+				 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+				 --field="System installation:CHK" "$_system_install_repr}" \
+		  )
+	    if [ "x${_choices}" = "x" ]; then
+		bxiw_message "info" "Cancelled dialog!"
+		return 1
+	    fi
+	    bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+	    bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
+	    bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
+	    _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
+	    if [ ${_do_rebuild_repr} == "TRUE" ]; then
+		bxiw_do_rebuild=true
+	    else
+		bxiw_do_rebuild=false
+	    fi
+	    _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
+	    if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+		bxiw_remove_build_dir=true
+	    else
+		bxiw_remove_build_dir=false
+	    fi
+	    _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
+	    if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+		bxiw_remove_tarballs=true
+	    else
+		bxiw_remove_tarballs=false
+	    fi
+	    _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
+	    if [ ${_system_install_repr} == "TRUE" ]; then
+		bxiw_system_install=true
+	    else
+		bxiw_system_install=false
+	    fi
+	fi
+    fi
+    
+    # Prepare:
+    _bxiw_prepare_post
+     
+    return 0
+}
+
+
+function boost_installer_get_tarball()
+{
+    local _boost_version="$1"
+    if [ "x${_boost_version}" = "x1.68.0" ]; then
+	echo "boost_$(echo ${_boost_version} | tr '.' '_').tar.bz2"
+    else
+	echo >&2 "[error] Unsupported version '${_boost_version}'!"
+	return 1
+    fi
+    return 0
+}
+
+
+function boost_installer_get_url()
+{
+    local _boost_version="$1"
+    local _boost_tarball=$(boost_installer_get_tarball ${_boost_version})
+    echo "https://sourceforge.net/projects/boost/${_boost_version}/${_boost_tarball}/download"
+    return 0
+}
+
+
+function boost_installer_set_system_dependencies()
+{
+    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+	bxiw_system_packages_build="build-essential \
+   	  	    make \
+        	    pkg-config \
+        	    dpkg-dev \
+       	    	    wget \
+   		    g++ \
+		    gcc \
+		    binutils \
+		    python python-dev libpython2.7 \
+		    autotools-dev \
+		    libicu-dev \
+		    bzip2 \
+		    libbz2-1.0 libbz2-dev\
+                    zlib1g zlib1g-dev \
+       	    	    libxml2 libxml2-dev \
+ 		    "
+	bxiw_system_packages_run="\
+		g++ \
+		python libpython2.7 \
+		zlib1g \
+		bzip2 \
+		libxml2 \
+		"	
+	if [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} \
+		    libicu60 \
+	    "
+	    bxiw_system_packages_run="${bxiw_system_packages_run} \
+		    libicu60 \
+	    "
+	elif [ "x${bxiw_os_distrib_release}" = "x16.04" ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} \
+		    libicu55 \
+	    "
+	    bxiw_system_packages_run="${bxiw_system_packages_run} \
+		    libicu55 \
+	    "
+	fi
+	if [ ${bxiw_with_package} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
+	fi
+	if [ ${bxiw_with_gui} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} yad"
+	fi
+    # elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
+    # elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+    fi
+    return 0
+}
+
+
+function boost_installer_print()
+{
+    bxiw_print
+    bxiw_log_info "Boost librairies : "
+    local _libs=$(echo ${boost_libs} | tr ',' ' ')
+    for _bl in ${_libs}; do
+	bxiw_log_info "   - ${_bl}"
+    done
+    return 0
+}
+
+
+function boost_installer_download()
+{
+    local _boost_tarball=$(boost_installer_get_tarball ${bxiw_package_version})
+    local _boost_url=$(boost_installer_get_url ${bxiw_package_version})
+    bxiw_download_file ${_boost_url} ${_boost_tarball}
+    if [ $? -ne 0 ]; then
+	bxiw_message "error" "Could not download the '${_boost_tarball}' file!"
+	return 1
+    fi
+    return  0
+}
+
+function boost_installer_install()
+{
+    local _boost_opwd=$(pwd)
+    local _boost_tarball=$(boost_installer_get_tarball ${bxiw_package_version})
+    cd ${bxiw_cache_dir}
+    local _boost_source_dir="$(pwd)/boost_$(echo ${bxiw_package_version} | tr '.' '_')"
+    bxiw_message "info" "BOOST version is                : '${bxiw_package_version}'"
+    bxiw_message "info" "BOOST source directory is       : '${_boost_source_dir}'"
+    if [ ! -d ${_boost_source_dir} ]; then
+	bxiw_message "info" "Unpacking source directory..."
+	tar xjf ${bxiw_cache_dir}/${_boost_tarball}
+	if [ $? -ne 0 ]; then
+	    bxiw_message "error" "Source directory has not been unpacked."
+	    cd ${_boost_opwd}
+	    return 1
+	else
+	    bxiw_message "info" "Source directory has been unpacked."
+	fi
+    else
+	bxiw_message "info" "Source directory was already unpacked."
+    fi
+
+    bxiw_message "info" "BOOST build directory is        : '${bxiw_build_dir}'"
+    bxiw_message "info" "BOOST tag directory is          : '${bxiw_tag_dir}'"
+    bxiw_message "info" "BOOST installation directory is : '${bxiw_install_dir}'"
+
+    if [ ! -f ${bxiw_build_dir}/bootstrap.sh ]; then
+	bxiw_message "info" "Copying the source directory in the build directory..."
+	cp -a ${_boost_source_dir}/* ${bxiw_build_dir}/
+    else
+	bxiw_message "info" "The source directory is already cloned in the build directory."
+	ls -1 ${bxiw_build_dir}
+    fi
+
+    cd ${bxiw_build_dir}
+
+    # Configuration:
+    local _boost_do_config=false
+    if [ ! -f ${bxiw_tag_configured} ]; then
+	bxiw_message "info" "BOOST configuration is needed."
+	_boost_do_config=true
+    else
+	bxiw_message "info" "BOOST configuration is already done."
+	if [ ${bxiw_do_reconfigure} == true ]; then
+	    bxiw_message "info" "Forcing BOOST reconfiguration..."
+	    _boost_do_configure=true
+	fi
+    fi
+ 
+    if [ ${_boost_do_config} == true ]; then
+	bxiw_message "info" "BOOST configuration..."
+	./bootstrap.sh \
+	    --with-libraries="${boost_libs}" \
+	    --with-python=$(which python) \
+	    --with-icu \
+	    ${_boost_source_dir}
+	if [ $? -ne 0 ]; then
+	    bxiw_message "error" "BOOST configuration failed!"
+	    cd ${_boost_opwd}
+	    return 1
+	else
+	    touch ${bxiw_tag_configured}
+    	    bxiw_message "info" "BOOST is configured."
+	fi
+    else
+	bxiw_message "info" "Do not configure BOOST."
+    fi
+
+    # Build:
+    local _boost_do_build=false
+    if [ ! -f ${bxiw_tag_built} ]; then
+	bxiw_message "info" "BOOST build is needed."
+	_boost_do_build=true
+    else
+	bxiw_message "info" "BOOST build is already done."
+	if [ ${bxiw_do_rebuild} == true ]; then
+	    bxiw_message "info" "Forcing BOOST rebuild..."
+	    _boost_do_build=true
+	fi
+    fi
+
+    if [ ${_boost_do_build} == true ]; then
+	bxiw_message "info" "Building BOOST..."
+	local _boost_nbprocs=${bxiw_nbprocs}
+	if [ ${_boost_nbprocs} -gt 2 ]; then
+	    let _boost_nbprocs=${bxiw_nbprocs}
+	else
+	    _boost_nbprocs=1 
+	fi
+	bxiw_message "info" "#procs = ${_boost_nbprocs}"
+    	./b2 stage
+	if [ $? -ne 0 ]; then
+    	    bxiw_message "error" "BOOST build failed!"
+    	    cd ${_boost_opwd}
+    	    return 1
+	else
+	    touch ${bxiw_tag_built}
+    	    bxiw_message "info" "BOOST is built."
+	fi
+    else
+	bxiw_message "info" "Do not build BOOST."
+    fi
+
+    # Installation:
+    local _boost_do_install=false
+    if [ ! -f ${bxiw_tag_installed} ]; then
+	bxiw_message "info" "BOOST installation is needed."
+	_boost_do_install=true
+    else
+	bxiw_message "info" "BOOST installation is already done."
+	if [ ${bxiw_do_reinstall} == true ]; then
+	    _boost_do_install=true
+	    bxiw_message "info" "Forcing BOOST installation..."
+	fi
+    fi
+    if [ ${bxiw_no_install} == true ]; then
+	_boost_do_install=false
+    fi
+
+    if [ ${_boost_do_install} == true ]; then
+	local _boost_do_package=false
+	if [ ${bxiw_with_package} == true ]; then
+	    _boost_do_package=true
+	fi
+	if [ ${_boost_do_package} == true ]; then
+	    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+		bxiw_message "info" "Building a binary package for BOOST..."
+		boost_installer_makedebpack
+	    else
+    		bxiw_message "error" "Cannot pack BOOST for '${bxiw_os_distrib_id}'!"
+    		cd ${_boost_opwd}
+		return 1
+	    fi
+	else
+	    bxiw_message "info" "Installing BOOST..."
+	    ./b2 \
+		--prefix="${bxiw_install_dir}" \
+		install
+	    if [ $? -ne 0 ]; then
+    		bxiw_message "error" "BOOST installation failed!"
+    		cd ${_boost_opwd}
+    		return 1
+	    else
+		touch ${bxiw_tag_installed}
+    		bxiw_message "info" "BOOST is installed."
+	    fi
+	fi
+    else
+	bxiw_message "info" "Do not install BOOST."
+    fi
+    cd ${_boost_opwd}
+    return  0
+}
+
+
+function boost_installer_makedebpack()
+{
+    local _boost_build_dir="${build_dir}"
+    cd ${_boost_build_dir}
+    mkdir -p ${_boost_build_dir}/doc-pak
+    touch ${_boost_build_dir}/description-pak
+    cat>${_boost_build_dir}/description-pak<<EOF
+Boost C++ Library (Bayeux edition)
+
+This is a binary version for Ubuntu 18.04 
+usable with the Bayeux software suite. 
+EOF
+
+    local _arch="amd64"
+    local _boost_do_package=true
+    local _boost_pkg_filename="bx${package_name}_${package_version}-${pkg_release}_${_arch}.deb"
+    if [ -f ${package_dir}/${_boost_pkg_filename} ]; then
+	echo >&2 "[info] Package '${_boost_pkg_filename}' exists in '${package_dir}'."
+	_boost_do_package=false
+    fi
+    local _boost_requires="\
+		g++ \
+		python libpython2.7 \
+		zlib1g \
+		bzip2 \
+		libxml2 \
+		libicu60 \
+	  "
+    _boost_requires_list=$(echo ${_boost_requires} | tr ' ' ',')
+    # _boost_conflicts_list=""
+    ###	     --conflicts="${_boost_conflicts_list}" 
+    echo >&2 "[info] Requires : ${_boost_requires_list}!"	
+    if [ ${_boost_do_package} == true ]; then
+	if [ "x${os_arch}" != "xx86_64" ]; then
+	    echo >&2 "[error] Unsupported architecture ${os_arch}!"	
+	    return 1
+	fi
+	sudo checkinstall \
+	     --type="debian" \
+	     --install="no" \
+	     --fstrans="no" \
+	     --pkgname="bx${package_name}" \
+	     --pkgversion="${package_version}" \
+	     --pkgrelease=${pkg_release} \
+	     --pkglicense="Boost Software License" \
+	     --pkgsource="$(boost_installer_get_url ${package_version})" \
+	     --maintainer="${pkg_maintener_email}" \
+	     --provides="bx${package_name}" \
+	     --requires="${_boost_requires_list}" \
+	     --backup="no" \
+	     --pakdir="${package_dir}" \
+	     --default \
+	     ninja install
+	if [ $? -ne 0 ]; then
+	    echo >&2 "[error] Debian binary package build failed!"	
+	    return 1
+	fi
+    fi	 
+    return 0
+}
+
+
+function boost_installer_setup()
+{
+    bxiw_log_trace "boost_installer_setup: entering..."
+    local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}.bash"
+    bxiw_message "info" "Installing setup script '${_bxsoftware_setup_script}'..."
+    cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
+	sed \
+	    -e "s@__BOOST_INSTALL_DIR__@${bxiw_install_dir}@g" \
+	    -e "s@__BOOST_VERSION__@${bxiw_package_version}@g" \
+	    > ${_bxsoftware_setup_script}
+    return  0
+}
+
+bxiw_detect_os
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Unsupported OS!"
+fi
+
+bxiw_env
+bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
+bxiw_message "info" "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+boost_installer_parse_cl ${bxiw_app_cl_remaining_argv}
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Command line parse error!"
+fi
+
+boost_installer_prepare
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Preparation failed!"
+fi
+
+boost_installer_set_system_dependencies
+
+boost_installer_print
+
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "System dependencies installation failed!"
+fi
+
+boost_installer_download
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Source archive download failed!"
+fi
+
+boost_installer_install
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Installation failed!"
+fi
+
+if [ ${bxiw_with_package} == false ]; then
+    boost_installer_setup
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "Setup failed!"
+    fi
+fi
+
+bxiw_exit 0
+
+# end

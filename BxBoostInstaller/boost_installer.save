@@ -1,0 +1,758 @@
+#!/usr/bin/env bash
+
+opwd=$(pwd)
+installer_prefix="$(pwd)"
+os_name=$(uname -s)
+os_arch=$(uname -m)
+os_distrib_id=
+os_distrib_release=
+nbprocs=$(cat /proc/cpuinfo | grep ^processor | wc -l)
+default_package_version="1.68.0"
+default_cache_directory="${HOME}/bxsoftware/_cache.d"
+default_working_directory="${HOME}/bxsoftware/_work.d"
+default_install_base_dir="${HOME}/bxsoftware"
+default_package_dir="${HOME}/bxsoftware/_package.d"
+if [ ${UID} -eq 0 ]; then
+    default_cache_directory="/var/bxsoftware/cache.d"    
+    default_working_directory="/var/bxsoftware/work.d"    
+    default_install_base_dir="/opt/bxsoftware"    
+    default_package_dir="/var/bxsoftware/package.d"
+fi
+package_name="boost"
+package_version=
+work_dir=
+cache_dir=
+package_dir=
+skip_config=false
+
+do_reconfigure=false
+do_rebuild=false
+no_build=false
+no_install=false
+no_package=true
+system_install=false
+build_dir=
+remove_build_dir=false
+remove_tarballs=false
+install_base_dir="${default_install_base_dir}"
+install_dir=
+timeout_seconds=3600
+gui=false
+pkg_maintener_email="mauger@lpccaen.in2p3.fr"
+pkg_release=1
+
+
+function app_exit()
+{
+    local error_code=$1
+    shift 1
+    local error_message="$@"
+    if [ "x${error_message}" != "x" -a ${error_code} -ne 0 ]; then
+	echo >&2 "[error] ${error_message}"
+    fi
+    cd ${opwd}
+    exit ${error_code} 
+}
+
+
+function app_usage()
+{
+    cat<<EOF
+
+boost_installer - Boost library installer
+
+Synopsis:
+
+    boost_installer [OPTION]...
+
+Options:
+
+  --help              Print this help then exit
+  --cache-dir path    Set the cache directory
+  --work-dir path     Set the working directory
+  --build-dir path    Set the build directory
+  --install-dir path  Set the installation directory
+  --skip-config       Skip configuration step (only if already performed)
+  --reconfigure	      Force reconfiguration      
+  --no-build          Configuration only      
+  --rebuild	      Force rebuild      
+  --no-install        Build only
+  --system-install    Perfome a system installation
+  --no-pkg            Do not build the package
+  --pkg               Build the package
+  --pkg-maintener     Set the package maintener email address
+  --gui               Activate GUI
+      
+EOF
+    return 0
+}
+
+
+function boost_installer_detect_os()
+{
+    if [ "x${os_name}" = "xLinux" ]; then
+	if [ -f /etc/lsb-release ]; then
+	    os_distrib_id=$(grep ^DISTRIB_ID= /etc/lsb-release | cut -d= -f2)
+	    os_distrib_release=$(grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d= -f2)
+	elif [ -f /etc/redhat-release ]; then
+	    os_distrib_id=$(cat /etc/redhat-release | cut -d' ' -f1)
+	    os_distrib_release=$(cat /etc/redhat-release | cut -d' ' -f4 | cut -d. -f1,2)
+	fi
+    else
+	return 1
+    fi
+    return 0
+}
+
+
+function boost_installer_env()
+{
+    if [ "x${BX_CACHE_DIR}" != "x" ]; then
+	cache_dir="${BX_CACHE_DIR}"
+	echo >&2 "[info] Cache directory is set from the BX_CACHE_DIR environment variable: '${cache_dir}'"
+    fi
+    
+    if [ "x${BX_WORK_DIR}" != "x" ]; then
+	work_dir="${BX_WORK_DIR}"
+	echo >&2 "[info] Work directory is set from the BX_WORK_DIR environment variable: '${work_dir}'"
+    fi
+    
+    if [ "x${BX_INSTALL_BASE_DIR}" != "x" ]; then
+	install_base_dir="${BX_INSTALL_BASE_DIR}"
+	echo >&2 "[info] Installation base directory is set from the BX_INSTALL_BASE_DIR environment variable: '${install_base_dir}'"
+    fi
+   
+    if [ "x${BX_PACKAGE_DIR}" != "x" ]; then
+	package_dir="${BX_PACKAGE_DIR}"
+	echo >&2 "[info] Package directory is set from the BX_PACKAGE_DIR environment variable: '${package_dir}'"
+    fi
+
+    return 0
+}
+
+
+function boost_installer_parse_cl()
+{
+    while [ -n "$1" ]; do
+	token="$1"
+	if [ "x${token:0:1}" = "x-" ]; then
+	    opt="${token}"
+	    if [ ${opt} = "--help" ]; then
+		app_usage
+		app_exit 0
+	    elif [ ${opt} = "--work-dir" ]; then
+		shift 1
+		work_dir="$1"
+	    elif [ ${opt} = "--cache-dir" ]; then
+		shift 1
+		cache_dir="$1"
+	    elif [ ${opt} = "--build-dir" ]; then
+		shift 1
+		build_dir="$1"
+	    elif [ ${opt} = "--install-dir" ]; then
+		shift 1
+		install_dir="$1"
+	    elif [ ${opt} = "--package-dir" ]; then
+		shift 1
+		package_dir="$1"
+	    elif [ ${opt} = "--skip-config" ]; then
+		skip_config=true
+	    elif [ ${opt} = "--reconfigure" ]; then
+		do_reconfigure=true
+	    elif [ ${opt} = "--rebuild" ]; then
+		do_rebuild=true
+	    elif [ ${opt} = "--no-build" ]; then
+		no_build=true
+	    elif [ ${opt} = "--no-install" ]; then
+		no_install=true
+	    elif [ ${opt} = "--remove-build-dir" ]; then
+		remove_build_dir=true
+	    elif [ ${opt} = "--remove-tarballs" ]; then
+		remove_tarballs=true
+	    elif [ ${opt} = "--gui" ]; then
+		gui=true
+	    elif [ ${opt} = "--pkg-maintener" ]; then
+		shift 1
+		pkg_maintener_email="$1"
+	    elif [ ${opt} = "--no-pkg" ]; then
+		no_package=true
+	    elif [ ${opt} = "--pkg" ]; then
+		no_package=false
+	    elif [ ${opt} = "--system-install" ]; then
+		system_install=true
+	    else
+		echo >&2 "[error] Unsupported option '${opt}'!"
+		return 1
+	    fi
+	else
+	    arg="${token}"
+	fi
+	shift 1
+    done
+    return 0
+}
+
+
+function boost_installer_prepare()
+{ 
+    if [ "x${package_version}" = "x" ]; then
+	package_version="${default_package_version}"
+    fi
+
+    if [ "x${cache_dir}" = "x" ]; then
+	cache_dir="${default_cache_directory}"
+    fi
+
+    if [ "x${work_dir}" = "x" ]; then
+	work_dir="${default_working_directory}"
+    fi
+
+    if [ "x${install_base_dir}" = "x" ]; then
+	install_base_dir="${default_install_base_dir}"
+    fi
+
+    if [ "x${package_dir}" = "x" ]; then
+	package_dir="${default_package_directory}"
+    fi
+
+    local _default_install_directory="${install_base_dir}/${package_name}/${package_version}"
+    if [ "x${install_dir}" = "x" ]; then
+	install_dir="${_default_install_directory}"
+    fi
+
+    echo >&2 "[devel] package_version='${package_version}'"
+    echo >&2 "[devel] cache_dir='${cache_dir}'"
+    echo >&2 "[devel] work_dir='${work_dir}'"
+    echo >&2 "[devel] install_base_dir='${install_base_dir}'"
+    echo >&2 "[devel] install_dir='${install_dir}'"
+    echo >&2 "[devel] package_dir='${package_dir}'"
+
+    local _do_reconfigure_repr="FALSE"
+    if [ ${do_reconfigure} = true ]; then
+	_do_reconfigure_repr="TRUE"
+    fi
+
+    local _do_rebuild_repr="FALSE"
+    if [ ${do_rebuild} = true ]; then
+	_do_rebuild_repr="TRUE"
+    fi
+    
+    local _remove_build_dir_repr="FALSE"
+    if [ ${remove_build_dir} = true ]; then
+	_remove_build_dir_repr="TRUE"
+    fi
+    
+    local _remove_tarballs_repr="FALSE"
+    if [ ${remove_tarballs} = true ]; then
+	_remove_tarballs_repr="TRUE"
+    fi
+    
+    local _system_install_repr="FALSE"
+    if [ ${system_install} = true ]; then
+	_system_install_repr="TRUE"
+    fi
+    
+    if [ ${gui} = true ]; then
+	local _choices=$(yad --width=500 \
+			     --form \
+			     --title "Boost options" \
+			     --field="Cache directory:CDIR"   "${cache_dir}" \
+			     --field="Working directory:CDIR" "${work_dir}" \
+			     --field="Installation directory:CDIR" "${install_dir}" \
+			     --field="Force reconfigure:CHK" "${_do_reconfigure_repr}" \
+			     --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+			     --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+			     --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+			     --field="System installation:CHK" "$_system_install_repr}" \
+	      )
+	if [ "x${_choices}" = "x" ]; then
+	    echo >&2 "[info] Cancelled dialog!"
+	    return 1
+	fi
+	cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+	work_dir=$(echo ${_choices} | cut -d'|' -f2)
+	install_dir=$(echo ${_choices} | cut -d'|' -f3)
+	_do_reconfigure_repr=$(echo ${_choices} | cut -d'|' -f4)
+	if [ ${_do_reconfigure_repr} == "TRUE" ]; then
+	    do_reconfigure=true
+	else
+	    do_reconfigure=false
+	fi
+	_do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f5)
+	if [ ${_do_rebuild_repr} == "TRUE" ]; then
+	    do_rebuild=true
+	else
+	    do_rebuild=false
+	fi
+	_remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f6)
+	if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+	    remove_build_dir=true
+	else
+	    remove_build_dir=false
+	fi
+	_remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f7)
+	if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+	    remove_tarballs=true
+	else
+	    remove_tarballs=false
+	fi
+	_system_install_repr=$(echo ${_choices} | cut -d'|' -f8)
+	if [ ${_system_install_repr} == "TRUE" ]; then
+	    system_install=true
+	else
+	    system_install=false
+	fi
+    fi
+    
+    # Prepare:
+    
+    if [ "x${build_dir}" = "x" ]; then
+	build_dir="${work_dir}/_build.d/${package_name}-${package_version}"
+    fi
+
+    if [ ! -d ${cache_dir} ]; then
+	mkdir -p ${cache_dir}
+	if [ $? -ne 0 ]; then
+	    echo >&2 "[error] Cannot create the '${cache_dir}' directory!"
+	    return 1
+	else
+	    echo >&2 "[info] Cache directory '${cache_dir}' was created!"
+	fi
+    else
+	echo >&2 "[info] Cache directory '${cache_dir}' already exists!"
+    fi
+     
+    if [ ${do_rebuild} == true -a -d ${build_dir} ]; then
+	echo >&2 "[info] Removing existing '${build_dir}' build directory..."
+	rm -fr ${build_dir}
+    fi
+    
+    if [ ! -d ${build_dir} ]; then
+	mkdir -p ${build_dir}
+	if [ $? -ne 0 ]; then
+	    echo >&2 "[error] Cannot create the '${build_dir}' directory!"
+	    return 1
+	else
+	    echo >&2 "[info] Build directory '${build_dir}' was created!"
+	fi
+    fi
+    
+    if [ ! -d ${install_base_dir} ]; then
+	mkdir -p ${install_base_dir}
+	if [ $? -ne 0 ]; then
+	    echo >&2 "[error] Cannot create the '${install_base_dir}' directory!"
+	    return 1
+	else
+	    echo >&2 "[info] Installation base directory '${install_base_dir}' was created!"
+	fi
+    fi
+     
+    if [ ${system_install} == true ]; then
+	install_dir="/usr"
+    fi
+    
+    if [ ${no_package} == false ]; then
+	if [ ! -d ${package_dir} ]; then
+	    mkdir -p ${package_dir}
+	    if [ $? -ne 0 ]; then
+		echo >&2 "[error] Cannot create the '${package_dir}' directory!"
+		return 1
+	    else
+		echo >&2 "[info] Package directory '${package_dir}' was created!"
+	    fi
+	fi
+    fi
+     
+    return 0
+}
+
+
+function boost_installer_get_tarball()
+{
+    local _boost_version="$1"
+    local _boost_patch=""
+    if [ "x${_boost_version}" = "x1.68.0" ]; then
+	echo "boost_$(echo ${_boost_version} | tr '.' '_').tar.bz2"
+    else
+	echo >&2 "[error] Unsupported version '${_boost_version}'!"
+	return 1
+    fi
+    return 0
+}
+
+
+function boost_installer_get_url()
+{
+    local _boost_version="$1"
+    local _boost_tarball=$(boost_installer_get_tarball ${_boost_version})
+    echo "https://sourceforge.net/projects/boost/${_boost_version}/${_boost_tarball}/download"
+    return 0
+}
+
+
+function boost_installer_print()
+{
+    echo >&2 "[info] os_name             = '${os_name}'"
+    echo >&2 "[info] os_arch             = '${os_arch}'"
+    echo >&2 "[info] os_distrib_id       = '${os_distrib_id}'"
+    echo >&2 "[info] os_distrib_release  = '${os_distrib_release}'"
+    echo >&2 "[info] nbprocs             = ${nbprocs}"
+    echo >&2 "[info] UID                 = ${UID}"
+    echo >&2 "[info] package_version     = '${package_version}'"
+    echo >&2 "[info] work_dir            = '${work_dir}'"
+    echo >&2 "[info] cache_dir           = '${cache_dir}'"
+    echo >&2 "[info] install_dir         = '${install_dir}'"
+    echo >&2 "[info] package_dir         = '${package_dir}'"
+    echo >&2 "[info] build_dir           = '${build_dir}'"
+    echo >&2 "[info] skip_config         = ${skip_config}"
+    echo >&2 "[info] no_build            = ${no_build}"
+    echo >&2 "[info] do_rebuild          = ${do_rebuild}"
+    echo >&2 "[info] remove_build_dir    = ${remove_build_dir}"
+    echo >&2 "[info] no_install          = ${no_install}"
+    echo >&2 "[info] package_dir         = '${package_dir}'"
+    echo >&2 "[info] no_package          = ${no_package}"
+    echo >&2 "[info] system_install      = ${system_install}"
+    echo >&2 "[info] pkg_maintener_email = '${pkg_maintener_email}'"
+    return 0
+}
+
+
+function boost_installer_install_system_dependencies_ubuntu_18_04()
+{
+    sudo apt-get install build-essential g++ python-dev autotools-dev libicu-dev build-essential libbz2-dev
+    local _syspackages="build-essential \
+   	  	    make \
+        	    pkg-config \
+        	    dpkg-dev \
+       	    	    wget \
+   		    g++ \
+		    gcc \
+		    binutils \
+		    python-dev \
+		    autotools-dev \
+		    libicu60 libicu-dev \
+		    bzip2 libbz2-dev libbz2-1.0  \
+                    zlib1g zlib1g-dev \
+       	    	    libxml2 libxml2-dev \
+		    "    
+    if [ ${no_package} = false  ]; then
+	_syspackages="${_syspackages} checkinstall "
+    fi
+   
+    for syspackage in ${_syspackages}; do
+	dpkg-query -s ${syspackage} > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    sudo apt-get install ${syspackage}
+	    if [ $? -ne 0 ]; then
+		app_exit 1 "Cannot install system package '${syspackage}'"
+	    fi
+	else
+	    echo >&2 "[info] System package '${syspackage}' is already installed."
+	fi
+    done
+
+    return 0
+}
+
+
+function boost_installer_install_system_dependencies()
+{
+    if [ "x${os_distrib_id}" = "xUbuntu" -a "x${os_distrib_release}" = "x18.04" ]; then
+	boost_installer_install_system_dependencies_ubuntu_18_04
+    else
+	echo >&2 "[error] Unsupported operation system flavour!"
+	return 1
+    fi
+    return 0
+}
+
+
+function boost_installer_download()
+{
+    local _boost_opwd=$(pwd)
+    local _boost_tarball=$(boost_installer_get_tarball ${package_version})
+    local _boost_url=$(boost_installer_get_url ${package_version})
+    if [ ! -f ${cache_dir}/${_boost_tarball} ]; then
+	cd ${_cache_dir}
+	echo >&2 "[info] Downloading tarball '${_boost_tarball}' from '${_boost_url}'..."
+	wget ${_boost_url} -O "${cache_dir}/${_boost_tarball}"
+	if [ $? -ne 0 ]; then
+	    echo >&2 "[error] Cannot download the '${_boost_tarball}' file!"
+	    cd ${_boost_opwd}
+	    return 1
+	fi
+    else
+	echo >&2 "[info] Tarball '${_boost_tarball}' already exists in '${cache_dir}'!"
+    fi
+    cd ${_boost_opwd}
+    return  0
+}
+
+
+function boost_installer_install()
+{
+    local _boost_opwd=$(pwd)
+    local _boost_tarball=$(boost_installer_get_tarball ${package_version})
+    cd ${cache_dir}
+    local _boost_source_dir="$(pwd)/boost_$(echo ${package_version} | tr '.' '_')"
+    echo >&2 "[info] Boost version is                : '${package_version}'"
+    echo >&2 "[info] Boost source directory is       : '${_boost_source_dir}'"
+    echo >&2 "[info] Boost source directory is       : '${_boost_source_dir}'"
+    echo >&2 "[info] Boost build directory is now    : '${build_dir}'"
+    echo >&2 "[info] Boost installation directory is : '${install_dir}'"
+    if [ ! -d ${_boost_source_dir} ]; then
+	echo >&2 "[info] Unpacking source directory..."
+	tar xjf ${cache_dir}/${_boost_tarball}
+	echo >&2 "[info] Source directory has been unpacked."
+    else
+	echo >&2 "[info] Source directory was already unpacked."
+    fi
+
+    echo >&2 "[info] Copying source directory in build directory..."
+    cp -a ${_boost_source_dir}/* ${build_dir}/
+    ### ls -l ${build_dir}
+
+    cd ${build_dir}
+
+    local _boost_libs="atomic,chrono,date_time,filesystem,graph,iostreams,locale,log,math,program_options,python,random,regex,serialization,signals,system,thread"
+    echo >&2 "[info] Boost libraries: ${_boost_libs}"
+
+    return 2
+    
+    # Configuration:
+    local _boost_do_config=false
+    if [ ! -f rules.ninja ]; then
+	_boost_do_config=true
+    elif [ ${skip_config} == true ]; then
+	_boost_do_config=false
+    fi
+    if [ ${do_reconfigure} == true ]; then
+	_boost_do_config=true
+    fi
+    if [ ${_boost_do_config} == true ]; then
+	echo >&2 "[info] Boost configuration..."
+	./bootstrap.sh  \
+	    --with-libraries="${_boost_libs}" \
+	    --with-python=$(which python) \
+	    --with-icu \
+	    ${_boost_source_dir}
+	if [ $? -ne 0 ]; then
+	    echo >&2 "[error] Boost configuration failed!"
+	    cd ${_boost_opwd}
+	    return 1
+	fi
+    else
+	echo >&2 "[info] Boost configuration was already done!"
+    fi
+    
+    # Build:
+    local _boost_do_build=true
+    if [ ${no_build} == true ]; then
+    	echo >&2 "[info] Boost no build!"
+    	_boost_do_build=false
+    else
+    	if [ ${do_rebuild} == true ]; then
+    	    echo >&2 "[info] Boost rebuild!"
+    	    _boost_do_build=true
+    	fi
+    fi
+    if [ ${_boost_do_build} == true ]; then
+    	echo >&2 "[info] Building Boost..."
+    	local _boost_nbprocs=${nbprocs}
+    	if [ ${_boost_nbprocs} -gt 2 ]; then
+    	    let _boost_nbprocs=${nbprocs}
+    	else
+    	    _boost_nbprocs=1 
+    	fi
+    	echo >&2 "[info] #procs = ${_boost_nbprocs}"
+    	./b2 stage
+    	if [ $? -ne 0 ]; then
+    	    echo >&2 "[error] Boost build failed!"
+    	    cd ${_boost_opwd}
+    	    return 1
+    	fi
+    else
+    	echo >&2 "[info] Do not build Boost."
+    fi
+
+    # Installation:
+    local _boost_do_install=true
+    if [ ${no_install} == true ]; then
+	_boost_do_install=false
+    fi	
+    if [ ${_boost_do_install} == true ]; then
+	local _boost_do_package=false
+	if [ ${no_package} == false ]; then
+	    _boost_do_package=true
+	fi
+	if [ ${_boost_do_package} == true ]; then
+	    if [ "x${os_distrib_id}" = "xUbuntu" ]; then
+		echo >&2 "[info] Building a binary package for Boost..."
+		boost_installer_makedebpack
+	    else
+    		echo >&2 "[error] Cannot pack Boost for '${os_distrib_id}'!"
+    		cd ${_boost_opwd}
+		return 1
+	    fi
+	else
+	    echo >&2 "[info] Installing Boost..."
+	    ./b2 \
+		--prefix=PREFIX:PATH="${install_dir}" \
+		install
+	    if [ $? -ne 0 ]; then
+    		echo >&2 "[error] Boost installation failed!"
+    		cd ${_boost_opwd}
+    		return 1
+	    fi
+	fi
+    fi
+    cd ${_boost_opwd}
+    return  0
+}
+
+
+function boost_installer_makedebpack()
+{
+    local _boost_build_dir="${build_dir}"
+    cd ${_boost_build_dir}
+    mkdir -p ${_boost_build_dir}/doc-pak
+    touch ${_boost_build_dir}/description-pak
+    cat>${_boost_build_dir}/description-pak<<EOF
+Boost C++ Library (Bayeux edition)
+
+This is a binary version for Ubuntu 18.04 
+usable with the Bayeux software suite. 
+EOF
+
+    local _arch="amd64"
+    local _boost_do_package=true
+    local _boost_pkg_filename="bx${package_name}_${package_version}-${pkg_release}_${_arch}.deb"
+    if [ -f ${package_dir}/${_boost_pkg_filename} ]; then
+	echo >&2 "[info] Package '${_boost_pkg_filename}' exists in '${package_dir}'."
+	_boost_do_package=false
+    fi
+    local _boost_requires="\
+		g++ \
+		python libpython2.7 \
+		zlib1g \
+		bzip2 \
+		libxml2 \
+		libicu60 \
+	  "
+    _boost_requires_list=$(echo ${_boost_requires} | tr ' ' ',')
+    # _boost_conflicts_list=""
+    ###	     --conflicts="${_boost_conflicts_list}" 
+    echo >&2 "[info] Requires : ${_boost_requires_list}!"	
+    if [ ${_boost_do_package} == true ]; then
+	if [ "x${os_arch}" != "xx86_64" ]; then
+	    echo >&2 "[error] Unsupported architecture ${os_arch}!"	
+	    return 1
+	fi
+	sudo checkinstall \
+	     --type="debian" \
+	     --install="no" \
+	     --fstrans="no" \
+	     --pkgname="bx${package_name}" \
+	     --pkgversion="${package_version}" \
+	     --pkgrelease=${pkg_release} \
+	     --pkglicense="Boost Software License" \
+	     --pkgsource="$(boost_installer_get_url ${package_version})" \
+	     --maintainer="${pkg_maintener_email}" \
+	     --provides="bx${package_name}" \
+	     --requires="${_boost_requires_list}" \
+	     --backup="no" \
+	     --pakdir="${package_dir}" \
+	     --default \
+	     ninja install
+	if [ $? -ne 0 ]; then
+	    echo >&2 "[error] Debian binary package build failed!"	
+	    return 1
+	fi
+    fi	 
+    return 0
+}
+
+
+function boost_installer_setup()
+{
+    local _boost_system=false
+    local _bxsoftware_setup_dir="${HOME}/.bxsoftware.d/modules"
+    if [ ${_boost_system} = true ]; then
+	_bxsoftware_setup_dir="/etc/bxsoftware/modules"
+	if [ ! -d ${_bxsoftware_setup_dir} ]; then
+	    sudo mkdir -p ${_bxsoftware_setup_dir}
+	    if [ $? -ne 0 ]; then
+    		echo >&2 "[error] Creation of directory '${_bxsoftware_setup_dir}' failed!"
+		return 1
+	    fi
+	fi
+    else
+	if [ ! -d ${_bxsoftware_setup_dir} ]; then
+	    mkdir -p ${_bxsoftware_setup_dir}
+	    if [ $? -ne 0 ]; then
+    		echo >&2 "[error] Creation of directory '${_bxsoftware_setup_dir}' failed!"
+		return 1
+	    fi
+	fi
+    fi
+    echo >&2 "[info] Installing setup script '${_bxsoftware_setup_dir}/boost.bash'..."
+    cat ${installer_prefix}/resources/boost.bash.in | \
+	sed \
+	    -e "s@__Boost_INSTALL_DIR__@${install_dir}@g" \
+	    -e "s@__Boost_VERSION__@${package_version}@g" \
+	    > ${_bxsoftware_setup_dir}/boost.bash
+    return  0
+}
+
+
+boost_installer_detect_os
+if [ $? -ne 0 ]; then
+    app_exit 1 "Unsupported OS!"
+fi
+
+
+boost_installer_env
+
+
+boost_installer_parse_cl $@
+if [ $? -ne 0 ]; then
+    app_exit 1 "Command line parse error!"
+fi
+
+
+boost_installer_prepare
+if [ $? -ne 0 ]; then
+    app_exit 1 "Preparation failed!"
+fi
+
+
+boost_installer_print
+
+
+boost_installer_install_system_dependencies
+if [ $? -ne 0 ]; then
+    app_exit 1 "System dependencies installation failed!"
+fi
+
+
+boost_installer_download
+if [ $? -ne 0 ]; then
+    app_exit 1 "Source archive download failed!"
+fi
+
+
+boost_installer_install
+if [ $? -ne 0 ]; then
+    app_exit 1 "Installation failed!"
+fi
+
+# if [ ${no_package} == false ]; then
+#     boost_installer_setup
+#     if [ $? -ne 0 ]; then
+# 	app_exit 1 "Setup failed!"
+#     fi
+# fi
+
+app_exit 0
+
+# end
