@@ -208,6 +208,7 @@ function bxiw_check_installed_system_package()
 {
     local _syspackage_name="$1"
     shift 1
+    bxiw_log_info "Checking package '${_syspackage_name}'..."
     if [ "x${_syspackage_name}" = "x" ]; then
 	bxiw_exit 1 "Missing system package name!"
     fi
