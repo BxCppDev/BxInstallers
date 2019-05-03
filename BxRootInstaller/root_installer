@@ -63,6 +63,19 @@ function root_installer_parse_cl()
 
 function root_installer_prepare()
 {
+    if [ "x${bxiw_os_name}" = "xLinux" -a "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+	if [ "x${bxiw_os_distrib_release}" = "x16.04" ]; then
+	    if [ "x${bxiw_package_version}" = "x6.16.00" ]; then
+		echo >&2<<EOF
+Root version '${bxiw_package_version}' requests cmake 3.6 
+but Ubuntu Linux 16.04 provides cmake 3.5.
+EOF
+                bxiw_log_error "Unsupported Root version '${bxiw_package_version}'"
+		return 1
+	    fi
+	fi
+    fi
+    
     _bxiw_prepare_pre
  
     if [ ${bxiw_with_gui} = true ]; then
@@ -650,7 +663,7 @@ fi
 
 bxiw_env
 bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
-bxiw_message "info" "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+bxiw_log_info "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
 root_installer_parse_cl ${bxiw_app_cl_remaining_argv}
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Command line parse error!"
