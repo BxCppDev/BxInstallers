@@ -216,16 +216,19 @@ function bxiw_check_installed_system_package()
 	### dpkg-query -l ${_syspackage_name}
 	dpkg-query -s ${_syspackage_name} > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Package '${_syspackage_name}' is not installed"
 	    return 1
 	fi
     elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
 	sudo yum list installed ${_syspackage_name}
 	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Package '${_syspackage_name}' is not installed"
 	    return 1
 	fi
     elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
 	sudo yum list installed ${_syspackage_name}
 	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Package '${_syspackage_name}' is not installed"
 	    return 1
 	fi
     else
