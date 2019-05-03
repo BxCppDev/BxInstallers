@@ -10,6 +10,7 @@ bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="root"
 bxiw_default_package_version="6.16.00"
+bxiw_supported_package_versions="6.16.00 6.12.06"
 bxiw_package_version=
 
 root_system_tbb=false
@@ -148,6 +149,8 @@ function root_installer_get_tarball()
     shift 1
     local _root_patch=""
     if [ "x${_root_version}" = "x6.16.00" ]; then
+        echo "root_v${_root_version}.source.tar.gz"
+    elif [ "x${_root_version}" = "x6.12.06" ]; then
         echo "root_v${_root_version}.source.tar.gz"
     else
         echo >&2 "[error] Unsupported version '${_root_version}'!"
