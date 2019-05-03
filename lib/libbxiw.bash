@@ -249,16 +249,16 @@ function bxiw_install_system_package()
     fi
     bxiw_check_installed_system_package ${_syspackage_name}
     if [ $? -eq 0 ]; then
-	bxiw_log_info "System package '${_syspackage_name}' is already installed!"
+	bxiw_log_info "System package '${_syspackage_name}' is already installed"
     else
 	bxiw_log_info "Installing system package '${_syspackage_name}'..."
-	if [ "x${os_distrib_id}" = "xUbuntu" ]; then
+	if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
 	    sudo apt-get install ${_syspackage_name}
 	    _error_code=$?
-	elif [ "x${os_distrib_id}" = "xCentOS" ]; then
+	elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
 	    sudo yum install ${_syspackage_name}
 	    _error_code=$?
-	elif [ "x${os_distrib_id}" = "xScientific" ]; then
+	elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
 	    sudo yum install ${_syspackage_name}
 	    _error_code=$?
 	fi
