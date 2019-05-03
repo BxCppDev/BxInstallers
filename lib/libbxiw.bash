@@ -212,22 +212,25 @@ function bxiw_check_installed_system_package()
     if [ "x${_syspackage_name}" = "x" ]; then
 	bxiw_exit 1 "Missing system package name!"
     fi
-    if [ "x${os_distrib_id}" = "xUbuntu" ]; then
+    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
 	### dpkg-query -l ${_syspackage_name}
 	dpkg-query -s ${_syspackage_name} > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
 	    return 1
 	fi
-    elif [ "x${os_distrib_id}" = "xCentOS" ]; then
+    elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
 	sudo yum list installed ${_syspackage_name}
 	if [ $? -ne 0 ]; then
 	    return 1
 	fi
-    elif [ "x${os_distrib_id}" = "xScientific" ]; then
+    elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
 	sudo yum list installed ${_syspackage_name}
 	if [ $? -ne 0 ]; then
 	    return 1
 	fi
+    else
+	bxiw_log_error "Unsupported OS distribution '${bxiw_os_distrib_id}'"
+	return 1
     fi
     return 0
 }
