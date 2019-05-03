@@ -9,9 +9,9 @@ bxiw_app_name="boost_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="boost"
-bxiw_default_package_version="1.68.0"
+bxiw_default_package_version="1.69.0"
 bxiw_package_version=
-boost_libs="atomic,chrono,date_time,filesystem,graph,iostreams,locale,log,math,program_options,python,random,regex,serialization,signals,system,thread"
+boost_libs=""
 
 
 function boost_installer_usage()
@@ -131,6 +131,16 @@ function boost_installer_prepare()
         fi
     fi
     
+    boost_libs="atomic,chrono,date_time,filesystem,graph,iostreams,locale,log,math,program_options,python,random,regex,serialization,system,thread"
+    local _boost_version="${bxiw_package_version}"
+    bxiw_log_info "_boost_version = '${_boost_version}'"
+    # if [ "x${_boost_version}" = "x1.65.0" -o "x${_boost_version}" = "x1.68.0" ]; then
+    # 	boost_libs="${boost_libs},signals"
+    # elif [ "x${_boost_version}" = "x1.69.0" ]; then
+    # 	boost_libs="${boost_libs},signals2"
+    # fi
+    bxiw_log_info "boost_libs = '${boost_libs}'"
+
     # Prepare:
     _bxiw_prepare_post
      
@@ -141,7 +151,11 @@ function boost_installer_prepare()
 function boost_installer_get_tarball()
 {
     local _boost_version="$1"
-    if [ "x${_boost_version}" = "x1.68.0" ]; then
+    if [ "x${_boost_version}" = "x1.65.0" ]; then
+        echo "boost_$(echo ${_boost_version} | tr '.' '_').tar.bz2"
+    elif [ "x${_boost_version}" = "x1.68.0" ]; then
+        echo "boost_$(echo ${_boost_version} | tr '.' '_').tar.bz2"
+    elif [ "x${_boost_version}" = "x1.69.0" ]; then
         echo "boost_$(echo ${_boost_version} | tr '.' '_').tar.bz2"
     else
         echo >&2 "[error] Unsupported version '${_boost_version}'!"
@@ -249,7 +263,7 @@ function boost_installer_install()
     bxiw_message "info" "BOOST source directory is       : '${_boost_source_dir}'"
     if [ ! -d ${_boost_source_dir} ]; then
         bxiw_message "info" "Unpacking source directory..."
-        tar xjzf ${bxiw_cache_dir}/${_boost_tarball}
+        tar xjf ${bxiw_cache_dir}/${_boost_tarball}
         if [ $? -ne 0 ]; then
             bxiw_message "error" "Source directory has not been unpacked."
             cd ${_boost_opwd}
@@ -487,6 +501,8 @@ boost_installer_prepare
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Preparation failed!"
 fi
+
+# bxiw_exit 0
 
 boost_installer_set_system_dependencies
 
