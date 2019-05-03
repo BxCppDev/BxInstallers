@@ -213,7 +213,7 @@ function bxiw_check_installed_system_package()
     fi
     if [ "x${os_distrib_id}" = "xUbuntu" ]; then
 	### dpkg-query -l ${_syspackage_name}
-	dpkg-query -s ${_syspackage} > /dev/null 2>&1
+	dpkg-query -s ${_syspackage_name} > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
 	    return 1
 	fi
