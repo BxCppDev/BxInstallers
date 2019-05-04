@@ -2,6 +2,11 @@
 
 ### if [ "x${__libbxiw_loaded}" = "x" ]; then
 
+# Default package traits:
+__bxiw_enable_source_from_git=false
+__bxiw_disable_package=false
+__bxiw_enable_packaging=false
+
 if [ "x${bxiw_app_name}" = "x" ]; then
     bxiw_app_name=
 fi
@@ -46,6 +51,9 @@ if [ "x${bxiw_setup_module_dir}" = "x" ]; then
     bxiw_setup_module_dir=
 fi
 bxiw_default_timeout_seconds=3600
+bxiw_source_from_git=false
+bxiw_source_git_path=
+bxiw_source_git_branch=
 bxiw_timeout_seconds=0
 bxiw_install_base_dir=
 if [ "x${bxiw_system_install}" = "x" ]; then
@@ -63,11 +71,11 @@ fi
 if [ "x${bxiw_pkg_release}" = "x" ]; then
     bxiw_pkg_release=0
 fi
-__bxiw_disable_package=false
 bxiw_system_packages_build=
 bxiw_system_packages_run=
 bxiw_work_dir=
 bxiw_cache_dir=
+bxiw_cache_git_dir=
 bxiw_package_dir=
 bxiw_build_dir=
 bxiw_tag_dir=
@@ -300,6 +308,18 @@ function _bxiw_usage_options()
   --system-install     Perform a system installation
   --timeout duration   Set the timeout duration for downloading files (in seconds)
 EOF
+    
+    if [ ${__bxiw_enable_source_from_git} == true ]; then
+	cat<<EOF
+  --source-from-git    Built from the Git development branch
+  --source-git-path path
+                       Set the Git repository path of the source 
+  --source-git-branch name
+                       Set the Git branch to use as source repository 
+EOF
+	
+    fi
+    
     if [ ${__bxiw_disable_package} == false ]; then
 	cat<<EOF
   --no-pkg-build       Do not build the package
@@ -307,7 +327,9 @@ EOF
   --pkg-maintener      Set the package maintener email address
   --pkg-release        Set the package release number
 EOF
+	
     fi
+    
     return 0
 }
 
@@ -324,6 +346,14 @@ function bxiw_parse_cl()
 	    elif [ ${opt} = "--package-version" ]; then
 		shift 1
 		bxiw_package_version="$1"
+	    elif [ ${__bxiw_enable_source_from_git} == true -a ${opt} = "--source-from-git" ]; then
+		bxiw_source_from_git=true
+	    elif [ ${__bxiw_enable_source_from_git} == true -a ${opt} = "--source-git-path" ]; then
+		shift 1
+		bxiw_source_git_path="$1"
+	    elif [ ${__bxiw_enable_source_from_git} == true -a ${opt} = "--source-git-branch" ]; then
+		shift 1
+		bxiw_source_git_branch="$1"
 	    elif [ ${opt} = "--cache-dir" ]; then
 		shift 1
 		bxiw_cache_dir="$1"
@@ -505,9 +535,19 @@ function _bxiw_prepare_pre()
     if [ "x${bxiw_builder}" = "x" ]; then
 	bxiw_builder="make"
     fi
+
+    if [ ${__bxiw_enable_source_from_git} == true -a ${bxiw_source_from_git} == true ]; then
+	if [ "x${bxiw_source_git_branch}" == "x" ]; then
+	    bxiw_source_git_branch="develop"
+	fi
+     fi
     
     if [ "x${bxiw_package_version}" = "x" ]; then
-	bxiw_package_version="${bxiw_default_package_version}"
+	if [ ${__bxiw_enable_source_from_git} == true -a ${bxiw_source_from_git} == true ]; then
+	    bxiw_package_version="${bxiw_source_git_branch}"
+	else
+	    bxiw_package_version="${bxiw_default_package_version}"
+	fi
     fi
 
     if [ "x${bxiw_cache_dir}" = "x" ]; then
@@ -549,12 +589,20 @@ function _bxiw_prepare_pre()
 function bxiw_print()
 {
     bxiw_log_info "bxiw_app_name            = '${bxiw_app_name}'"
-    bxiw_log_info "bxiw_package_name        = '${bxiw_package_name}'"
-    bxiw_log_info "bxiw_package_version     = '${bxiw_package_version}'"
+    bxiw_log_info "  - enable source from Git = ${__bxiw_enable_source_from_git}"
+    bxiw_log_info "  - disable package        = ${__bxiw_disable_package} (deprecated)"
+    bxiw_log_info "  - enable packaging       = ${__bxiw_enable_packaging} (not used yet)"
     bxiw_log_info "bxiw_os_name             = '${bxiw_os_name}'"
     bxiw_log_info "bxiw_os_arch             = '${bxiw_os_arch}'"
     bxiw_log_info "bxiw_os_distrib_id       = '${bxiw_os_distrib_id}'"
     bxiw_log_info "bxiw_os_distrib_release  = '${bxiw_os_distrib_release}'"
+    bxiw_log_info "bxiw_package_name        = '${bxiw_package_name}'"
+    if [ ${__bxiw_enable_source_from_git} == true ]; then
+	bxiw_log_info "bxiw_source_from_git        = ${bxiw_source_from_git}"
+	bxiw_log_info "bxiw_source_git_path        = '${bxiw_source_git_path}'"
+	bxiw_log_info "bxiw_source_git_branch      = '${bxiw_source_git_branch}'"
+    fi
+    bxiw_log_info "bxiw_package_version     = '${bxiw_package_version}'"
     bxiw_log_info "bxiw_system_packages_build : "
     for _syspackname in ${bxiw_system_packages_build}; do
 	bxiw_log_info "  - ${_syspackname}"
@@ -570,7 +618,6 @@ function bxiw_print()
     bxiw_log_info "bxiw_install_base_dir    = '${bxiw_install_base_dir}'"
     bxiw_log_info "bxiw_work_dir            = '${bxiw_work_dir}'"
     bxiw_log_info "bxiw_cache_dir           = '${bxiw_cache_dir}'"
-    bxiw_log_info "bxiw_package_dir         = '${bxiw_package_dir}'"
     bxiw_log_info "bxiw_build_dir           = '${bxiw_build_dir}'"
     bxiw_log_info "bxiw_install_dir         = '${bxiw_install_dir}'"
     bxiw_log_info "bxiw_do_reconfigure      = ${bxiw_do_reconfigure}"
@@ -579,10 +626,52 @@ function bxiw_print()
     bxiw_log_info "bxiw_remove_build_dir    = ${bxiw_remove_build_dir}"
     bxiw_log_info "bxiw_remove_tarballs     = ${bxiw_remove_tarballs}"
     bxiw_log_info "bxiw_no_install          = ${bxiw_no_install}"
-    bxiw_log_info "bxiw_with_package        = ${bxiw_with_package}"
-    bxiw_log_info "bxiw_pkg_maintener_email = '${bxiw_pkg_maintener_email}'"
-    bxiw_log_info "bxiw_pkg_release         = '${bxiw_pkg_release}'"
+    if [ ${__bxiw_disable_package} == false ]; then
+	bxiw_log_info "bxiw_package_dir         = '${bxiw_package_dir}'"
+	bxiw_log_info "bxiw_with_package        = ${bxiw_with_package}"
+	bxiw_log_info "bxiw_pkg_maintener_email = '${bxiw_pkg_maintener_email}'"
+	bxiw_log_info "bxiw_pkg_release         = '${bxiw_pkg_release}'"
+    fi
     return 0
+}
+
+
+function bxiw_git_clone_and_branch()
+{
+    local _opwd=$(pwd)
+    local _git_url="$1"
+    shift 1
+    local _git_branch="$1"
+    shift 1
+    local _git_local_dir="$1"
+    shift 1 
+    bxiw_log_trace "Git repository URL       : '${_git_url}'"
+    bxiw_log_trace "Git branch               : '${_git_branch}'"
+    bxiw_log_trace "Git local copy directory : '${_git_local_dir}'"
+    bxiw_cache_git_dir=${bxiw_cache_dir}/${_git_local_dir}
+    if [ ! -d ${bxiw_cache_git_dir} ]; then
+	cd ${bxiw_cache_dir}
+	bxiw_log_info "Cloning '${_git_url}' into '${_git_local_dir}'..."
+	git clone ${_git_url} ${bxiw_cache_git_dir}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Cannot clone '${_git_url}' repository!"
+	    cd ${_opwd}
+	    return 1
+	fi
+	if [ "x${_git_branch}" != "x" ]; then
+	    cd ${bxiw_cache_git_dir}
+	    git checkout ${_git_branch}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Cannot checkout branch '${_git_branch}'!"
+		cd ${_opwd}
+		return 1
+	    fi
+	fi
+    else
+	bxiw_log_info "Git local copy directory '${_git_local_dir}' already exists in '${bxiw_cache_dir}'!"
+    fi
+    cd ${_opwd}
+    return 0   
 }
 
 
