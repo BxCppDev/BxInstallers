@@ -67,8 +67,9 @@ function root_installer_prepare()
 	if [ "x${bxiw_os_distrib_release}" = "x16.04" ]; then
 	    if [ "x${bxiw_package_version}" = "x6.16.00" ]; then
 		echo >&2<<EOF
-Root version '${bxiw_package_version}' requests cmake 3.6 
-but Ubuntu Linux 16.04 provides cmake 3.5.
+Root version '${bxiw_package_version}' requests cmake >= 3.6 
+but Ubuntu Linux 16.04 provides cmake 3.5. Please install
+Root version 6.12.06 which requires cmake >= 3.4.3.
 EOF
                 bxiw_log_error "Unsupported Root version '${bxiw_package_version}'"
 		return 1
