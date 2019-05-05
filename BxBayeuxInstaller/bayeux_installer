@@ -843,6 +843,8 @@ function bayeux_installer_setup()
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
     local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
     bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    bxiw_log_info " - Using installing dir : '${bxiw_install_dir}'..."
+    bxiw_log_info " - Using version        : '${bxiw_package_version}'..."
     cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
 	sed \
 	    -e "s@__Bayeux_INSTALL_DIR__@${bxiw_install_dir}@g" \
