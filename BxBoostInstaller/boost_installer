@@ -474,7 +474,7 @@ function boost_installer_setup()
 {
     bxiw_log_trace "boost_installer_setup: entering..."
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
-    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}.bash"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
     bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
     cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
         sed \
@@ -501,8 +501,6 @@ boost_installer_prepare
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Preparation failed!"
 fi
-
-# bxiw_exit 0
 
 boost_installer_set_system_dependencies
 

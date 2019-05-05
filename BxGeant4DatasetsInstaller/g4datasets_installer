@@ -426,7 +426,7 @@ function g4datasets_installer_setup()
 {
     bxiw_log_trace "g4datasets_installer_setup: entering..."
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
-    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}.bash"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
     bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
     cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_version}/${bxiw_package_name}.bash.in | \
 	sed \
@@ -443,7 +443,7 @@ fi
 
 bxiw_env
 bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
-bxiw_log_trace "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+# bxiw_log_trace "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
 g4datasets_installer_parse_cl ${bxiw_app_cl_remaining_argv}
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Command line parse error!"

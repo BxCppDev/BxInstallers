@@ -43,7 +43,7 @@ function clhep_installer_parse_cl()
 		clhep_installer_usage
 		bxiw_exit 0
 	    else
-		bxiw_message "error" "Unsupported option '${opt}'!"
+		bxiw_log_error "Unsupported option '${opt}'!"
 		return 1
 	    fi
 	else
@@ -96,7 +96,7 @@ function clhep_installer_prepare()
 				 --field="System installation:CHK" "$_system_install_repr}" \
 		  )
 	    if [ "x${_choices}" = "x" ]; then
-		bxiw_message "info" "Cancelled dialog!"
+		bxiw_log_info "Cancelled dialog!"
 		return 1
 	    fi
 	    bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
@@ -198,7 +198,7 @@ function clhep_installer_download()
     local _clhep_url=$(clhep_installer_get_url ${bxiw_package_version})
     bxiw_download_file ${_clhep_url} ${_clhep_tarball}
     if [ $? -ne 0 ]; then
-	bxiw_message "error" "Could not download the '${_clhep_tarball}' file!"
+	bxiw_log_error "Could not download the '${_clhep_tarball}' file!"
 	return 1
     fi
     return  0
@@ -211,42 +211,42 @@ function clhep_installer_install()
     local _clhep_tarball=$(clhep_installer_get_tarball ${bxiw_package_version})
     cd ${bxiw_cache_dir}
     local _clhep_source_dir="$(pwd)/${bxiw_package_version}/CLHEP"
-    bxiw_message "info" "CLHEP version is                : '${bxiw_package_version}'"
-    bxiw_message "info" "CLHEP source directory is       : '${_clhep_source_dir}'"
+    bxiw_log_info "CLHEP version is                : '${bxiw_package_version}'"
+    bxiw_log_info "CLHEP source directory is       : '${_clhep_source_dir}'"
     if [ ! -d ${_clhep_source_dir} ]; then
-	bxiw_message "info" "Unpacking source directory..."
+	bxiw_log_info "Unpacking source directory..."
 	tar xzf ${bxiw_cache_dir}/${_clhep_tarball}
 	if [ $? -ne 0 ]; then
-	    bxiw_message "error" "Source directory has not been unpacked."
+	    bxiw_log_error "Source directory has not been unpacked."
 	    cd ${_clhep_opwd}
 	    return 1
 	else
-	    bxiw_message "info" "Source directory has been unpacked."
+	    bxiw_log_info "Source directory has been unpacked."
 	fi
     else
-	bxiw_message "info" "Source directory was already unpacked."
+	bxiw_log_info "Source directory was already unpacked."
     fi
 
     cd ${bxiw_build_dir}
-    bxiw_message "info" "CLHEP build directory is        : '${bxiw_build_dir}'"
-    bxiw_message "info" "CLHEP tag directory is          : '${bxiw_tag_dir}'"
-    bxiw_message "info" "CLHEP installation directory is : '${bxiw_install_dir}'"
+    bxiw_log_info "CLHEP build directory is        : '${bxiw_build_dir}'"
+    bxiw_log_info "CLHEP tag directory is          : '${bxiw_tag_dir}'"
+    bxiw_log_info "CLHEP installation directory is : '${bxiw_install_dir}'"
     
     # Configuration:
     local _clhep_do_config=false
     if [ ! -f ${bxiw_tag_configured} ]; then
-	bxiw_message "info" "CLHEP configuration is needed."
+	bxiw_log_info "CLHEP configuration is needed."
 	_clhep_do_config=true
     else
-	bxiw_message "info" "CLHEP configuration is already done."
+	bxiw_log_info "CLHEP configuration is already done."
 	if [ ${bxiw_do_reconfigure} == true ]; then
-	    bxiw_message "info" "Forcing CLHEP reconfiguration..."
+	    bxiw_log_info "Forcing CLHEP reconfiguration..."
 	    _clhep_do_configure=true
 	fi
     fi
 
     if [ ${_clhep_do_config} == true ]; then
-	bxiw_message "info" "CLHEP configuration..."
+	bxiw_log_info "CLHEP configuration..."
 	cmake  \
 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
 	    -DCLHEP_BUILD_DOCS=ON \
@@ -254,62 +254,62 @@ function clhep_installer_install()
 	    -G Ninja \
 	    ${_clhep_source_dir}
 	if [ $? -ne 0 ]; then
-	    bxiw_message "error" "CLHEP configuration failed!"
+	    bxiw_log_error "CLHEP configuration failed!"
 	    cd ${_clhep_opwd}
 	    return 1
 	else
 	    touch ${bxiw_tag_configured}
-    	    bxiw_message "info" "CLHEP is configured."
+    	    bxiw_log_info "CLHEP is configured."
 	fi
     else
-	bxiw_message "info" "Do not configure CLHEP."
+	bxiw_log_info "Do not configure CLHEP."
     fi
     
     # Build:
     local _clhep_do_build=false
     if [ ! -f ${bxiw_tag_built} ]; then
-	bxiw_message "info" "CLHEP build is needed."
+	bxiw_log_info "CLHEP build is needed."
 	_clhep_do_build=true
     else
-	bxiw_message "info" "CLHEP build is already done."
+	bxiw_log_info "CLHEP build is already done."
 	if [ ${bxiw_do_rebuild} == true ]; then
-	    bxiw_message "info" "Forcing CLHEP rebuild..."
+	    bxiw_log_info "Forcing CLHEP rebuild..."
 	    _clhep_do_build=true
 	fi
     fi
 
     if [ ${_clhep_do_build} == true ]; then
-	bxiw_message "info" "Building CLHEP..."
+	bxiw_log_info "Building CLHEP..."
 	local _clhep_nbprocs=${bxiw_nbprocs}
 	if [ ${_clhep_nbprocs} -gt 2 ]; then
 	    let _clhep_nbprocs=${bxiw_nbprocs}
 	else
 	    _clhep_nbprocs=1 
 	fi
-	bxiw_message "info" "#procs = ${_clhep_nbprocs}"
+	bxiw_log_info "#procs = ${_clhep_nbprocs}"
 	ninja -j ${_clhep_nbprocs}
 	if [ $? -ne 0 ]; then
-    	    bxiw_message "error" "CLHEP build failed!"
+    	    bxiw_log_error "CLHEP build failed!"
     	    cd ${_clhep_opwd}
     	    return 1
 	else
 	    touch ${bxiw_tag_built}
-    	    bxiw_message "info" "CLHEP is built."
+    	    bxiw_log_info "CLHEP is built."
 	fi
     else
-	bxiw_message "info" "Do not build CLHEP."
+	bxiw_log_info "Do not build CLHEP."
     fi
 
     # Installation:
     local _clhep_do_install=false
     if [ ! -f ${bxiw_tag_installed} ]; then
-	bxiw_message "info" "CLHEP installation is needed."
+	bxiw_log_info "CLHEP installation is needed."
 	_clhep_do_install=true
     else
-	bxiw_message "info" "CLHEP installation is already done."
+	bxiw_log_info "CLHEP installation is already done."
 	if [ ${bxiw_do_reinstall} == true ]; then
 	    _clhep_do_install=true
-	    bxiw_message "info" "Forcing CLHEP installation..."
+	    bxiw_log_info "Forcing CLHEP installation..."
 	fi
     fi
     if [ ${bxiw_no_install} == true ]; then
@@ -323,27 +323,27 @@ function clhep_installer_install()
 	fi
 	if [ ${_clhep_do_package} == true ]; then
 	    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
-		bxiw_message "info" "Building a binary package for CLHEP..."
+		bxiw_log_info "Building a binary package for CLHEP..."
 		clhep_installer_makedebpack
 	    else
-    		bxiw_message "error" "Cannot pack CLHEP for '${bxiw_os_distrib_id}'!"
+    		bxiw_log_error "Cannot pack CLHEP for '${bxiw_os_distrib_id}'!"
     		cd ${_clhep_opwd}
 		return 1
 	    fi
 	else
-	    bxiw_message "info" "Installing CLHEP..."
+	    bxiw_log_info "Installing CLHEP..."
 	    ninja install
 	    if [ $? -ne 0 ]; then
-    		bxiw_message "error" "CLHEP installation failed!"
+    		bxiw_log_error "CLHEP installation failed!"
     		cd ${_clhep_opwd}
     		return 1
 	    else
 		touch ${bxiw_tag_installed}
-    		bxiw_message "info" "CLHEP is installed."
+    		bxiw_log_info "CLHEP is installed."
 	    fi
 	fi
     else
-	bxiw_message "info" "Do not install CLHEP."
+	bxiw_log_info "Do not install CLHEP."
     fi
     cd ${_clhep_opwd}
     return  0
@@ -367,17 +367,17 @@ EOF
     local _clhep_do_package=true
     local _clhep_pkg_filename="bx${bxiw_package_name}_${bxiw_package_version}-${bxiw_pkg_release}_${_arch}.deb"
     if [ -f ${package_dir}/${_clhep_pkg_filename} ]; then
-	bxiw_message "info" "Package '${_clhep_pkg_filename}' exists in '${bxiw_package_dir}'."
+	bxiw_log_info "Package '${_clhep_pkg_filename}' exists in '${bxiw_package_dir}'."
 	_clhep_do_package=false
     fi
     local _clhep_requires="\
 		"
     _clhep_requires_list=$(echo ${_clhep_requires} | tr ' ' ',')
     _clhep_conflicts_list="libclhep-dev,libclhep2.1v5"
-    bxiw_message "info" "Requires : ${_clhep_requires_list}!"	
+    bxiw_log_info "Requires : ${_clhep_requires_list}!"	
     if [ ${_clhep_do_package} == true ]; then
 	if [ "x${bxiw_os_arch}" != "xx86_64" ]; then
-	    bxiw_message "error" "Unsupported architecture ${bxiw_os_arch}!"	
+	    bxiw_log_error "Unsupported architecture ${bxiw_os_arch}!"	
 	    return 1
 	fi
 	sudo checkinstall \
@@ -398,7 +398,7 @@ EOF
 	     --default \
 	     ninja install
 	if [ $? -ne 0 ]; then
-	    bxiw_message "error" "Debian binary package build failed!"	
+	    bxiw_log_error "Debian binary package build failed!"	
 	    return 1
 	fi
     fi	 
@@ -410,8 +410,8 @@ function clhep_installer_setup()
 {
     bxiw_log_trace "clhep_installer_setup: entering..."
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
-    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}.bash"
-    bxiw_message "info" "Installing setup script '${_bxsoftware_setup_script}'..."
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
     cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
 	sed \
 	    -e "s@__CLHEP_INSTALL_DIR__@${bxiw_install_dir}@g" \
@@ -427,7 +427,7 @@ fi
 
 bxiw_env
 bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
-bxiw_message "info" "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+# bxiw_log_info "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
 clhep_installer_parse_cl ${bxiw_app_cl_remaining_argv}
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Command line parse error!"
