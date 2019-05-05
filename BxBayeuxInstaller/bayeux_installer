@@ -847,8 +847,8 @@ function bayeux_installer_setup()
     bxiw_log_info " - Using version        : '${bxiw_package_version}'..."
     cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
 	sed \
-	    -e "s@__Bayeux_INSTALL_DIR__@${bxiw_install_dir}@g" \
-	    -e "s@__Bayeux_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__BAYEUX_INSTALL_DIR__@${bxiw_install_dir}@g" \
+	    -e "s@__BAYEUX_VERSION__@${bxiw_package_version}@g" \
 	    > ${_bxsoftware_setup_script}
     return  0
 }
