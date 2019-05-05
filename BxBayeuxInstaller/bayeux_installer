@@ -858,7 +858,7 @@ fi
 
 bxiw_env
 bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
-bxiw_log_info "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+# bxiw_log_info "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
 bayeux_installer_parse_cl ${bxiw_app_cl_remaining_argv}
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Command line parse error!"
