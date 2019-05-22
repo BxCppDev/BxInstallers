@@ -20,6 +20,9 @@ List of supported software libraries
 * ``BxGeant4DatasetsInstaller`` : Installer for the GEANT4 datasets
 * ``BxGeant4Installer`` : Installer for the GEANT4 Simulation Toolkit
 * ``BxRootInstaller`` : Installer for the ROOT library
+* ``BxProtobuf/`` : Installer for the Google Protocol Buffers library
+
+  Protobuf's Java support is not possible yet because of a bug in the installation (see https://github.com/protocolbuffers/protobuf/issues/4269).
 
 
 Description
