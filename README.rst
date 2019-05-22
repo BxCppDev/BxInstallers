@@ -3,7 +3,7 @@ BxInstallers
 ===================================
 
 :author: F.Mauger <mauger@lpccaen.in2p3.fr>
-:date: 2019-04-25
+:date: 2019-05-22
 
 
 BxInstallers provides some build/install scripts for semi-automated installation of
