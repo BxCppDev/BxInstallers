@@ -1,0 +1,25 @@
+# -*- mode: shell-script; -*-
+
+function protobuf_setup()
+{
+    local _bx_protobuf_version="__PROTOBUF_VERSION__"
+    local _bx_protobuf_install_dir="__PROTOBUF_INSTALL_DIR__"
+    if [ -n "${BX_PROTOBUF_INSTALL_DIR}" ]; then
+	echo >&2 "[warning] protobuf_setup: PROTOBUF version ${BX_PROTOBUF_VERSION} is already setup !"   
+	return 1
+    fi
+    export BX_PROTOBUF_INSTALL_DIR="${_bx_protobuf_install_dir}"
+    export BX_PROTOBUF_VERSION="${_bx_protobuf_version}"
+    export PATH=${BX_PROTOBUF_INSTALL_DIR}/bin:${PATH}
+    if [ -z "${PKG_CONFIG_PATH}" ]; then
+	export PKG_CONFIG_PATH=${BX_PROTOBUF_INSTALL_DIR}/lib/pkgconfig
+    else
+	export PKG_CONFIG_PATH=${BX_PROTOBUF_INSTALL_DIR}/lib/pkgconfig:${PKG_CONFIG_PATH}
+    fi
+    echo >&2 "[info] protobuf_setup: PROTOBUF version ${_bx_protobuf_version} is now setup !"
+    return 0
+}
+export -f protobuf_setup
+
+# end
+
