@@ -38,8 +38,8 @@ BxInstallers uses a set of conventional directories used to build and install li
   and ``/var/bxsoftware/work.d`` for the root user.
 * The *installation* base directory is the installation base directory for the installed software.
   By default, it is ``${HOME}/bxsoftware/install`` for a standard user (without root proviledges)
-  and ``/var/bxsoftware/install`` for the root user.
-* The *package*directory is the directory where to store generated Debian packages.
+  and ``/opt/bxsoftware/install`` for the root user.
+* The *package* directory is the directory where to store generated Debian packages.
   By default, it is ``${HOME}/bxsoftware/_package.d`` for a standard user (without root proviledges)
   and ``/var/bxsoftware/package.d`` for the root user.
 
