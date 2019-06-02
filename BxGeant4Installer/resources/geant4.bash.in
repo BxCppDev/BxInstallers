@@ -1,11 +1,11 @@
 # -*- mode: shell-script; -*-
 
-function geant4_setup()
+function geant4___GEANT4_UVERSION___setup()
 {
     local _bx_geant4_version="__GEANT4_VERSION__"
     local _bx_geant4_install_dir="__GEANT4_INSTALL_DIR__"
     if [ -n "${BX_GEANT4_INSTALL_DIR}" ]; then
-	echo >&2 "[warning] geant4_setup: GEANT4 version ${BX_GEANT4_VERSION} is already setup !"   
+	echo >&2 "[warning] geant4___GEANT4_UVERSION___setup: GEANT4 version ${BX_GEANT4_VERSION} is already setup !"   
 	return 1
     fi
     export BX_GEANT4_INSTALL_DIR="${_bx_geant4_install_dir}"
@@ -14,10 +14,10 @@ function geant4_setup()
     if [ -f ${BX_GEANT4_INSTALL_DIR}/bin/geant4.sh ]; then
 	source ${BX_GEANT4_INSTALL_DIR}/bin/geant4.sh
     else
-	echo >&2 "[error] geant4_setup: Cannot find GEANT4 setup script '${BX_GEANT4_INSTALL_DIR}/bin/geant4.sh' !"   
+	echo >&2 "[error] geant4___GEANT4_UVERSION___setup: Cannot find GEANT4 setup script '${BX_GEANT4_INSTALL_DIR}/bin/geant4.sh' !"   
 	return 1
     fi
-    echo >&2 "[info] geant4_setup: GEANT4 version ${_bx_geant4_version} is now setup !"
+    echo >&2 "[info] geant4___GEANT4_UVERSION___setup: GEANT4 version ${_bx_geant4_version} is now setup !"
     return 0
 }
-export -f geant4_setup
+export -f geant4___GEANT4_UVERSION___setup

@@ -12,6 +12,7 @@ bxiw_app_name="g4datasets_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_package_name="g4datasets"
 bxiw_default_package_version="10.5"
+bxiw_supported_package_versions="9.6.4 10.5"
 if [ ${in_debian_package} == false ]; then
     if [ ! -f "$(pwd)/.bxwi_g4datasets.locate" ]; then
 	echo >&2 "[error] Please run from the Geant4 datasets installer directory!"
@@ -89,6 +90,14 @@ function g4datasets_installer_parse_cl()
 
 function g4datasets_installer_prepare()
 {
+    if [  "x${bxiw_package_version}" != "x" ]; then
+	echo ${bxiw_supported_package_versions} | grep ${bxiw_package_version} > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    bxiw_message "error" "Unsupported version '${bxiw_package_version}'!"
+	    return 1
+	fi
+    fi
+    
     _bxiw_prepare_pre
    
     if [ ${bxiw_with_gui} = true ]; then
@@ -176,22 +185,12 @@ function g4datasets_installer_prepare()
     _bxiw_prepare_post
 
     bxiw_log_info "Geant4 datasets tag directory is : '${bxiw_tag_dir}'"
-   if [ ${in_debian_package} == true ]; then
+    if [ ${in_debian_package} == true ]; then
 	if [ -d ${bxiw_tag_dir} ]; then
 	    rm -f ${bxiw_tag_dir}/*.tag 
 	fi
     fi
      
-    return 0
-}
-
-
-function g4datasets_installer_get_tarball()
-{
-    local _g4datasets
-    _version="$1"
-    shift 1
-    echo "clhep-${_g4datasets_version}.tgz"
     return 0
 }
 
@@ -306,7 +305,7 @@ function g4datasets_installer_build()
 	    bxiw_log_info "Geant4 datasets build directory '${bxiw_build_dir}/bin' is created."
 	fi
 	if [ ! -f ${bxiw_build_dir}/bin/g4datasets-config ]; then
-	    cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_version}/g4datasets-config.in | \
+	    cat ${bxiw_app_installer_prefix}/resources/g4datasets-config.in | \
 		sed \
 		    -e "s@__G4DATASETS_INSTALL_DIR__@${bxiw_install_dir}@g" \
 		    -e "s@__G4DATASETS_VERSION__@${bxiw_package_version}@g" \
@@ -427,11 +426,14 @@ function g4datasets_installer_setup()
     bxiw_log_trace "g4datasets_installer_setup: entering..."
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
     local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
     bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    bxiw_log_info "Underscored version '${_bxsoftware_underscored_version}'"
     cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_version}/${bxiw_package_name}.bash.in | \
 	sed \
 	    -e "s@__G4DATASETS_INSTALL_DIR__@${bxiw_install_dir}@g" \
 	    -e "s@__G4DATASETS_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__G4DATASETS_UVERSION__@${_bxsoftware_underscored_version}@g" \
 	    > ${_bxsoftware_setup_script}
     return  0
 }

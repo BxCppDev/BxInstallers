@@ -10,6 +10,7 @@ bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="geant4"
 bxiw_default_package_version="10.5"
+bxiw_supported_package_versions="9.6.4 10.5"
 bxiw_package_version=
 
 g4_with_system_clhep=true
@@ -17,6 +18,7 @@ g4_system_clhep_dir=
 g4_with_buildin_datasets=false
 g4_external_datasets_dir=
 g4_with_qt=false
+g4_datasets_timeout=86400
 
 function geant4_installer_usage()
 {
@@ -80,6 +82,14 @@ function geant4_installer_parse_cl()
 
 function geant4_installer_prepare()
 {
+    if [  "x${bxiw_package_version}" != "x" ]; then
+	echo ${bxiw_supported_package_versions} | grep ${bxiw_package_version} > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    bxiw_message "error" "Unsupported version '${bxiw_package_version}'!"
+	    return 1
+	fi
+    fi
+    
     _bxiw_prepare_pre
  
     if [ ${bxiw_with_gui} = true ]; then
@@ -199,6 +209,11 @@ function geant4_installer_get_tarball()
     shift 1
     if [ "x${_geant4_version}" = "x10.5" ]; then
 	echo "geant4.10.05.tar.gz"
+    elif [ "x${_geant4_version}" = "x9.6.4" ]; then
+	echo "geant4.9.6.p04.tar.gz"
+    else
+	bxiw_log_info "Unsupported Geant4 version: ${_geant4_version}"	
+	return 1
     fi
     return 0
 }
@@ -229,7 +244,6 @@ function geant4_installer_set_system_dependencies()
 		    expat libexpat1 libexpat1-dev \
 		    libx11-6 libx11-dev \
 		    libxext6 libxext-dev \
-		    zlib1g zlib1g-dev \
 		    "
 	# libfreetype6 libfreetype6-dev 
 	bxiw_system_packages_run="\
@@ -238,8 +252,12 @@ function geant4_installer_set_system_dependencies()
 	  libexpat1 \
 	  libx11-6 \
 	  libxext6 \
-	  zlib1g \
-        "	  
+        "
+	
+	if [ "${bxiw_package_version}" = "10.5" ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} zlib1g zlib1g-dev "
+	    bxiw_system_packages_run="${bxiw_system_packages_run} zlib1g "
+	fi
         # libfreetype6 
 	if [ ${bxiw_with_package} == true ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
@@ -247,7 +265,7 @@ function geant4_installer_set_system_dependencies()
 	if [ ${bxiw_with_gui} == true ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} yad"
 	fi
-	if [ ${bxiw_with_qt} == true ]; then
+	if [ ${g4_with_qt} == true ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} qtbase5-dev"
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libqt5core5a"
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libqt5gui5"
@@ -314,7 +332,12 @@ function geant4_installer_install()
     local _geant4_opwd=$(pwd)
     local _geant4_tarball=$(geant4_installer_get_tarball ${bxiw_package_version})
     cd ${bxiw_cache_dir}
-    local _geant4_source_dir="$(pwd)/geant4.10.05"
+    local _geant4_source_dir=
+    if [ "${bxiw_package_version}" = "10.5" ]; then
+	_geant4_source_dir="$(pwd)/geant4.10.05"
+    elif [ "${bxiw_package_version}" = "9.6.4" ]; then
+	_geant4_source_dir="$(pwd)/geant4.9.6.p04"
+    fi
     bxiw_message "info" "GEANT4 version is                : '${bxiw_package_version}'"
     bxiw_message "info" "GEANT4 source directory is       : '${_geant4_source_dir}'"
     if [ ! -d ${_geant4_source_dir} ]; then
@@ -329,6 +352,20 @@ function geant4_installer_install()
 	fi
     else
 	bxiw_message "info" "Source directory was already unpacked."
+    fi
+
+    if [ "${bxiw_package_version}" = "9.6.4" ]; then
+	bxiw_message "info" "Fix file 'G4LElastic.cc'"
+	mv ${_geant4_source_dir}/source/processes/hadronic/models/low_energy/src/G4LElastic.cc \
+	   ${_geant4_source_dir}/source/processes/hadronic/models/low_energy/src/G4LElastic.cc-buggy
+	cp ${bxiw_app_installer_prefix}/resources/9.6.4/G4LElastic.cc \
+	   ${_geant4_source_dir}/source/processes/hadronic/models/low_energy/src/G4LElastic.cc
+
+	bxiw_message "info" "Fix file 'G4GMocrenIO.cc.cc'"
+	mv ${_geant4_source_dir}/source/visualization/gMocren/src/G4GMocrenIO.cc \
+	   ${_geant4_source_dir}/source/visualization/gMocren/src/G4GMocrenIO.cc-buggy
+	cp ${bxiw_app_installer_prefix}/resources/9.6.4/G4GMocrenIO.cc \
+	   ${_geant4_source_dir}/source/visualization/gMocren/src/G4GMocrenIO.cc
     fi
 
     cd ${bxiw_build_dir}
@@ -358,12 +395,16 @@ function geant4_installer_install()
 	fi
 	local _geant4_datasets_opt="-DGEANT4_INSTALL_DATA=ON"
 	if [ ${g4_with_buildin_datasets} = false ]; then
-	    _geant4_datasets_opt="-DGEANT4_INSTALL_DATA=OFF -DGEANT4_INSTALL_DATADIR=${g4_external_datasets_dir}"
+	    _geant4_datasets_opt="-DGEANT4_INSTALL_DATA=OFF -DGEANT4_INSTALL_DATADIR=${g4_external_datasets_dir} -DGEANT4_INSTALL_DATA_TIMEOUT=${g4_datasets_timeout}"
 	fi
 	local _geant4_qt_opt="-DGEANT4_USE_QT=OFF"
 	if [ ${g4_with_qt} == true ]; then
 	    _geant4_qt_opt="-DGEANT4_USE_QT=ON"
 	fi
+	local _geant4_zlib_opt="-DGEANT4_USE_SYSTEM_ZLIB=ON"
+	if [ "${bxiw_package_version}" = "9.6.4" ]; then
+	    _geant4_zlib_opt="-DGEANT4_USE_SYSTEM_ZLIB=OFF"
+	fi	
 	cmake  \
 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
 	    -DCMAKE_INSTALL_LIBDIR=lib \
@@ -372,10 +413,11 @@ function geant4_installer_install()
 	    ${_geant4_datasets_opt} \
 	    ${_geant4_clhep_opt} \
 	    ${_geant4_qt_opt} \
+	    ${_geant4_zlib_opt} \
 	    -DGEANT4_USE_SYSTEM_EXPAT=ON \
-	    -DGEANT4_USE_SYSTEM_ZLIB=ON \
 	    -DGEANT4_USE_GDML=ON \
 	    -DGEANT4_USE_OPENGL_X11=ON \
+	    -Wno-dev \
 	    -G Ninja \
 	    ${_geant4_source_dir}
 	if [ $? -ne 0 ]; then
@@ -389,7 +431,7 @@ function geant4_installer_install()
     else
 	bxiw_message "info" "Do not configure GEANT4."
     fi
-    
+   
     # Build:
     local _geant4_do_build=false
     if [ ! -f ${bxiw_tag_built} ]; then
@@ -541,11 +583,13 @@ function geant4_installer_setup()
     bxiw_log_trace "geant4_installer_setup: entering..."
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
     local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
     bxiw_message "info" "Installing setup script '${_bxsoftware_setup_script}'..."
     cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
 	sed \
 	    -e "s@__GEANT4_INSTALL_DIR__@${bxiw_install_dir}@g" \
 	    -e "s@__GEANT4_VERSION__@${bxiw_package_version}@g" \
+            -e "s@__GEANT4_UVERSION__@${_bxsoftware_underscored_version}@g" \
 	    > ${_bxsoftware_setup_script}
     return  0
 }
@@ -581,6 +625,8 @@ geant4_installer_download
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Source archive download failed!"
 fi
+
+# bxiw_exit 0
 
 geant4_installer_install
 if [ $? -ne 0 ]; then

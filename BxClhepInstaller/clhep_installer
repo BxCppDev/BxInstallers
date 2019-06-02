@@ -10,6 +10,7 @@ bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="clhep"
 bxiw_default_package_version="2.4.1.0"
+bxiw_supported_package_versions="2.1.3.1 2.4.1.0"
 bxiw_package_version=
 
 function clhep_installer_usage()
@@ -246,11 +247,17 @@ function clhep_installer_install()
     fi
 
     if [ ${_clhep_do_config} == true ]; then
+	cxxstd_option=
+	if [ "${bxiw_package_version}" == "2.4.1.0" ]; then
+	   cxxstd_option="-DCLHEP_BUILD_CXXSTD=-std=c++11"
+	fi
+	docs_option="-DCLHEP_BUILD_DOCS=OFF"
+	###	    -DCLHEP_BUILD_DOCS=ON \
 	bxiw_log_info "CLHEP configuration..."
 	cmake  \
 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
-	    -DCLHEP_BUILD_DOCS=ON \
-	    -DCLHEP_BUILD_CXXSTD=-std=c++11 \
+	    ${cxxstd_option} \
+	    ${docs_option} \
 	    -G Ninja \
 	    ${_clhep_source_dir}
 	if [ $? -ne 0 ]; then
@@ -411,11 +418,13 @@ function clhep_installer_setup()
     bxiw_log_trace "clhep_installer_setup: entering..."
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
     local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
     bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
     cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
 	sed \
 	    -e "s@__CLHEP_INSTALL_DIR__@${bxiw_install_dir}@g" \
 	    -e "s@__CLHEP_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__CLHEP_UVERSION__@${_bxsoftware_underscored_version}@g" \
 	    > ${_bxsoftware_setup_script}
     return  0
 }

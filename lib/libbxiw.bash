@@ -186,6 +186,15 @@ function bxiw_detect_os()
 }
 
 
+function bxiw_underscored_version()
+{
+    local _ver="$1"
+    local _uver=$(echo ${_ver} | tr '.' '_' | tr -d 'v' | tr -d 'p')
+    echo ${_uver}
+    return 0
+}
+
+
 function bxiw_env()
 {
     if [ "x${BX_CACHE_DIR}" != "x" ]; then
