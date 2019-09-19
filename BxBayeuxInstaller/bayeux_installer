@@ -198,18 +198,26 @@ function bayeux_installer_prepare()
     # Boost:
     if [ ${bayeux_no_system_boost} == true ]; then
 	if [ "x${bayeux_boost_root}" = "x" ]; then
-	    if [ "x${BX_BOOST_INSTALL_DIR}" = "x" ]; then
-		bxiw_log_error "Environment variable 'BX_BOOST_INSTALL_DIR' is not set!"
-		bxiw_log_error "Cannot locate Boost!"	    
-		return 1
+	    if [ "x${BX_BOOST_INSTALL_DIR}" != "x" ]; then
+		bxiw_log_info "Using environment variable 'BX_BOOST_INSTALL_DIR'..."
+		if [ ! -d "${BX_BOOST_INSTALL_DIR}" ]; then
+		    bxiw_log_error "Boost installation directory '${BX_BOOST_INSTALL_DIR}' does not exist!"
+		    return 1
+		fi
+		bayeux_boost_root="${BX_BOOST_INSTALL_DIR}"
 	    fi
-	    if [ ! -d "${BX_BOOST_INSTALL_DIR}" ]; then
-		bxiw_log_error "Boost installation directory '${BX_BOOST_INSTALL_DIR}' does not exist!"
-		return 1
-	    fi
-	    bayeux_boost_root="${BX_BOOST_INSTALL_DIR}"
-	    bxiw_log_info "Boost root directory set at : '${bayeux_boost_root}'"
 	fi
+	if [ "x${bayeux_boost_root}" = "x" ]; then
+	    found_boost_root_dir=`find ${bxiw_install_base_dir} -maxdepth 1 -mindepth 1 -type d -name "boost-?.??.?" | sort -n | tail -1`
+	    if [ "x${found_boost_root_dir}" = "x" ]; then
+		bayeux_boost_root="${found_boost_root_dir}"
+	    fi
+	fi
+	if [ "x${bayeux_boost_root}" = "x" ]; then
+	    bxiw_log_error "No Boost root directory has been provided nor detected!"
+	    return 1
+	fi
+	bxiw_log_info "Boost root directory set at : '${bayeux_boost_root}'"
 	if [ ! -d "${bayeux_boost_root}" ]; then
 	    bxiw_log_error "Cannot find '${bayeux_boost_root}' directory!"
 	    return 1
@@ -223,7 +231,7 @@ function bayeux_installer_prepare()
 	    return 1
 	fi
 	bayeux_boost_version=`cat ${bayeux_boost_root}/include/boost/version.hpp | grep "^#define BOOST_LIB_VERSION" | tr -s [[:space:]] | cut -d' ' -f3 | tr -d '"' | tr '_' '.' `
-	# bxiw_log_info "bayeux_boost_version='${bayeux_boost_version}'"
+	bxiw_log_info "Found Boost version='${bayeux_boost_version}' for Bayeux"
 	bxiw_pass
     fi
     
@@ -546,7 +554,7 @@ function bayeux_installer_install()
 {
     local _bayeux_opwd=$(pwd)
     cd ${bxiw_cache_dir}
-    local _bayeux_source_dir="$(pwd)/bayeux-${bxiw_package_version}"
+    local _bayeux_source_dir="$(pwd)/Bayeux-${bxiw_package_version}"
     bxiw_log_info "Bayeux version is                : '${bxiw_package_version}'"
     bxiw_log_info "Bayeux source directory is       : '${_bayeux_source_dir}'"
     if [ ! -d ${_bayeux_source_dir} ]; then
@@ -694,8 +702,6 @@ function bayeux_installer_install()
     else
 	bxiw_log_info "Do not configure Bayeux."
     fi
-
-    # return 1
     
     # Build:
     local _bayeux_do_build=false
