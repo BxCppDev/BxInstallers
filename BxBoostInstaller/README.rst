@@ -1,7 +1,4 @@
-<<<<<<< Updated upstream
-=======
 =================================
->>>>>>> Stashed changes
 Boost installation
 =================================
 
@@ -49,8 +46,3 @@ Example
 
 
 .. end
-<<<<<<< Updated upstream
- 
-=======
-   
->>>>>>> Stashed changes
