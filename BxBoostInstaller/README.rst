@@ -46,3 +46,7 @@ Example
 
 
 .. end
+<<<<<<< Updated upstream
+=======
+   
+>>>>>>> Stashed changes
