@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [ ! -f "$(pwd)/.bxwi_bayeux.locate" ]; then
-    echo >&2 "[error] Please run from the BAYEUX installer directory!"
+    echo >&2 "[error] Please run from the Bayeux installer directory!"
     exit 1
 fi
 
@@ -799,7 +799,6 @@ Bayeux Library
 
 This is a binary version for ${bxiw_os_distrib_id} ${bxiw_os_distrib_release}.
 EOF
- 
     local _arch="amd64"
     local _bayeux_do_package=true
     local _bayeux_pkg_filename="bx${bxiw_package_name}_${bxiw_package_version}-${bxiw_pkg_release}_${_arch}.deb"

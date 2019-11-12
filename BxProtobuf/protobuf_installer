@@ -9,8 +9,8 @@ bxiw_app_name="protobuf_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="protobuf"
-#bxiw_default_package_version="3.3.0" // not supported
 bxiw_default_package_version="3.7.1"
+bxiw_supported_package_versions="3.7.1 3.9.2"
 bxiw_package_version=
 
 protobuf_with_java=false
@@ -30,9 +30,9 @@ Options:
   --help              Print this help then exit
 EOF
     _bxiw_usage_options
-#     cat<<EOF
-#   --with-java         Build Protobuf Java interface
-# EOF
+    cat<<EOF
+  --with-java         Build Protobuf Java interface
+EOF
      echo ""
     return 0
 }
@@ -47,8 +47,8 @@ function protobuf_installer_parse_cl()
 	    if [ ${opt} = "--help" ]; then
 		protobuf_installer_usage
 		bxiw_exit 0
-	    # elif [ ${opt} = "--with-java" ]; then
-	    # 	protobuf_with_java=true
+	    elif [ ${opt} = "--with-java" ]; then
+	    	protobuf_with_java=true
 	    else
 		bxiw_log_error "Unsupported option '${opt}'!"
 		return 1

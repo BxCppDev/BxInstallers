@@ -4,7 +4,7 @@ if [ ! -f "$(pwd)/.bxwi_boost.locate" ]; then
     echo >&2 "[error] Please run from the Boost installer directory!"
     exit 1
 fi
-source ../lib/libbxiw.bash
+source $(pwd)/../lib/libbxiw.bash
 bxiw_app_name="boost_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
@@ -12,7 +12,7 @@ bxiw_package_name="boost"
 bxiw_default_package_version="1.69.0"
 bxiw_package_version=
 boost_libs=""
-bxiw_supported_package_versions="1.58.0 1.63.0 1.65.1 1.68.0 1.69.0"
+bxiw_supported_package_versions="1.58.0 1.63.0 1.65.1 1.68.0 1.69.0 1.70.0"
 
 function boost_installer_usage()
 {
@@ -492,7 +492,8 @@ if [ $? -ne 0 ]; then
 fi
 
 bxiw_env
-bxiw_pars_cl ${bxiw_app_cl_remaining_argv}
+bxiw_log_info "bxiw_app_cl_remaining_argv='${bxiw_app_cl_remaining_argv}'"
+bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
 # bxiw_log_info "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
 boost_installer_parse_cl ${bxiw_app_cl_remaining_argv}
 if [ $? -ne 0 ]; then

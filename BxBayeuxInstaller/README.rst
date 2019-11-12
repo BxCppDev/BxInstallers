@@ -28,10 +28,10 @@ Example
 
 .. code:: bash
 
-   $ export BX_CACHE_DIR="/tmp/${USER}/BxCache"
-   $ export BX_WORK_DIR="/tmp/${USER}/BxWork"
-   $ export BX_INSTALL_BASE_DIR="/tmp/${USER}/BxInstall"
-   $ export BX_PACKAGE_DIR="/tmp/${USER}/BxPackage"
+   $ export BX_CACHE_DIR="/opt/sw/${USER}/BxCache"
+   $ export BX_WORK_DIR="/opt/sw/${USER}/BxWork"
+   $ export BX_INSTALL_BASE_DIR="/opt/sw/${USER}/BxInstall"
+   $ export BX_PACKAGE_DIR="/opt/sw/${USER}/BxPackage"
    $ mkdir -p ${BX_CACHE_DIR}
    $ mkdir -p ${BX_WORK_DIR}
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
