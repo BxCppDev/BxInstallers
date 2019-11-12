@@ -8,16 +8,16 @@ CAMP installation for Bayeux
 CAMP installer for Ubuntu provided by the Bayeux
 development group.
 
+Default CAMP version: 0.8.2
+
 Requirements
 ============
 
 * Boost (>=1.38.0)
 
-  Recommended: Boost 1.68.0
+  Recommended: Boost 1.69.0
 
   
-
-
 Usage
 ======
 
@@ -40,10 +40,17 @@ Installation as standard user
    .. code:: bash
 
       $ boost_setup
+      $ echo ${BX_BOOST_INSTALL_DIR}
+      ...
+      $ echo ${BX_BOOST_VERSION}
+      ...
       $ ./camp_installer \
           --boost-root ${BX_BOOST_INSTALL_DIR} \
-	  --work-dir "${HOME}/.bxsoftware/work.d" \
-	  --install-dir "${HOME}/bxsoftware/install/camp-0.8.0" 
+	  --work-dir "/tmp/${USER}/.bxsoftware/work.d" \
+	  --install-dir "${HOME}/bxsoftware/install/camp-0.8.2"
+      ...
+      $ tree ${HOME}/bxsoftware/install/camp-0.8.2/
+      ...
    ..
 
 
@@ -54,7 +61,7 @@ Installation as standard user
 
    .. code:: bash
 
-      $ source ~/.bxsoftware.d/modules/camp.bash
+      $ source ${HOME}/.bxsoftware.d/modules/camp@0.8.2.bash
    ..
 
    To activate CAMP from a Bash shell, do:
@@ -62,8 +69,8 @@ Installation as standard user
    .. code:: bash
 
       $ camp_setup
-      $ which camp-config
-      $ camp-config --version 
+      $ echo ${BX_CAMP_INSTALL_DIR}
+      $ echo ${BX_CAMP_VERSION}
    ..
 
 
@@ -96,7 +103,7 @@ Installation as root
 Build and make a binary package
 ===============================
 
-Generate a ``bxcamp_0.8.0-1_amd64.deb`` binary Debian package:
+Generate a ``bxcamp_0.8.2-1_amd64.deb`` binary Debian package:
 
 .. code:: bash
 	  
@@ -109,14 +116,14 @@ Check the package:
 
 .. code:: bash
 	  
-   $ dpkg -c bxcamp_0.8.0-1_amd64.deb
+   $ dpkg -c bxcamp_0.8.2-1_amd64.deb
 ..
 
 Then install the package:
 
 .. code:: bash
 	  
-   $ sudo dpkg -i bxcamp_0.8.0-1_amd64.deb
+   $ sudo dpkg -i bxcamp_0.8.2-1_amd64.deb
 ..
 
 
