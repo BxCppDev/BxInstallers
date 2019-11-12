@@ -1,7 +1,24 @@
+=================================
+Boost installation for Bayeux
+=================================
 
+:author: F.Mauger <mauger@lpccaen.in2p3.fr>
+:date: 2019-07-05
 
+Boost installer for Ubuntu provided by the Bayeux
+development group.
 
-$ cd /scratch/ubuntu18.04/BxCache
-$ wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.bz2/download -O boost_1_68_0.tar.bz2
-$ tar xjf boost_1_68_0.tar.bz2
-$ cd boost_1_68_0
+Default Boost version: 1.69.0
+
+Requirements
+============
+
+None.
+
+Usage
+======
+
+.. code:: bash
+	  
+   $ ./boost_installer --help
+..

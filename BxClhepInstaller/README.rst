@@ -8,6 +8,8 @@ CLHEP installation for Bayeux
 CLHEP installer for Ubuntu provided by the Bayeux
 development group.
 
+Default CLHEP version: 2.4.1.0
+
 Requirements
 ============
 
@@ -88,6 +90,8 @@ Installation as root
    
 Build and make a binary package
 ===============================
+
+VERY EXPERIMENTAL
 
 Generate a ``bxclhep_2.4.1.0-1_amd64.deb`` binary Debian package:
 
