@@ -13,8 +13,11 @@ Default Boost version: 1.69.0
 Requirements
 ============
 
-None.
+Please have a look at the ``boost_installer_set_system_dependencies`` function
+in the ``boost_installer`` script to make an idea about required packages
+on the Ubuntu system.
 
+  
 Usage
 ======
 
