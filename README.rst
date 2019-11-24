@@ -13,6 +13,7 @@ for testing, mostly on Ubuntu Linux.
 List of supported software libraries
 ====================================
 
+* ``BxQtInstaller`` : Installer for the Qt library (new)
 * ``BxBoostInstaller`` : Installer for the Boost library
 * ``BxCampInstaller`` : Installer for the CAMP library
 * ``BxClhepInstaller`` : Installer for the CLHEP C++ library
@@ -82,6 +83,8 @@ Example:
    $ ./camp_installer --boost-root "${BX_INSTALL_BASE_DIR}/boost-1.69.0" 
    $ cd ../BxClhepInstaller/
    $ ./clhep_installer --package-version "2.1.3.1"
+   $ cd ../BxQtInstaller/
+   $ ./qt_installer --package-version 5.13.2 
 ..
 
 

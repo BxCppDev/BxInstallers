@@ -1,0 +1,561 @@
+#!/usr/bin/env bash
+
+if [ ! -f "$(pwd)/.bxwi_qt.locate" ]; then
+    echo >&2 "[error] Please run from the Qt installer directory!"
+    exit 1
+fi
+
+source $(pwd)/../lib/libbxiw.bash
+bxiw_app_name="qt_installer"
+bxiw_app_saved_opwd=$(pwd)
+bxiw_app_installer_prefix="$(pwd)"
+bxiw_package_name="qt"
+bxiw_default_package_version="5.13.2"
+bxiw_package_version=
+qt_libs=""
+bxiw_supported_package_versions="5.13.2"
+
+function qt_installer_usage()
+{
+    cat<<EOF
+
+qt_installer - Qt library installer
+
+Synopsis:
+
+    qt_installer [OPTION]...
+
+Options:
+
+  --help               Print this help then exit
+EOF
+    _bxiw_usage_options
+    echo ""
+    return 0
+}
+
+
+function qt_installer_parse_cl()
+{
+    while [ -n "$1" ]; do
+        token="$1"
+        if [ "x${token:0:1}" = "x-" ]; then
+            opt="${token}"
+            if [ ${opt} = "--help" ]; then
+                qt_installer_usage
+                bxiw_exit 0
+            else
+                bxiw_log_error "Unsupported option '${opt}'!"
+                return 1
+            fi
+        else
+            arg="${token}"
+        fi
+        shift 1
+    done
+    return 0
+}
+
+
+function qt_installer_prepare()
+{
+    _bxiw_prepare_pre
+ 
+    if [ ${bxiw_with_gui} = true ]; then
+        
+        local _do_rebuild_repr="FALSE"
+        if [ ${bxiw_do_rebuild} = true ]; then
+            _do_rebuild_repr="TRUE"
+        fi
+        
+        local _remove_build_dir_repr="FALSE"
+        if [ ${bxiw_remove_build_dir} = true ]; then
+            _remove_build_dir_repr="TRUE"
+        fi
+        
+        local _remove_tarballs_repr="FALSE"
+        if [ ${bxiw_remove_tarballs} = true ]; then
+            _remove_tarballs_repr="TRUE"
+        fi
+        
+        local _system_install_repr="FALSE"
+        if [ ${bxiw_system_install} = true ]; then
+            _system_install_repr="TRUE"
+        fi
+
+        which yad > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            bxiw_message "[warning] yad is not installed! No GUI!"
+        else
+            local _choices=$(yad --width=500 \
+                                 --form \
+                                 --title "${bxiw_package_name} installer options" \
+                                 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
+                                 --field="Working directory:CDIR" "${bxiw_work_dir}" \
+                                 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
+                                 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+                                 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+                                 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+                                 --field="System installation:CHK" "$_system_install_repr}" \
+                  )
+            if [ "x${_choices}" = "x" ]; then
+                bxiw_log_info "Cancelled dialog!"
+                return 1
+            fi
+            bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+            bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
+            bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
+            _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
+            if [ ${_do_rebuild_repr} == "TRUE" ]; then
+                bxiw_do_rebuild=true
+            else
+                bxiw_do_rebuild=false
+            fi
+            _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
+            if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+                bxiw_remove_build_dir=true
+            else
+                bxiw_remove_build_dir=false
+            fi
+            _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
+            if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+                bxiw_remove_tarballs=true
+            else
+                bxiw_remove_tarballs=false
+            fi
+            _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
+            if [ ${_system_install_repr} == "TRUE" ]; then
+                bxiw_system_install=true
+            else
+                bxiw_system_install=false
+            fi
+        fi
+    fi
+    
+    ###qt_libs="a,b,c"
+    local _qt_version="${bxiw_package_version}"
+    
+    bxiw_log_info "_qt_version = '${_qt_version}'"
+    # if [ "x${_qt_version}" = "x1.65.1" -o "x${_qt_version}" = "x1.68.0" ]; then
+    # 	qt_libs="${qt_libs},signals"
+    # elif [ "x${_qt_version}" = "x1.69.0" ]; then
+    # 	qt_libs="${qt_libs},signals2"
+    # fi
+    bxiw_log_info "qt_libs = '${qt_libs}'"
+
+    # Prepare:
+    _bxiw_prepare_post
+     
+    return 0
+}
+
+
+function qt_installer_get_tarball()
+{
+    local _qt_version="$1"
+    if [ "x${_qt_version}" = "x5.13.2" ]; then
+	echo "qtbase-everywhere-src-${_qt_version}.tar.xz"
+    else
+        echo >&2 "[error] Unsupported version '${_qt_version}'!"
+        return 1
+    fi
+    return 0
+}
+
+function qt_short_version()
+{
+    local _qt_version="$1"
+    echo ${_qt_version} | cut -d. -f1,2
+    return 0
+}
+
+
+function qt_installer_get_url()
+{
+    ### http://download.qt.io/archive/qt/5.13/5.13.2/submodules/qtbase-everywhere-src-5.13.2.tar.xz
+    
+    local _qt_version="$1"
+    local _qt_tarball=$(qt_installer_get_tarball ${_qt_version})
+    echo "https://download.qt.io/official_releases/qt/$(qt_short_version ${_qt_version})/${_qt_version}/submodules/${_qt_tarball}"
+    return 0
+}
+
+
+function qt_installer_set_system_dependencies()
+{
+    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+        bxiw_system_packages_build=""
+        bxiw_system_packages_build="build-essential \
+                    make \
+ 		    g++ \
+                    libicu-dev \
+                    libpng-dev \
+		    libjpeg-dev \
+		    libbz2-dev \
+		    libfreetype6-dev \
+                    "
+
+	bxiw_system_packages_run="${bxiw_system_packages_build}"
+
+	# if [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
+        #     bxiw_system_packages_build="${bxiw_system_packages_build} \
+        #             libXXX \
+        #     "
+        #     bxiw_system_packages_run="${bxiw_system_packages_run} \
+        #             libXXX \
+        #     "
+        # elif [ "x${bxiw_os_distrib_release}" = "x16.04" ]; then
+        #     bxiw_system_packages_build="${bxiw_system_packages_build} \
+        #             libXXX \
+        #     "
+        #     bxiw_system_packages_run="${bxiw_system_packages_run} \
+        #             libXXX \
+        #     "
+        # fi
+        if [ ${bxiw_with_package} == true ]; then
+            bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
+        fi
+        if [ ${bxiw_with_gui} == true ]; then
+            bxiw_system_packages_build="${bxiw_system_packages_build} yad"
+        fi
+    # elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
+    # elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+    fi
+    return 0
+}
+
+
+function qt_installer_print()
+{
+    bxiw_print
+    bxiw_log_info "Qt librairies : "
+    local _libs=$(echo ${qt_libs} | tr ',' ' ')
+    for _bl in ${_libs}; do
+        bxiw_log_info "   - ${_bl}"
+    done
+    return 0
+}
+
+
+function qt_installer_download()
+{
+    local _qt_tarball=$(qt_installer_get_tarball ${bxiw_package_version})
+    local _qt_url=$(qt_installer_get_url ${bxiw_package_version})
+    bxiw_download_file ${_qt_url} ${_qt_tarball}
+    if [ $? -ne 0 ]; then
+        bxiw_message "error" "Could not download the '${_qt_tarball}' file!"
+        return 1
+    fi
+    return  0
+}
+
+function qt_installer_install()
+{
+    local _qt_opwd=$(pwd)
+    local _qt_tarball=$(qt_installer_get_tarball ${bxiw_package_version})
+    cd ${bxiw_cache_dir}
+    local _qt_source_dir="$(pwd)/qtbase-everywhere-src-${bxiw_package_version}"
+    bxiw_log_info "Qt version is                : '${bxiw_package_version}'"
+    bxiw_log_info "Qt source directory is       : '${_qt_source_dir}'"
+    if [ ! -d ${_qt_source_dir} ]; then
+        bxiw_log_info "Unpacking source directory..."
+        tar xJf ${bxiw_cache_dir}/${_qt_tarball}
+        if [ $? -ne 0 ]; then
+            bxiw_log_error "Source directory has not been unpacked."
+            cd ${_qt_opwd}
+            return 1
+        else
+            bxiw_log_info "Source directory has been unpacked."
+        fi
+    else
+        bxiw_log_info "Source directory was already unpacked."
+    fi
+
+    bxiw_log_info "Qt build directory is        : '${bxiw_build_dir}'"
+    bxiw_log_info "Qt tag directory is          : '${bxiw_tag_dir}'"
+    bxiw_log_info "Qt installation directory is : '${bxiw_install_dir}'"
+
+    if [ ! -f ${bxiw_build_dir}/configure ]; then
+        bxiw_log_info "Copying the source directory in the build directory..."
+        cp -af ${_qt_source_dir}/* ${bxiw_build_dir}/
+        cp -f ${_qt_source_dir}/.qmake.conf ${bxiw_build_dir}/
+        cp -f ${_qt_source_dir}/.tag ${bxiw_build_dir}/
+        cp -f ${_qt_source_dir}/.release-timestamp ${bxiw_build_dir}/
+    else
+        bxiw_log_info "The source directory is already cloned in the build directory."
+        ls -1 ${bxiw_build_dir}
+    fi
+
+    cd ${bxiw_build_dir}
+    # pwd
+    
+    # Configuration:
+    local _qt_do_config=false
+    if [ ! -f ${bxiw_tag_configured} ]; then
+        bxiw_log_info "Qt configuration is needed."
+        _qt_do_config=true
+    else
+        bxiw_log_info "Qt configuration is already done."
+        if [ ${bxiw_do_reconfigure} == true ]; then
+            bxiw_log_info "Forcing Qt reconfiguration..."
+            _qt_do_config=true
+	    if [ -f Makefile ]; then
+		make confclean
+	    fi
+        fi
+    fi
+ 
+    if [ ${_qt_do_config} == true ]; then
+        bxiw_log_info "Qt configuration..."
+        ./configure \
+            -prefix "${bxiw_install_dir}" \
+	    -platform linux-g++ \
+	    -system-zlib \
+	    -system-libjpeg \
+	    -system-libpng \
+	    -system-freetype \
+            -opensource \
+	    -confirm-license \
+	    -release \
+            -icu \
+	    -gui \
+	    -widgets \
+	    -rpath \
+	    -c++std c++11 
+        if [ $? -ne 0 ]; then
+            bxiw_log_error "Qt configuration failed!"
+            cd ${_qt_opwd}
+            return 1
+        else
+            touch ${bxiw_tag_configured}
+            bxiw_log_info "Qt is configured."
+        fi
+	# qmake
+        # if [ $? -ne 0 ]; then
+        #     bxiw_log_error "Qmake failed!"
+        #     cd ${_qt_opwd}
+        #     return 1
+        # else
+        #     touch ${bxiw_tag_configured}
+        #     bxiw_log_info "Qmake is done."
+        # fi
+    else
+        bxiw_log_info "Do not configure Qt."
+    fi
+
+    # Build:
+    local _qt_do_build=false
+    if [ ! -f ${bxiw_tag_built} ]; then
+        bxiw_log_info "Qt build is needed."
+        _qt_do_build=true
+    else
+        bxiw_log_info "Qt build is already done."
+        if [ ${bxiw_do_rebuild} == true ]; then
+            bxiw_log_info "Forcing Qt rebuild..."
+            _qt_do_build=true
+        fi
+    fi
+    
+    # bxiw_log_info "STOP"
+    # cd ${_qt_opwd}
+    # return  0
+
+    if [ ${_qt_do_build} == true ]; then
+        bxiw_log_info "Building Qt..."
+        local _qt_nbprocs=${bxiw_nbprocs}
+        if [ ${_qt_nbprocs} -gt 2 ]; then
+            let _qt_nbprocs=${bxiw_nbprocs}
+        else
+            _qt_nbprocs=1 
+        fi
+        bxiw_log_info "#procs = ${_qt_nbprocs}"
+        make -j4
+        if [ $? -ne 0 ]; then
+            bxiw_message "error" "Qt build failed!"
+            cd ${_qt_opwd}
+            return 1
+        else
+            touch ${bxiw_tag_built}
+            bxiw_log_info "Qt is built."
+        fi
+    else
+        bxiw_log_info "Do not build Qt."
+    fi
+
+    # Installation:
+    local _qt_do_install=false
+    if [ ! -f ${bxiw_tag_installed} ]; then
+        bxiw_log_info "Qt installation is needed."
+        _qt_do_install=true
+    else
+        bxiw_log_info "Qt installation is already done."
+        if [ ${bxiw_do_reinstall} == true ]; then
+            _qt_do_install=true
+            bxiw_log_info "Forcing Qt installation..."
+        fi
+    fi
+    if [ ${bxiw_no_install} == true ]; then
+        _qt_do_install=false
+    fi
+
+    if [ ${_qt_do_install} == true ]; then
+        local _qt_do_package=false
+        if [ ${bxiw_with_package} == true ]; then
+            _qt_do_package=true
+        fi
+        if [ ${_qt_do_package} == true ]; then
+            if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+                bxiw_log_info "Building a binary package for Qt..."
+                qt_installer_makedebpack
+            else
+                bxiw_log_error "Cannot pack Qt for '${bxiw_os_distrib_id}'!"
+                cd ${_qt_opwd}
+                return 1
+            fi
+        else
+            bxiw_log_info "Installing Qt..."
+            make install
+            if [ $? -ne 0 ]; then
+                bxiw_log_error "Qt installation failed!"
+                cd ${_qt_opwd}
+                return 1
+            else
+                touch ${bxiw_tag_installed}
+                bxiw_log_info "Qt is installed."
+            fi
+        fi
+    else
+        bxiw_log_info "Do not install Qt."
+    fi
+    cd ${_qt_opwd}
+    return  0
+}
+
+
+function qt_installer_makedebpack()
+{
+    local _qt_build_dir="${build_dir}"
+    cd ${_qt_build_dir}
+    mkdir -p ${_qt_build_dir}/doc-pak
+    touch ${_qt_build_dir}/description-pak
+    cat>${_qt_build_dir}/description-pak<<EOF
+Qt Library (Bayeux edition)
+
+This is a binary version for Ubuntu 18.04 
+usable with the Bayeux software suite. 
+EOF
+
+    local _arch="amd64"
+    local _qt_do_package=true
+    local _qt_pkg_filename="bx${package_name}_${package_version}-${pkg_release}_${_arch}.deb"
+    if [ -f ${package_dir}/${_qt_pkg_filename} ]; then
+        bxiw_log_info "Package '${_qt_pkg_filename}' exists in '${package_dir}'."
+        _qt_do_package=false
+    fi
+    # local _qt_requires="\
+    #             g++ \
+    #             libicu-dev \
+    #             libpng-dev \
+    #             libjpeg-dev \
+    #             libbz2-dev \
+    #             libfreetype6-dev \
+    #       "
+    local _qt_requires=""
+    _qt_requires_list=$(echo ${_qt_requires} | tr ' ' ',')
+    # _qt_conflicts_list=""
+    ###      --conflicts="${_qt_conflicts_list}" 
+    bxiw_log_info "Requires : ${_qt_requires_list}!"       
+    if [ ${_qt_do_package} == true ]; then
+        if [ "x${os_arch}" != "xx86_64" ]; then
+            bxiw_log_error "Unsupported architecture ${os_arch}!"     
+            return 1
+        fi
+        sudo checkinstall \
+             --type="debian" \
+             --install="no" \
+             --fstrans="no" \
+             --pkgname="bx${package_name}" \
+             --pkgversion="${package_version}" \
+             --pkgrelease=${pkg_release} \
+             --pkglicense="Qt Software License" \
+             --pkgsource="$(qt_installer_get_url ${package_version})" \
+             --maintainer="${pkg_maintener_email}" \
+             --provides="bx${package_name}" \
+             --requires="${_qt_requires_list}" \
+             --backup="no" \
+             --pakdir="${package_dir}" \
+             --default \
+             ninja install
+        if [ $? -ne 0 ]; then
+            bxiw_log_error "Debian binary package build failed!"      
+            return 1
+        fi
+    fi   
+    return 0
+}
+
+
+function qt_installer_setup()
+{
+    bxiw_log_trace "qt_installer_setup: entering..."
+    local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
+    bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
+        sed \
+            -e "s@__QT_INSTALL_DIR__@${bxiw_install_dir}@g" \
+            -e "s@__QT_VERSION__@${bxiw_package_version}@g" \
+            -e "s@__QT_UVERSION__@${_bxsoftware_underscored_version}@g" \
+            > ${_bxsoftware_setup_script}
+    return  0
+}
+
+bxiw_detect_os
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Unsupported OS!"
+fi
+
+bxiw_env
+bxiw_log_info "bxiw_app_cl_remaining_argv='${bxiw_app_cl_remaining_argv}'"
+bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
+# bxiw_log_info "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+qt_installer_parse_cl ${bxiw_app_cl_remaining_argv}
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Command line parse error!"
+fi
+
+qt_installer_prepare
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Preparation failed!"
+fi
+
+qt_installer_set_system_dependencies
+
+qt_installer_print
+
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "System dependencies installation failed!"
+fi
+
+qt_installer_download
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Source archive download failed!"
+fi
+
+qt_installer_install
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Installation failed!"
+fi
+
+if [ ${bxiw_with_package} == false ]; then
+    qt_installer_setup
+    if [ $? -ne 0 ]; then
+        bxiw_exit 1 "Setup failed!"
+    fi
+fi
+
+bxiw_exit 0
+
+# end

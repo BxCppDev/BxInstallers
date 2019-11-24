@@ -1,0 +1,26 @@
+# -*- mode: shell-script; -*-
+
+function qt___QT_UVERSION___setup()
+{
+    local _bx_qt_version="__QT_VERSION__"
+    local _bx_qt_install_dir="__QT_INSTALL_DIR__"
+    if [ -n "${BX_QT_INSTALL_DIR}" ]; then
+	echo >&2 "[warning] qt___QT_UVERSION___setup: Qt version ${BX_QT_VERSION} is already setup !"   
+	return 1
+    fi
+    export BX_QT_INSTALL_DIR="${_bx_qt_install_dir}"
+    export BX_QT_VERSION="${_bx_qt_version}"
+    export PATH="${BX_QT_INSTALL_DIR}/bin:${PATH}"
+    if [ -z ${PKG_CONFIG_PATH} ]; then
+	export PKG_CONFIG_PATH="${BX_QT_INSTALL_DIR}/lib/pkgconfig"
+    else
+	export PKG_CONFIG_PATH="${BX_QT_INSTALL_DIR}/lib/pkgconfig:${PKG_CONFIG_PATH}"
+    fi
+    echo >&2 "[info] qt___QT_UVERSION___setup: Qt version ${_bx_qt_version} is now setup !"
+    return 0
+}
+export -f qt___QT_UVERSION___setup
+alias qt_setup='qt___QT_UVERSION___setup'
+
+# end
+
