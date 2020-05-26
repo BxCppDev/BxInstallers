@@ -18,6 +18,8 @@ g4_system_clhep_dir=
 g4_with_buildin_datasets=false
 g4_external_datasets_dir=
 g4_with_qt=false
+g4_no_system_qt=false
+g4_qt5_prefix=
 g4_datasets_timeout=86400
 
 function geant4_installer_usage()
@@ -68,6 +70,14 @@ function geant4_installer_parse_cl()
 		g4_with_buildin_datasets=true
 	    elif [ ${opt} = "--with-qt" ]; then
 		g4_with_qt=true
+	    elif [ ${opt} = "--no-system-qt" ]; then
+		g4_with_qt=true
+		g4_no_system_qt=true
+	    elif [ ${opt} = "--qt-prefix" ]; then
+		g4_with_qt=true
+		g4_no_system_qt=true
+		shift 1
+		g4_qt5_prefix="$1"
 	    else
 		bxiw_message "error" "Unsupported option '${opt}'!"
 		return 1
@@ -243,6 +253,7 @@ function geant4_installer_set_system_dependencies()
 		    binutils \
 		    expat libexpat1 libexpat1-dev \
 		    libx11-6 libx11-dev \
+		    libxmu6 libxmu-dev \
 		    libxext6 libxext-dev \
 		    "
 	# libfreetype6 libfreetype6-dev 
@@ -251,8 +262,9 @@ function geant4_installer_set_system_dependencies()
 	  expat \
 	  libexpat1 \
 	  libx11-6 \
-	  libxext6 \
-        "
+	  libxmu6 \
+ 	  libxext6 \
+       "
 	
 	if [ "${bxiw_package_version}" = "10.5" ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} zlib1g zlib1g-dev "
@@ -265,7 +277,7 @@ function geant4_installer_set_system_dependencies()
 	if [ ${bxiw_with_gui} == true ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} yad"
 	fi
-	if [ ${g4_with_qt} == true ]; then
+	if [ ${g4_with_qt} == true -a ${g4_no_system_qt} == false ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} qtbase5-dev"
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libqt5core5a"
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libqt5gui5"
@@ -288,6 +300,11 @@ function geant4_installer_set_system_dependencies()
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libxerces-c3.2 libxerces-c-dev" 
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libglu1-mesa libglu1-mesa-dev"
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libglvnd0 libglvnd-dev"
+	    bxiw_system_packages_run="${bxiw_system_packages_run} libxerces-c3.2 libglu1-mesa libglvnd0"
+	elif [ "x${bxiw_os_distrib_release}" = "x20.04" ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libxerces-c-dev" 
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libglu1-mesa-dev"
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libglvnd-dev"
 	    bxiw_system_packages_run="${bxiw_system_packages_run} libxerces-c3.2 libglu1-mesa libglvnd0"
 	fi
     # elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
@@ -391,7 +408,8 @@ function geant4_installer_install()
 	bxiw_message "info" "GEANT4 configuration..."
 	local _geant4_datasets_opt="-DGEANT4_INSTALL_DATA=OFF"
 	if [ ${g4_with_system_clhep} = true ]; then
-	    _geant4_clhep_opt="-DGEANT4_USE_SYSTEM_CLHEP=ON -DCLHEP_ROOT_DIR=${g4_system_clhep_dir}"
+	    #_geant4_clhep_opt="-DGEANT4_USE_SYSTEM_CLHEP=ON -DCLHEP_ROOT_DIR=${g4_system_clhep_dir} -DCLHEP_DIR=${g4_system_clhep_dir}"
+	    _geant4_clhep_opt="-DGEANT4_USE_SYSTEM_CLHEP=ON  -DCLHEP_ROOT_DIR=${g4_system_clhep_dir} -DCLHEP_INCLUDE_DIR=${g4_system_clhep_dir}/include "
 	fi
 	local _geant4_datasets_opt="-DGEANT4_INSTALL_DATA=ON"
 	if [ ${g4_with_buildin_datasets} = false ]; then
@@ -400,6 +418,13 @@ function geant4_installer_install()
 	local _geant4_qt_opt="-DGEANT4_USE_QT=OFF"
 	if [ ${g4_with_qt} == true ]; then
 	    _geant4_qt_opt="-DGEANT4_USE_QT=ON"
+	    if [ ${g4_no_system_qt} == true ]; then
+		_geant4_qt_opt="${_geant4_qt_opt} -DQt5Core_DIR=${g4_qt5_prefix}/Qt5Core"
+		_geant4_qt_opt="${_geant4_qt_opt} -DQt5Gui_DIR=${g4_qt5_prefix}/Qt5Gui"
+		_geant4_qt_opt="${_geant4_qt_opt} -DQt5Widgets_DIR=${g4_qt5_prefix}/Qt5Widgets"
+		_geant4_qt_opt="${_geant4_qt_opt} -DQt5OpenGL_DIR=${g4_qt5_prefix}/Qt5OpenGL"
+		_geant4_qt_opt="${_geant4_qt_opt} -DQt5PrintSupport_DIR=${g4_qt5_prefix}/Qt5PrintSupport"
+	    fi
 	fi
 	local _geant4_zlib_opt="-DGEANT4_USE_SYSTEM_ZLIB=ON"
 	if [ "${bxiw_package_version}" = "9.6.4" ]; then

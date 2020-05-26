@@ -3,15 +3,17 @@ GEANT4 installation for Bayeux
 =================================
 
 :author: F.Mauger <mauger@lpccaen.in2p3.fr>
-:date: 2019-04-18
+:date: 2020-05-26
 
 GEANT4 installer for Ubuntu provided by the Bayeux
 development group.
 
+Supported versions: 9.6.4 10.5
+
 Requirements
 ============
 
-1. ``bxclhep`` package  
+1. ``bxclhep`` package  if no system install is available
 2. ``bxg4datasets-installer`` package  
 
 
@@ -23,16 +25,16 @@ Usage
    $ ./geant4_installer --help
 ..
 
-Installation on Ubuntu 18.04
-============================
+Installation on Ubuntu 18.04/20.04
+==================================
 
 Preparation
 -----------
 
 .. code:: bash
 
-   $ clhep_setup
-   $ g4datasets_setup
+   $ clhep_setup        # or clhep_2_1_4_2_setup
+   $ g4datasets_setup   # or g4datasets_9_6_4_setup
 ..
 
    
@@ -44,9 +46,20 @@ Installation as standard user
    .. code:: bash
 	  
       $ ./geant4_installer \
+         --package-version 9.6.4 \
+	 --system-clhep-dir "$(clhep-config --prefix)/lib"
+   ..
+
+   or:
+   
+   .. code:: bash
+	  
+      $ ./geant4_installer \
 	  --work-dir "${HOME}/.bxsoftware/work.d" \
 	  --install-dir "${HOME}/bxsoftware/install/geant4-10.5" 
    ..
+	  
+..
 
 
 2. Use the setup script:
