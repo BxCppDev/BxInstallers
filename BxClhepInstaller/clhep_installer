@@ -10,7 +10,7 @@ bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="clhep"
 bxiw_default_package_version="2.4.1.0"
-bxiw_supported_package_versions="2.1.3.1 2.4.1.0"
+bxiw_supported_package_versions="2.1.3.1 2.1.4.2 2.4.1.0"
 bxiw_package_version=
 
 function clhep_installer_usage()

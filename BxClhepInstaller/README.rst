@@ -8,7 +8,8 @@ CLHEP installation for Bayeux
 CLHEP installer for Ubuntu provided by the Bayeux
 development group.
 
-Default CLHEP version: 2.4.1.0
+* Default CLHEP version: 2.4.1.0
+* Supported versions: 2.1.3.1 2.1.4.2 2.4.1.0
 
 Requirements
 ============
@@ -21,6 +22,7 @@ Usage
 .. code:: bash
 	  
    $ ./clhep_installer --help
+   $ ./clhep_installer --package-version 2.1.4.2 
 ..
 
 Installation on Ubuntu 18.04
@@ -41,26 +43,24 @@ Installation as standard user
 	  --install-dir "${HOME}/bxsoftware/install/clhep-2.4.1.0" 
    ..
 
-
 2. Use the setup script:
    
-   A Bash setup script ``${HOME}/.bxsoftware.d/modules/clhep.bash`` is installed in your
+   A Bash setup script ``${HOME}/.bxsoftware.d/modules/clhep@2.4.1.0.bash`` is installed in your
    home directory. It automatically source the setup script above.
 
    .. code:: bash
 
-      $ source ~/.bxsoftware.d/modules/clhep.bash
+      $ source ~/.bxsoftware.d/modules/clhep@2.4.1.0.bash
    ..
 
    To activate CLHEP from a Bash shell, do:
 
    .. code:: bash
 
-      $ clhep_setup
+      $ clhep_2_4_1_0_setup
       $ which clhep-config
       $ clhep-config --version 
    ..
-
 
 Installation as root
 -----------------------------
@@ -69,24 +69,20 @@ Installation as root
 
    .. code:: bash
 	  
-      $ sudo ./clhep_installer \
-	  --system-install \
+      $ sudo ./clhep_installer --system-install --package-version 2.1.4.2 
    ..
-
 
 2. Use the setup script:
 
    The ``clhep.sh`` setup script is stored
    in the ``/etc/usr/bin`` directory.
 
-   To activate Geant4 from a Bash shell, do:
+   To activate CLHEP from a Bash shell, do:
    
    .. code:: bash
 
-      $ source $(geant4-config --prefix)/../bin/clhep.bash
+      $ source $(clhep-config --prefix)/../bin/clhep.bash
    ..
-
-
    
 Build and make a binary package
 ===============================
@@ -115,7 +111,6 @@ Then install the package:
 	  
    $ sudo dpkg -i bxclhep_2.4.1.0-1_amd64.deb
 ..
-
 
 
 .. end
