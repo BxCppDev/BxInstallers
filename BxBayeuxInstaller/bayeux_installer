@@ -11,16 +11,18 @@ bxiw_app_name="bayeux_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="bayeux"
-bxiw_default_package_version="3.4.0"
+bxiw_default_package_version="3.4.1"
 bxiw_package_version=
 bxiw_source_git_path="https://github.com/BxCppDev/Bayeux"
 bxiw_source_git_branch="develop"
 
+bayeux_no_system_camp=false
 bayeux_no_system_boost=false
 bayeux_boost_root=
 bayeux_boost_version=
 bayeux_camp_prefix=
 bayeux_camp_dir=
+bayeux_camp_version=
 bayeux_clhep_prefix=
 bayeux_clhep_dir=
 bayeux_root_prefix=
@@ -58,7 +60,8 @@ Options:
 EOF
     _bxiw_usage_options
     cat<<EOF
-  --no-system-boost   Do not use Boost system installation 
+  --no-system-camp    Do not use Boost system installation 
+  --no-system-boost   Do not use CAMP system installation 
   --boost-root path   Set Boost installation path (implies --no-system-boost)
   --with-qt           Bayeux is built with Qt5 support
   --no-system-qt      Do not use Qt5 system installation 
@@ -86,16 +89,21 @@ function bayeux_installer_parse_cl()
 		bxiw_exit 0
 	    elif [ ${opt} = "--no-system-boost" ]; then
 		bayeux_no_system_boost=true
+	    elif [ ${opt} = "--no-system-camp" ]; then
+		bayeux_no_system_camp=true
 	    elif [ ${opt} = "--boost-root" ]; then
 		shift 1
 		bayeux_boost_root="$1"
 	    elif [ ${opt} = "--with-qt" ]; then
 		bayeux_with_qt=true
 	    elif [ ${opt} = "--no-system-qt" ]; then
+		bayeux_with_qt=true # Implicit Qt dependency
 		bayeux_no_system_qt=true
 	    elif [ ${opt} = "--qt5-prefix" ]; then
 		shift 1
 		bayeux_qt5_prefix="$1"
+		bayeux_with_qt=true # Implicit Qt dependency
+		bayeux_no_system_qt=true  # Implicit non-system Qt
 	    elif [ ${opt} = "--with-geant4" ]; then
 		bayeux_with_geant4=true
 	    elif [ ${opt} = "--with-docs" ]; then
@@ -223,8 +231,17 @@ function bayeux_installer_prepare()
 	    return 1
 	fi
 	bxiw_log_info "Using Boost from directory : '${bayeux_boost_root}'"
-    fi
-    
+    else
+	if [ "x${bayeux_boost_root}" = "x" ]; then
+	    bxiw_log_info "Checking system Boost..."
+	    dpkg -l | grep "libboost-all-dev" > /dev/null
+	    if [ $? -eq 0 ]; then
+		bxiw_log_info "Set system install path for Boost"
+		bayeux_boost_root="/usr"
+	    fi
+	fi
+     fi
+   
     if [ "x${bayeux_boost_root}" != "x" ]; then
 	if [ ! -f "${bayeux_boost_root}/include/boost/version.hpp" ]; then
 	    bxiw_log_error "Cannot find '${bayeux_boost_root}/include/boost/version.hpp' file!"
@@ -237,26 +254,47 @@ function bayeux_installer_prepare()
     
     # CAMP:
     bayeux_camp_prefix=""
-    if [ "x${bayeux_camp_prefix}" = "x" ]; then
-	if [ "x${BX_CAMP_INSTALL_DIR}" != "x" ]; then
-	    bayeux_camp_prefix="${BX_CAMP_INSTALL_DIR}"
+    if [ ${bayeux_no_system_camp} == true ]; then
+	if [ "x${bayeux_camp_prefix}" = "x" ]; then
+	    if [ "x${BX_CAMP_INSTALL_DIR}" != "x" ]; then
+		bayeux_camp_prefix="${BX_CAMP_INSTALL_DIR}"
+	    fi
 	fi
+	if [ "x${bayeux_camp_prefix}" = "x" ]; then
+	    find "/usr" -name "CAMPConfig.cmake"
+	    if [ $? -eq 0 ]; then
+		bayeux_camp_prefix="/usr"
+	    fi
+	fi
+	if [ "x${bayeux_camp_prefix}" = "x" ]; then
+	    bxiw_log_error "Missing CAMP prefix!"
+	    return 1 
+	fi
+	if [ ! -d "${bayeux_camp_prefix}" ]; then
+	    bxiw_log_error "CAMP directory '${bayeux_camp_prefix}' does not exist!"
+	    return 1 
+	fi
+	bayeux_camp_dir="${bayeux_camp_prefix}/lib/camp/cmake"
+	if [ ! -d ${bayeux_camp_dir} ]; then
+	    bxiw_log_error "CAMP CMake directory '${bayeux_camp_dir}' does not exist!"
+	    return 1 
+	fi
+	bxiw_log_info "Using CAMP from directory : '${bayeux_camp_dir}'"
+    # else
+    # 	bayeux_camp_prefix="/usr"
+    # 	bayeux_camp_dir="${bayeux_camp_prefix}/lib/camp/cmake"
     fi
-    if [ "x${bayeux_camp_prefix}" = "x" ]; then
-	bxiw_log_error "Missing CAMP prefix!"
-	return 1 
-    fi
-    if [ ! -d "${bayeux_camp_prefix}" ]; then
-	bxiw_log_error "CAMP directory '${bayeux_camp_prefix}' does not exist!"
-	return 1 
-    fi
-    bayeux_camp_dir="${bayeux_camp_prefix}/lib/camp/cmake"
-    if [ ! -d ${bayeux_camp_dir} ]; then
-	bxiw_log_error "CAMP CMake directory '${bayeux_camp_dir}' does not exist!"
-	return 1 
-    fi
-    bxiw_log_info "Using CAMP from directory : '${bayeux_camp_dir}'"
    
+    if [ "x${bayeux_camp_prefix}" != "x" ]; then
+	if [ ! -f "${bayeux_camp_prefix}/include/camp/version.hpp" ]; then
+	    bxiw_log_error "Cannot find '${bayeux_camp_prefix}/include/camp/version.hpp' file!"
+	    return 1
+	fi
+	bayeux_camp_version=`cat ${bayeux_camp_prefix}/include/camp/version.hpp | grep "^#define CAMP_VERSION_STR" | tr -s [[:space:]] | cut -d' ' -f3 | tr -d '"' | tr '_' '.' `
+	bxiw_log_info "Found CAMP version='${bayeux_camp_version}' for Bayeux"
+	bxiw_pass
+    fi
+    
     # CLHEP:
     bayeux_clhep_prefix=""
     if [ "x${bayeux_clhep_prefix}" = "x" ]; then
@@ -362,7 +400,7 @@ function bayeux_installer_prepare()
 	    fi
 	fi
 	
-	bayeux_qt5_dir="${bayeux_qt5_prefix}/lib/x86_64-linux-gnu/cmake"
+	### bayeux_qt5_dir="${bayeux_qt5_prefix}/lib/x86_64-linux-gnu/cmake"
 	if [ ! -d ${bayeux_qt5_dir} ]; then
 	    bxiw_log_error "Qt5 CMake config dir '${bayeux_qt5_dir}' does not exist!"
 	    return 1 
@@ -440,6 +478,11 @@ function bayeux_installer_set_system_dependencies()
 	if [ ${bayeux_no_system_boost} == false -a "x${bayeux_boost_root}" = "x" ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libboost-all-dev"
 	fi
+	if [ "x${bxiw_os_distrib_release}" = "x20.04" ]; then
+	    if [ ${bayeux_no_system_camp} == false -a "x${bayeux_camp_prefix}" = "x" ]; then
+		bxiw_system_packages_build="${bxiw_system_packages_build} libcamp-dev"
+	    fi
+	fi
 
 	if [ ${bayeux_no_system_qt} == false -a "x${bayeux_qt5_prefix}" = "x" ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} \
@@ -464,14 +507,16 @@ function bayeux_installer_set_system_dependencies()
 		"
 	fi
 	
-	bxiw_system_packages_build="${bxiw_system_packages_build} libreadline-dev"
 	# if [ "x${bxiw_os_distrib_release}" = "x16.04" ]; then
 	#     bxiw_system_packages_build="${bxiw_system_packages_build} libreadline-dev"
 	# elif [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
 	#     bxiw_system_packages_build="${bxiw_system_packages_build} libreadline-dev"	    
 	# fi
 	# bxiw_system_packages_build="${bxiw_system_packages_build} readline-common"	    
-
+	if [ "x${bxiw_os_distrib_release}" = "x20.04" ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libxerces-c-dev"
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libcamp-dev"
+	fi
 	bxiw_pass
     elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
 	bxiw_pass
@@ -609,7 +654,17 @@ function bayeux_installer_install()
 	local _boost_options=
 	if [ "x${bayeux_boost_root}" != "x" ]; then
 	    _boost_options="-DBOOST_ROOT:PATH=${bayeux_boost_root} -DBoost_ADDITIONAL_VERSIONS=${bayeux_boost_version}"
+	    bxiw_log_info "Boost options = ${_boost_options}"
+	else 
+	    bxiw_log_info "No Boost root"
 	fi
+	# if [ "${bxiw_package_version}" = "3.4.1" ]; then
+	#     if [ -f /usr/share/cmake-3.16/Modules/FindBoost.cmake -a ! -f ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig ]; then
+	# 	bxiw_log_info "Updating FindBoost.cmake scirpt..."
+	# 	mv ${_bayeux_source_dir}/cmake/FindBoost.cmake ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig
+	# 	cp /usr/share/cmake-3.16/Modules/FindBoost.cmake ${_bayeux_source_dir}/cmake/
+	#     fi
+	# fi
 	local _camp_options=
 	if [ "x${bayeux_camp_dir}" != "x" ]; then
 	    _camp_options="-DCAMP_DIR:PATH=${bayeux_camp_dir}"
@@ -688,7 +743,6 @@ function bayeux_installer_install()
 	    -DBAYEUX_WITH_GENVTX=ON \
 	    -DBAYEUX_WITH_MCTOOLS=ON \
 	    -DBAYEUX_WITH_LAHAGUE=OFF \
-	    -DBAYEUX_WITH_MCNP_MODULE=OFF \
   	    -G Ninja \
 	    ${_bayeux_source_dir}
 	if [ $? -ne 0 ]; then

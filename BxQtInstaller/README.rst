@@ -8,7 +8,7 @@ Qt installation
 Qt installer for Ubuntu provided by the Bayeux
 development group.
 
-Default Qt version: 5.13.2
+Default Qt version: 5.13.2 (experimental!!!)
 
 Requirements
 ============
@@ -17,6 +17,15 @@ Please have a look at the ``qt_installer_set_system_dependencies`` function
 in the ``qt_installer`` script to make an idea about required packages
 on the Ubuntu system.
 
+
+Aims to install the following Qt5 components:
+
+- libqt5core (Bayeux/Geant4 GUI layer, as in /usr/lib/x86_64-linux-gnu/libQt5Core.so)
+- libqt5gui (Bayeux/Geant4 GUI layer, as in /usr/lib/x86_64-linux-gnu/libQt5Gui.so)
+- libqt5widgets (Bayeux/Geant4 GUI layer, as in /usr/lib/x86_64-linux-gnu/libQt5Widgets.so)
+- libqt5svg (Bayeux GUI layer ?, as in /usr/lib/x86_64-linux-gnu/libQt5Svg.so)
+- libqt5opengl (Geant4 GUI layer, as in /usr/lib/x86_64-linux-gnu/libQt5OpenGL.so)
+- libqt5printsupport (Geant4 GUI layer, as in /usr/lib/x86_64-linux-gnu/libQt5PrintSupport.so)
   
 Usage
 ======

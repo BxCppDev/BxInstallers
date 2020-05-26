@@ -68,11 +68,10 @@ Example:
 
 .. code:: shell
 
-   $ export BX_BASE_DIR="/opt/sw/${USER}"
-   $ export BX_CACHE_DIR="${BX_BASE_DIR}/BxCache"
-   $ export BX_WORK_DIR="${BX_BASE_DIR}/BxWork"
-   $ export BX_INSTALL_BASE_DIR="${BX_BASE_DIR}/BxInstall"
-   $ export BX_PACKAGE_DIR="${BX_BASE_DIR}/BxPackage"
+   $ export BX_CACHE_DIR="/scratch/sw/BxCache"
+   $ export BX_WORK_DIR="/scratch/sw/BxWork"
+   $ export BX_INSTALL_BASE_DIR="/scratch/sw/BxInstall"
+   $ export BX_PACKAGE_DIR="/scratch/sw/BxPackage"
    $ mkdir -p ${BX_CACHE_DIR}
    $ mkdir -p ${BX_WORK_DIR}
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
@@ -85,6 +84,8 @@ Example:
    $ ./clhep_installer --package-version "2.1.3.1"
    $ cd ../BxQtInstaller/
    $ ./qt_installer --package-version 5.13.2 
+   $ cd ../BxRootInstaller/
+   $ ./root_installer --package-version 5.13.2 
 ..
 
 
