@@ -9,7 +9,7 @@ bxiw_app_name="camp_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="camp"
-bxiw_default_package_version="0.8.2"
+bxiw_default_package_version="0.8.4"
 bxiw_package_version=
 
 boost_root=
@@ -175,7 +175,9 @@ function camp_installer_get_url()
     local _camp_version="$1"
     local _camp_tarball=$(camp_installer_get_tarball ${_camp_version})
     ### echo "https://github.com/tegesoft/camp/archive/${_camp_version}.tar.gz"
-    echo "https://github.com/fw4spl-org/camp/archive/${_camp_version}.tar.gz"
+    ### echo "https://github.com/fw4spl-org/camp/archive/${_camp_version}.tar.gz"
+    echo "https://github.com/IRCAD-IHU/camp/archive/${_camp_version}.tar.gz"
+    ### https://github.com/IRCAD-IHU/camp
     return 0
 }
 
