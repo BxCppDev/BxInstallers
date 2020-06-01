@@ -276,10 +276,10 @@ function clhep_installer_install()
 	   cxxstd_option="-DCLHEP_BUILD_CXXSTD=-std=c++11"
 	fi
 	docs_option="-DCLHEP_BUILD_DOCS=OFF"
-	###	    -DCLHEP_BUILD_DOCS=ON \
+	###	    -DCLHEP_BUILD_DOCS=ON 
 	bxiw_log_info "CLHEP configuration..."
 	cmake  \
-	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \  
+	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
 	    ${cxxstd_option} \
 	    ${docs_option} \
 	    ${ninja_options} \
