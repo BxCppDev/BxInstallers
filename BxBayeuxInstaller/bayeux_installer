@@ -29,6 +29,8 @@ bayeux_root_prefix=
 bayeux_root_dir=
 bayeux_geant4_prefix=
 bayeux_geant4_dir=
+bayeux_with_bxdecay0=true
+bayeux_bxdecay0_dir=
 bayeux_with_qt=false
 bayeux_no_system_qt=false
 bayeux_qt5_prefix=
@@ -43,6 +45,7 @@ bayeux_cxx_std=11
 bayeux_with_docs=false
 bayeux_with_devtools=true
 bayeux_with_testing=false
+bayeux_with_werror=true
 
 function bayeux_installer_usage()
 {
@@ -60,20 +63,38 @@ Options:
 EOF
     _bxiw_usage_options
     cat<<EOF
-  --no-system-camp    Do not use Boost system installation 
-  --no-system-boost   Do not use CAMP system installation 
+  --no-system-boost   Do not use Boost system installation 
   --boost-root path   Set Boost installation path (implies --no-system-boost)
+  --no-system-camp    Do not use CAMP system installation 
   --with-qt           Bayeux is built with Qt5 support
-  --no-system-qt      Do not use Qt5 system installation 
-  --qt5-prefix path   Set Qt5 installation path (implies --no-system-qt)
+  --no-system-qt      Do not use Qt5 system installation (implies --with-qt)
+  --qt5-prefix path   Set Qt5 installation path (implies --with-qt and --no-system-qt)
+  --without-qt        Bayeux is built without Qt5 support (default)
+  --with-bxdecay0     Bayeux is built with BxDecay0 (default)
+  --bxdecay0-dir path Set BxDecay0 dir for CMake (implies --with-bxdecay0)
+  --without-bxdecay0  Bayeux is built without BxDecay0
   --with-docs         Bayeux is built with documentation
+  --without-docs      Bayeux is built without documentation (default)
+  --with-tests        Bayeux is built with tests
+  --without-tests     Bayeux is built without tests (default)
   --with-geant4       Bayeux is built with Geant4
+  --without-geant4    Bayeux is built without Geant4 (default)
+  --with-werror       Bayeux is built with compiler warnings as errors (default)
+  --without-werror    Bayeux is built without  compiler warnings as errors 
   --cxx-11            Bayeux is built with C++11 support (default)
   --cxx-14            Bayeux is built with C++14 support
   --cxx-17            Bayeux is built with C++17 support
   --cxx-20            Bayeux is built with C++20 support
 EOF
     echo ""
+cat<<EOF
+
+Example:
+
+   $ ./bayeux_installer --source-from-git --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
+
+EOF
+ 
     return 0
 }
 
@@ -104,10 +125,28 @@ function bayeux_installer_parse_cl()
 		bayeux_qt5_prefix="$1"
 		bayeux_with_qt=true # Implicit Qt dependency
 		bayeux_no_system_qt=true  # Implicit non-system Qt
-	    elif [ ${opt} = "--with-geant4" ]; then
-		bayeux_with_geant4=true
+	    elif [ ${opt} = "--without-qt" ]; then
+		bayeux_with_qt=false
+	    elif [ ${opt} = "--with-bxdecay0" ]; then
+		bayeux_with_bxdecay0=true
+	    elif [ ${opt} = "--bxdecay0-dir" ]; then
+		shift 1
+		bayeux_bxdecay0_dir="$1"
+		bayeux_with_bxdecay0=true # Implicit BxDecay0 dependency
+	    elif [ ${opt} = "--without-bxdecay0" ]; then
+		bayeux_with_bxdecay0=false
 	    elif [ ${opt} = "--with-docs" ]; then
 		bayeux_with_docs=true
+	    elif [ ${opt} = "--without-docs" ]; then
+		bayeux_with_docs=false
+	    elif [ ${opt} = "--with-tests" ]; then
+		bayeux_with_testing=true
+	    elif [ ${opt} = "--without-tests" ]; then
+		bayeux_with_testing=false
+	    elif [ ${opt} = "--with-geant4" ]; then
+		bayeux_with_geant4=true
+	    elif [ ${opt} = "--without-geant4" ]; then
+		bayeux_with_geant4=false
 	    elif [ ${opt} = "--cxx-11" ]; then
 		bayeux_cxx_std="11"
 	    elif [ ${opt} = "--cxx-14" ]; then
@@ -116,6 +155,10 @@ function bayeux_installer_parse_cl()
 		bayeux_cxx_std="17"
 	    elif [ ${opt} = "--cxx-20" ]; then
 		bayeux_cxx_std="20"
+	    elif [ ${opt} = "--with-werror" ]; then
+		bayeux_with_werror=true 
+	    elif [ ${opt} = "--without-werror" ]; then
+		bayeux_with_werror=false 
 	    else
 		bxiw_log_error "Unsupported option '${opt}'!"
 		return 1
@@ -320,6 +363,23 @@ function bayeux_installer_prepare()
     fi
     bxiw_log_info "Using CLHEP from directory : '${bayeux_clhep_dir}'"
 
+    # BxDecay0:
+    if [ ${bayeux_with_bxdecay0} = true ]; then
+	if [ "x${bayeux_bxdecay0_dir}" = "x" ]; then
+	    which bxdecay0-config > /dev/null 2>&1
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Cannot find BxDecay0 'bxdecay0-config' script!"
+		return 1
+	    fi
+	    bayeux_bxdecay0_dir="$(bxdecay0-config --cmakedir)"
+	    bxiw_log_info "Using BxDecay0 from directory : '${bayeux_bxdecay0_dir}'"
+	fi
+	if [ "x${bayeux_bxdecay0_dir}" = "x" ]; then
+	    bxiw_log_error "Missing BxDecay0 dir prefix!"
+	    return 1 
+	fi
+    fi
+    
     # ROOT:
     bayeux_root_prefix=""
     if [ "x${bayeux_root_prefix}" = "x" ]; then
@@ -540,6 +600,10 @@ function bayeux_installer_print()
     bxiw_log_info "bayeux_clhep_dir          = '${bayeux_clhep_dir}'"
     bxiw_log_info "bayeux_root_prefix        = '${bayeux_root_prefix}'"
     bxiw_log_info "bayeux_root_dir           = '${bayeux_root_dir}'"
+    bxiw_log_info "bayeux_with_bxdecay0      = ${bayeux_with_bxdecay0}"
+    if [ ${bayeux_with_bxdecay0} = true ]; then
+	bxiw_log_info "bayeux_bxdecay0_dir       = '${bayeux_bxdecay0_dir}'"
+    fi
     bxiw_log_info "bayeux_with_geant4        = ${bayeux_with_geant4}"
     if [ ${bayeux_with_geant4} = true ]; then
 	bxiw_log_info "bayeux_geant4_prefix      = '${bayeux_geant4_prefix}'"
@@ -569,10 +633,23 @@ function bayeux_installer_download()
 	bxiw_log_info "Bayeux Git repository : '${_bayeux_git_repo}'"
 	bxiw_log_info "Bayeux Git branch     : '${_bayeux_git_branch}'"
 	bxiw_log_info "Bayeux Git directory  : '${_bayeux_git_dir}'"
-	bxiw_git_clone_and_branch ${_bayeux_git_repo} ${_bayeux_git_branch} ${_bayeux_git_dir}
-	if [ $? -ne 0 ]; then
-	    bxiw_log_error "Could not clone the Git repository '${_bayeux_git_repo}' file!"
-	    return 1
+	if [ -d ${bxiw_cache_dir}/${_bayeux_git_dir} ]; then
+	    local _opwd=$(pwd)
+	    cd ${bxiw_cache_dir}/${_bayeux_git_dir}
+	    bxiw_log_info "Bayeux Git pull..."
+	    git checkout ${_bayeux_git_branch}
+	    git pull
+	    cd ${_opwd}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Could not pull the existing Git repository '${_bayeux_git_dir}'!"
+		return 1
+	    fi
+	else
+	    bxiw_git_clone_and_branch ${_bayeux_git_repo} ${_bayeux_git_branch} ${_bayeux_git_dir}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Could not clone the Git repository '${_bayeux_git_repo}'!"
+		return 1
+	    fi
 	fi
 	touch ${bxiw_tag_downloaded}
     else
@@ -660,7 +737,7 @@ function bayeux_installer_install()
 	fi
 	# if [ "${bxiw_package_version}" = "3.4.1" ]; then
 	#     if [ -f /usr/share/cmake-3.16/Modules/FindBoost.cmake -a ! -f ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig ]; then
-	# 	bxiw_log_info "Updating FindBoost.cmake scirpt..."
+	# 	bxiw_log_info "Updating FindBoost.cmake script..."
 	# 	mv ${_bayeux_source_dir}/cmake/FindBoost.cmake ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig
 	# 	cp /usr/share/cmake-3.16/Modules/FindBoost.cmake ${_bayeux_source_dir}/cmake/
 	#     fi
@@ -705,6 +782,12 @@ function bayeux_installer_install()
 	if [ ${bayeux_with_qt} = true ]; then
 	    _qt_options="-DBAYEUX_WITH_QT_GUI=ON"
 	fi
+	local _bxdecay0_options=
+	if [ ${bayeux_with_bxdecay0} = true ]; then
+	    _bxdecay0_options="-DBAYEUX_WITH_BXDECAY0=ON -DBxDecay0_DIR=${bayeux_bxdecay0_dir}"
+	else
+	    _bxdecay0_options="-DBAYEUX_WITH_BXDECAY0=OFF"
+	fi
 	local _testing_options="-DBAYEUX_ENABLE_TESTING=OFF"
 	if [ ${bayeux_with_testing} = true ]; then
 	    _testing_options="-DBAYEUX_ENABLE_TESTING=ON"
@@ -713,6 +796,12 @@ function bayeux_installer_install()
 	if [ ${bayeux_with_docs} = true ]; then
 	    _docs_options="-DBAYEUX_WITH_DOCS=ON -DBAYEUX_WITH_DOCS_OCD=ON "
 	fi
+	local _werror="ON"
+	if [ ${bayeux_with_werror} = false ]; then
+	    local _werror="OFF"
+	fi
+	echo >&2 "[info] bayeux_with_werror=${bayeux_with_werror}"
+	echo >&2 "[info] _werror=${_werror}"
 	cmake \
 	    -DCMAKE_BUILD_TYPE:STRING="Release" \
  	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
@@ -720,6 +809,7 @@ function bayeux_installer_install()
 	    ${_camp_options} \
 	    ${_clhep_options} \
 	    ${_root_options} \
+	    ${_bxdecay0_options} \
 	    ${_geant4_options} \
 	    ${_qt_options} \
 	    ${_testing_options} \
@@ -730,7 +820,7 @@ function bayeux_installer_install()
 	    ${_qt_option2} \
 	    ${_qt_option3} \
 	    ${_qt_option4} \
-	    -DBAYEUX_COMPILER_ERROR_ON_WARNING=ON \
+	    -DBAYEUX_COMPILER_ERROR_ON_WARNING=${_werror} \
 	    -DBAYEUX_WITH_IWYU_CHECK=OFF \
 	    -DBAYEUX_WITH_BRIO=ON \
 	    -DBAYEUX_WITH_CUTS=ON \
@@ -774,7 +864,7 @@ function bayeux_installer_install()
 	bxiw_log_info "Building Bayeux..."
 	local _bayeux_nbprocs=${bxiw_nbprocs}
 	if [ ${_bayeux_nbprocs} -gt 2 ]; then
-	    let _bayeux_nbprocs=${bxiw_nbprocs}
+	    let _bayeux_nbprocs=${bxiw_nbprocs}-1
 	else
 	    _bayeux_nbprocs=1 
 	fi
@@ -944,10 +1034,14 @@ if [ $? -ne 0 ]; then
     bxiw_exit 1 "Source archive download failed!"
 fi
 
+# bxiw_exit 0
+
 bayeux_installer_install
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Installation failed!"
 fi
+
+bxiw_exit 0
 
 if [ ${bxiw_with_package} == false ]; then
     bayeux_installer_setup

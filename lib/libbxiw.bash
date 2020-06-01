@@ -52,6 +52,8 @@ if [ "x${bxiw_setup_module_dir}" = "x" ]; then
 fi
 bxiw_default_timeout_seconds=3600
 bxiw_source_from_git=false
+# Next one seems not used !
+bxiw_source_dir=  
 bxiw_source_git_path=
 bxiw_source_git_branch=
 bxiw_timeout_seconds=0

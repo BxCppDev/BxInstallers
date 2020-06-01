@@ -20,7 +20,7 @@ Usage
 
 .. code:: bash
 	  
-   $ ./boost_installer --help
+   $ ./bayeux_installer --help
 ..
 
 Examples
@@ -29,12 +29,16 @@ Examples
 Prerequisites
 -------------
 
+You should first setup :
 
-You should first setup CLHEP (with CMake support),
-Geant4 (9.6.4) (CMake support) and ROOT 6:
+* BxDecay0 (recommended, CMake support),
+* CLHEP (CMake support),
+* Geant4 (9.6.4) (with Geant4 dataset, CMake support),
+* ROOT (6.16.00) (CMake support).
 
 .. code:: bash
 
+   $ bxdecay0_setup
    $ clhep_2_1_4_2_setup
    $ g4datasets_9_6_4_setup
    $ geant4_9_6_4_setup
@@ -58,9 +62,24 @@ Ubuntu 20.04
    $ ./bayeux_installer \
        --package-version 3.4.1 \
        --with-docs \
+       --with-tests \
        --with-geant4 \
-       --with-qt
+       --without-werror \
+       --with-qt 
 ..
+
+
+Git version
+-----------
+
+.. code:: bash
+
+   $ ./bayeux_installer \
+       --source-from-git \
+       --without-tests --without-qt --without-docs --with-bxdecay0
+..
+
+
 
 
 With a specific non system version of Boost (>1.68)
