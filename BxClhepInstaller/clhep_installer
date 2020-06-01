@@ -279,8 +279,7 @@ function clhep_installer_install()
 	###	    -DCLHEP_BUILD_DOCS=ON \
 	bxiw_log_info "CLHEP configuration..."
 	cmake  \
-	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
-	    
+	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \  
 	    ${cxxstd_option} \
 	    ${docs_option} \
 	    ${ninja_options} \
