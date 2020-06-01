@@ -142,7 +142,7 @@ function camp_installer_prepare()
 
     # Boost:
     if [ "x${boost_root}" = "x" ]; then
-	if [ "x${BX_BOOST_INSTALL_DIR}" != "x"]; then
+	if [ "x${BX_BOOST_INSTALL_DIR}" != "x" ]; then
 	    boost_root="${BX_BOOST_INSTALL_DIR}"
 	else
 	    boost_root="/usr"
