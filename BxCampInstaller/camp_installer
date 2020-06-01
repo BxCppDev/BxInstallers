@@ -13,6 +13,7 @@ bxiw_default_package_version="0.8.4"
 bxiw_package_version=
 
 boost_root=
+use_ninja=true
 
 function camp_installer_usage()
 {
@@ -31,6 +32,7 @@ EOF
     _bxiw_usage_options
     cat<<EOF
   --boost-root path   Set Boost installation path
+  --no-ninja          Do not use Ninja
 EOF
      echo ""
     return 0
@@ -49,6 +51,8 @@ function camp_installer_parse_cl()
 	    elif [ ${opt} = "--boost-root" ]; then
 		shift 1
 		boost_root="$1"
+	    elif [ ${opt} = "--no-ninja" ]; then
+		use_ninja=false
 	    else
 		bxiw_log_error "Unsupported option '${opt}'!"
 		return 1
@@ -184,10 +188,9 @@ function camp_installer_get_url()
 
 function camp_installer_set_system_dependencies()
 {
+    
     if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
 	bxiw_system_packages_build="cmake \
-   	  	    ninja-build \
-   	  	    make \
         	    pkg-config \
         	    dpkg-dev \
        	    	    wget \
@@ -196,6 +199,11 @@ function camp_installer_set_system_dependencies()
 		    doxygen \
 		    texlive-latex-base \
 		    "
+	if [ ${use_ninja} = true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} ninja-build"
+	else
+	    bxiw_system_packages_build="${bxiw_system_packages_build} make"
+	fi
 	if [ ${bxiw_with_package} == true ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
 	fi
@@ -285,6 +293,13 @@ function camp_installer_install()
 	fi
     fi
 
+    ninja_options=
+    build_bin=make
+    if [ ${use_ninja} = true ]; then
+	ninja_options="-G Ninja"
+	build_bin=ninja
+    fi
+    
     if [ ${_camp_do_config} == true ]; then
 	bxiw_log_info "CAMP configuration..."
 	boost_opt=
@@ -294,7 +309,7 @@ function camp_installer_install()
 	cmake \
 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
 	    ${boost_opt} \
-	    -G Ninja \
+	    ${ninja_options} \
 	    ${_camp_source_dir}
 	if [ $? -ne 0 ]; then
 	    bxiw_log_error "CAMP configuration failed!"
@@ -330,7 +345,7 @@ function camp_installer_install()
 	    _camp_nbprocs=1 
 	fi
 	bxiw_log_info "#procs = ${_camp_nbprocs}"
-	ninja -j ${_camp_nbprocs}
+	${build_bin} -j ${_camp_nbprocs}
 	if [ $? -ne 0 ]; then
     	    bxiw_log_error "CAMP build failed!"
     	    cd ${_camp_opwd}
@@ -375,7 +390,7 @@ function camp_installer_install()
 	    fi
 	else
 	    bxiw_log_info "Installing CAMP..."
-	    ninja install
+	    ${build_bin} install
 	    if [ $? -ne 0 ]; then
     		bxiw_log_error "CAMP installation failed!"
     		cd ${_camp_opwd}
