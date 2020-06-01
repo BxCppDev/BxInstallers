@@ -12,6 +12,10 @@ bxiw_package_name="clhep"
 bxiw_default_package_version="2.4.1.0"
 bxiw_supported_package_versions="2.1.3.1 2.1.4.2 2.4.1.0"
 bxiw_package_version=
+use_ninja=true
+ninja_exe=
+build_bin=
+
 
 function clhep_installer_usage()
 {
@@ -28,6 +32,10 @@ Options:
   --help              Print this help then exit
 EOF
     _bxiw_usage_options
+   cat<<EOF
+  --ninja-exe         Set Ninja executable path
+  --no-ninja          Do not use Ninja
+EOF
     echo ""
     return 0
 }
@@ -43,6 +51,11 @@ function clhep_installer_parse_cl()
 	    if [ ${opt} = "--help" ]; then
 		clhep_installer_usage
 		bxiw_exit 0
+	    elif [ ${opt} = "--ninja-exe" ]; then
+		shift 1
+		ninja_exe=$1
+	    elif [ ${opt} = "--no-ninja" ]; then
+		use_ninja=false
 	    else
 		bxiw_log_error "Unsupported option '${opt}'!"
 		return 1
@@ -246,6 +259,16 @@ function clhep_installer_install()
 	fi
     fi
 
+    ninja_options=
+    build_bin=make
+    if [ ${use_ninja} = true ]; then
+	ninja_options="-G Ninja"
+	build_bin=ninja
+	if [ "x${ninja_exe}" != "x" ]; then
+	    build_bin=${ninja_exe}
+	fi
+    fi
+
     if [ ${_clhep_do_config} == true ]; then
 	cxxstd_option=
 	if [ "${bxiw_package_version}" == "2.4.1.0" ]; then
@@ -258,7 +281,7 @@ function clhep_installer_install()
 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
 	    ${cxxstd_option} \
 	    ${docs_option} \
-	    -G Ninja \
+	    ${ninja_options} \
 	    ${_clhep_source_dir}
 	if [ $? -ne 0 ]; then
 	    bxiw_log_error "CLHEP configuration failed!"
@@ -294,7 +317,7 @@ function clhep_installer_install()
 	    _clhep_nbprocs=1 
 	fi
 	bxiw_log_info "#procs = ${_clhep_nbprocs}"
-	ninja -j ${_clhep_nbprocs}
+	${build_bin} -j ${_clhep_nbprocs}
 	if [ $? -ne 0 ]; then
     	    bxiw_log_error "CLHEP build failed!"
     	    cd ${_clhep_opwd}
@@ -339,7 +362,7 @@ function clhep_installer_install()
 	    fi
 	else
 	    bxiw_log_info "Installing CLHEP..."
-	    ninja install
+	    ${build_bin} install
 	    if [ $? -ne 0 ]; then
     		bxiw_log_error "CLHEP installation failed!"
     		cd ${_clhep_opwd}
