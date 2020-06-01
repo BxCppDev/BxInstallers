@@ -266,6 +266,7 @@ function clhep_installer_install()
 	build_bin=ninja
 	if [ "x${ninja_exe}" != "x" ]; then
 	    build_bin=${ninja_exe}
+	    ninja_options="${ninja_options} -DCMAKE_MAKE_PROGRAM=ninja"
 	fi
     fi
 
@@ -279,6 +280,7 @@ function clhep_installer_install()
 	bxiw_log_info "CLHEP configuration..."
 	cmake  \
 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
+	    
 	    ${cxxstd_option} \
 	    ${docs_option} \
 	    ${ninja_options} \
