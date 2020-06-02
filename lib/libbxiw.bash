@@ -156,6 +156,13 @@ function bxiw_log_error()
 }
 
 
+function bxiw_log_warning()
+{
+    bxiw_message "warning" $@
+    return 0
+}
+
+
 function bxiw_exit()
 {
     local error_code=$1
