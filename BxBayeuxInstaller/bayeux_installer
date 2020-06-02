@@ -20,6 +20,7 @@ bayeux_no_system_camp=false
 bayeux_no_system_boost=false
 bayeux_boost_root=
 bayeux_boost_version=
+bayeux_system_find_boost=false
 bayeux_camp_prefix=
 bayeux_camp_dir=
 bayeux_camp_version=
@@ -65,6 +66,7 @@ EOF
     cat<<EOF
   --no-system-boost   Do not use Boost system installation 
   --boost-root path   Set Boost installation path (implies --no-system-boost)
+  --system-find-boost Do not use the local FindBoost.cmake script
   --no-system-camp    Do not use CAMP system installation 
   --with-qt           Bayeux is built with Qt5 support
   --no-system-qt      Do not use Qt5 system installation (implies --with-qt)
@@ -115,6 +117,8 @@ function bayeux_installer_parse_cl()
 	    elif [ ${opt} = "--boost-root" ]; then
 		shift 1
 		bayeux_boost_root="$1"
+	    elif [ ${opt} = "--system-find-boost" ]; then
+		bayeux_system_find_boost=true
 	    elif [ ${opt} = "--with-qt" ]; then
 		bayeux_with_qt=true
 	    elif [ ${opt} = "--no-system-qt" ]; then
@@ -744,13 +748,12 @@ function bayeux_installer_install()
 	else 
 	    bxiw_log_info "No Boost root"
 	fi
-	# if [ "${bxiw_package_version}" = "3.4.1" ]; then
-	#     if [ -f /usr/share/cmake-3.16/Modules/FindBoost.cmake -a ! -f ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig ]; then
-	# 	bxiw_log_info "Updating FindBoost.cmake script..."
-	# 	mv ${_bayeux_source_dir}/cmake/FindBoost.cmake ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig
-	# 	cp /usr/share/cmake-3.16/Modules/FindBoost.cmake ${_bayeux_source_dir}/cmake/
-	#     fi
-	# fi
+	if [ ${bayeux_system_find_boost} = true ]; then
+	    if [ ! -f ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig ]; then
+		bxiw_log_info "Hidding FindBoost.cmake script..."
+	 	mv ${_bayeux_source_dir}/cmake/FindBoost.cmake ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig
+	    fi
+	fi
 	local _camp_options=
 	if [ "x${bayeux_camp_dir}" != "x" ]; then
 	    _camp_options="-DCAMP_DIR:PATH=${bayeux_camp_dir}"
