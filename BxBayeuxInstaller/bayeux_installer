@@ -427,10 +427,18 @@ function bayeux_installer_prepare()
 	fi
 	bayeux_geant4_dir="${bayeux_geant4_prefix}/lib/Geant4-$(geant4-config --version | cut -d' ' -f2)"
 	if [ ! -d ${bayeux_geant4_dir} ]; then
-	    bxiw_log_error "GEANT4 CMake directory '${bayeux_geant4_dir}' does not exist!"
+	    bxiw_log_warning "GEANT4 CMake directory '${bayeux_geant4_dir}' does not exist!"
+	fi
+	bayeux_geant4_dir="${bayeux_geant4_prefix}/lib64/Geant4-$(geant4-config --version | cut -d' ' -f2)"
+	if [ ! -d ${bayeux_geant4_dir} ]; then
+	    bxiw_log_warning "GEANT4 CMake directory '${bayeux_geant4_dir}' does not exist!"
+	fi
+	if [ -d ${bayeux_geant4_dir} ]; then
+	    bxiw_log_info "Using GEANT4 from directory : '${bayeux_geant4_dir}'"
+	else
+	    bxiw_log_error "GEANT4 CMake directory was not found!"
 	    return 1 
 	fi
-	bxiw_log_info "Using GEANT4 from directory : '${bayeux_geant4_dir}'"
     fi
     
     if [ ${bayeux_with_qt} = true ]; then
