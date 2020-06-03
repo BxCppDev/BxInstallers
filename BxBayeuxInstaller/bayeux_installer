@@ -385,7 +385,7 @@ function bayeux_installer_prepare()
 	bxiw_log_warning "CLHEP CMake directory '${bayeux_clhep_dir}' does not exist!"
 	bayeux_clhep_dir=""
     else
-	bxiw_log_info "Using CLHEP from directory : '${bayeux_clhep_prefix}'"
+	bxiw_log_info "Using CLHEP from root directory : '${bayeux_clhep_prefix}'"
     fi
 
     # BxDecay0:
@@ -782,7 +782,7 @@ function bayeux_installer_install()
 	if [ "x${bayeux_clhep_dir}" != "x" ]; then
 	    _clhep_options="-DCLHEP_DIR:PATH=${bayeux_clhep_dir}"
 	else
-	    _clhep_options="-DCLHEP_ROOT_DIR:PATH=${bayeux_prefix_dir}"
+	    _clhep_options="-DCLHEP_ROOT_DIR:PATH=${bayeux_clhep_prefix}"
 	fi
 	local _root_options=
 	if [ "x${bayeux_root_dir}" != "x" ]; then
