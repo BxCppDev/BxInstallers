@@ -10,6 +10,7 @@ function gsl___GSL_UVERSION___setup()
     fi
     export BX_GSL_INSTALL_DIR="${_bx_gsl_install_dir}"
     export BX_GSL_VERSION="${_bx_gsl_version}"
+    export PATH="${BX_GSL_INSTALL_DIR}/bin:${PATH}"
     echo >&2 "[info] gsl___GSL_UVERSION___setup: GSL version ${_bx_gsl_version} is now setup !"
     return 0
 }
