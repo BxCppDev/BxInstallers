@@ -69,6 +69,7 @@ EOF
   --system-find-boost Do not use the local FindBoost.cmake script
   --no-system-camp    Do not use CAMP system installation 
   --camp-prefix path  Set CAMP installation path
+  --camp-dir path     Set CAMP configuration CMake directory
   --with-qt           Bayeux is built with Qt5 support
   --no-system-qt      Do not use Qt5 system installation (implies --with-qt)
   --qt5-prefix path   Set Qt5 installation path (implies --with-qt and --no-system-qt)
@@ -118,6 +119,9 @@ function bayeux_installer_parse_cl()
 	    elif [ ${opt} = "--camp-prefix" ]; then
 		shift 1
 		bayeux_camp_prefix="$1"
+	    elif [ ${opt} = "--camp-dir" ]; then
+		shift 1
+		bayeux_camp_dir="$1"
 	    elif [ ${opt} = "--boost-root" ]; then
 		shift 1
 		bayeux_boost_root="$1"
@@ -304,35 +308,37 @@ function bayeux_installer_prepare()
     fi
     
     # CAMP:
-    bayeux_camp_prefix=""
-    if [ ${bayeux_no_system_camp} == true ]; then
-	if [ "x${bayeux_camp_prefix}" = "x" ]; then
-	    if [ "x${BX_CAMP_INSTALL_DIR}" != "x" ]; then
-		bayeux_camp_prefix="${BX_CAMP_INSTALL_DIR}"
+    if [ "x${bayeux_camp_dir}" = "x" ]; then
+	if [ ${bayeux_no_system_camp} == true ]; then
+	    if [ "x${bayeux_camp_prefix}" = "x" ]; then
+		if [ "x${BX_CAMP_INSTALL_DIR}" != "x" ]; then
+		    bayeux_camp_prefix="${BX_CAMP_INSTALL_DIR}"
+		fi
+	    fi
+	    if [ "x${bayeux_camp_prefix}" = "x" ]; then
+		find "/usr" -name "CAMPConfig.cmake"
+		if [ $? -eq 0 ]; then
+		    bayeux_camp_prefix="/usr"
+		fi
+	    fi
+	    if [ "x${bayeux_camp_prefix}" = "x" ]; then
+		bxiw_log_error "Missing CAMP prefix!"
+		return 1 
+	    fi
+	    if [ ! -d "${bayeux_camp_prefix}" ]; then
+		bxiw_log_error "CAMP directory '${bayeux_camp_prefix}' does not exist!"
+		return 1 
 	    fi
 	fi
-	if [ "x${bayeux_camp_prefix}" = "x" ]; then
-	    find "/usr" -name "CAMPConfig.cmake"
-	    if [ $? -eq 0 ]; then
-		bayeux_camp_prefix="/usr"
+	if [ "x${bayeux_camp_prefix}" != "x" ]; then
+	    if [ ! -d ${bayeux_camp_prefix} ]; then
+		bxiw_log_error "CAMP installation directory '${bayeux_camp_prefix}' does not exist!"
+		return 1 
 	    fi
 	fi
-	if [ "x${bayeux_camp_prefix}" = "x" ]; then
-	    bxiw_log_error "Missing CAMP prefix!"
-	    return 1 
-	fi
-	if [ ! -d "${bayeux_camp_prefix}" ]; then
-	    bxiw_log_error "CAMP directory '${bayeux_camp_prefix}' does not exist!"
-	    return 1 
-	fi
+	bayeux_camp_dir="${bayeux_camp_prefix}/lib/camp/cmake"
     fi
-    if [ "x${bayeux_camp_prefix}" != "x" ]; then
-	if [ ! -d ${bayeux_camp_prefix} ]; then
-	    bxiw_log_error "CAMP installation directory '${bayeux_camp_prefix}' does not exist!"
-	    return 1 
-	fi
-    fi
-    bayeux_camp_dir="${bayeux_camp_prefix}/lib/camp/cmake"
+    
     if [ ! -d ${bayeux_camp_dir} ]; then
 	bxiw_log_error "CAMP CMake directory '${bayeux_camp_dir}' does not exist!"
 	return 1 
@@ -341,7 +347,7 @@ function bayeux_installer_prepare()
     # else
     # 	bayeux_camp_prefix="/usr"
     # 	bayeux_camp_dir="${bayeux_camp_prefix}/lib/camp/cmake"
-    fi
+    # fi
    
     if [ "x${bayeux_camp_prefix}" != "x" ]; then
 	if [ ! -f "${bayeux_camp_prefix}/include/camp/version.hpp" ]; then
