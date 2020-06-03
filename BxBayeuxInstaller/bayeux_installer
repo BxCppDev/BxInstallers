@@ -360,29 +360,32 @@ function bayeux_installer_prepare()
     fi
     
     # CLHEP:
-    bayeux_clhep_prefix=""
-    if [ "x${bayeux_clhep_prefix}" = "x" ]; then
-	which clhep-config > /dev/null 2>&1
-	if [ $? -ne 0 ]; then
-	    bxiw_log_error "Cannot find CLHEP 'clhep-config' script!"
-	    return 1
+    if [ "x${bayeux_clhep_dir}" = "x" ]; then
+	
+	if [ "x${bayeux_clhep_prefix}" = "x" ]; then
+	    which clhep-config > /dev/null 2>&1
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Cannot find CLHEP 'clhep-config' script!"
+		return 1
+	    fi
+	    bayeux_clhep_prefix=$(clhep-config --prefix | tr -d '"')
 	fi
-	bayeux_clhep_prefix=$(clhep-config --prefix | tr -d '"')
+	if [ "x${bayeux_clhep_prefix}" = "x" ]; then
+	    bxiw_log_error "Missing CLHEP prefix!"
+	    return 1 
+	fi
+	if [ ! -d "${bayeux_clhep_prefix}" ]; then
+	    bxiw_log_error "CLHEP directory '${bayeux_clhep_prefix}' does not exist!"
+	    return 1 
+	fi
+	bayeux_clhep_dir="${bayeux_clhep_prefix}/lib/CLHEP-$(clhep-config --version | cut -d' ' -f2)"
     fi
-    if [ "x${bayeux_clhep_prefix}" = "x" ]; then
-	bxiw_log_error "Missing CLHEP prefix!"
-	return 1 
-    fi
-    if [ ! -d "${bayeux_clhep_prefix}" ]; then
-	bxiw_log_error "CLHEP directory '${bayeux_clhep_prefix}' does not exist!"
-	return 1 
-    fi
-    bayeux_clhep_dir="${bayeux_clhep_prefix}/lib/CLHEP-$(clhep-config --version | cut -d' ' -f2)"
+    
     if [ ! -d ${bayeux_clhep_dir} ]; then
 	bxiw_log_warning "CLHEP CMake directory '${bayeux_clhep_dir}' does not exist!"
-	#	return 1
+	bayeux_clhep_dir=""
     else
-	bxiw_log_info "Using CLHEP from directory : '${bayeux_clhep_dir}'"
+	bxiw_log_info "Using CLHEP from directory : '${bayeux_clhep_prefix}'"
     fi
 
     # BxDecay0:
