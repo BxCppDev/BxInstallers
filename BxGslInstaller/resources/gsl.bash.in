@@ -1,0 +1,20 @@
+# -*- mode: shell-script; -*-
+
+function gsl___GSL_UVERSION___setup()
+{
+    local _bx_gsl_version="__GSL_VERSION__"
+    local _bx_gsl_install_dir="__GSL_INSTALL_DIR__"
+    if [ -n "${BX_GSL_INSTALL_DIR}" ]; then
+	echo >&2 "[warning] gsl___GSL_UVERSION___setup: GSL version ${BX_GSL_VERSION} is already setup !"   
+	return 1
+    fi
+    export BX_GSL_INSTALL_DIR="${_bx_gsl_install_dir}"
+    export BX_GSL_VERSION="${_bx_gsl_version}"
+    echo >&2 "[info] gsl___GSL_UVERSION___setup: GSL version ${_bx_gsl_version} is now setup !"
+    return 0
+}
+export -f gsl___GSL_UVERSION___setup
+alias gsl_setup='gsl___GSL_UVERSION___setup'
+
+# end
+

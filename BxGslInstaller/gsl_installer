@@ -1,0 +1,489 @@
+#!/usr/bin/env bash
+
+if [ ! -f "$(pwd)/.bxwi_gsl.locate" ]; then
+    echo >&2 "[error] Please run from the GSL installer directory!"
+    exit 1
+fi
+source $(pwd)/../lib/libbxiw.bash
+bxiw_app_name="gsl_installer"
+bxiw_app_saved_opwd=$(pwd)
+bxiw_app_installer_prefix="$(pwd)"
+bxiw_package_name="gsl"
+bxiw_default_package_version="2.4"
+bxiw_supported_package_versions="2.4 2.5 2.6"
+bxiw_package_version=
+
+function gsl_installer_usage()
+{
+    cat<<EOF
+
+gsl_installer - GSL library installer
+
+Synopsis:
+
+    gsl_installer [OPTION]...
+
+Options:
+
+  --help              Print this help then exit
+EOF
+    _bxiw_usage_options
+    cat<<EOF
+EOF
+     echo ""
+    return 0
+}
+
+
+function gsl_installer_parse_cl()
+{
+    while [ -n "$1" ]; do
+	token="$1"
+	if [ "x${token:0:1}" = "x-" ]; then
+	    opt="${token}"
+	    if [ ${opt} = "--help" ]; then
+		gsl_installer_usage
+		bxiw_exit 0
+	    else
+		bxiw_log_error "Unsupported option '${opt}'!"
+		return 1
+	    fi
+	else
+	    arg="${token}"
+	fi
+	shift 1
+    done
+    return 0
+}
+
+function gsl_installer_prepare()
+{
+    _bxiw_prepare_pre
+ 
+    if [ ${bxiw_with_gui} = true ]; then
+	
+	local _do_rebuild_repr="FALSE"
+	if [ ${bxiw_do_rebuild} = true ]; then
+	    _do_rebuild_repr="TRUE"
+	fi
+	
+	local _remove_build_dir_repr="FALSE"
+	if [ ${bxiw_remove_build_dir} = true ]; then
+	    _remove_build_dir_repr="TRUE"
+	fi
+	
+	local _remove_tarballs_repr="FALSE"
+	if [ ${bxiw_remove_tarballs} = true ]; then
+	    _remove_tarballs_repr="TRUE"
+	fi
+	
+	local _system_install_repr="FALSE"
+	if [ ${bxiw_system_install} = true ]; then
+	    _system_install_repr="TRUE"
+	fi
+
+	which yad > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    bxiw_message "[warning] yad is not installed! No GUI!"
+	else
+	    local _choices=$(yad --width=500 \
+				 --form \
+				 --title "${bxiw_package_name} installer options" \
+				 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
+				 --field="Working directory:CDIR" "${bxiw_work_dir}" \
+				 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
+				 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+				 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+				 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+				 --field="System installation:CHK" "$_system_install_repr}" \
+		  )
+	    if [ "x${_choices}" = "x" ]; then
+		bxiw_log_error "Cancelled dialog!"
+		return 1
+	    fi
+	    bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+	    bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
+	    bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
+	    _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
+	    if [ ${_do_rebuild_repr} == "TRUE" ]; then
+		bxiw_do_rebuild=true
+	    else
+		bxiw_do_rebuild=false
+	    fi
+	    _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
+	    if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+		bxiw_remove_build_dir=true
+	    else
+		bxiw_remove_build_dir=false
+	    fi
+	    _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
+	    if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+		bxiw_remove_tarballs=true
+	    else
+		bxiw_remove_tarballs=false
+	    fi
+	    _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
+	    if [ ${_system_install_repr} == "TRUE" ]; then
+		bxiw_system_install=true
+	    else
+		bxiw_system_install=false
+	    fi
+	fi
+    fi
+    
+    # Prepare:
+    _bxiw_prepare_post
+     
+    return 0
+}
+
+
+function gsl_installer_get_tarball()
+{
+    local _gsl_version="$1"
+    shift 1
+    echo "gsl-${_gsl_version}.tar.gz"
+    return 0
+}
+
+
+function gsl_installer_get_url()
+{
+    local _gsl_version="$1"
+    local _gsl_tarball=$(gsl_installer_get_tarball ${_gsl_version})
+    echo "ftp://ftp.gnu.org/gnu/gsl/${_gsl_tarball}"
+    return 0
+}
+
+
+function gsl_installer_set_system_dependencies()
+{
+    
+    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+	bxiw_system_packages_build="cmake \
+        	    pkg-config \
+        	    dpkg-dev \
+       	    	    wget \
+ 		    gcc \
+		    doxygen \
+		    "
+	bxiw_system_packages_build="${bxiw_system_packages_build} make"
+	if [ ${bxiw_with_package} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
+	fi
+	if [ ${bxiw_with_gui} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} yad"
+	fi
+	# if [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
+	    
+	# fi
+	bxiw_system_packages_run="gcc"
+	bxiw_pass
+    elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
+	bxiw_pass
+    elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+	bxiw_pass
+    fi
+    return 0
+}
+
+
+function gsl_installer_print()
+{
+    bxiw_print
+    return 0
+}
+
+
+function gsl_installer_download()
+{
+    local _gsl_tarball=$(gsl_installer_get_tarball ${bxiw_package_version})
+    local _gsl_url=$(gsl_installer_get_url ${bxiw_package_version})
+    bxiw_log_info "GSL tarball : '${_gsl_tarball}'"
+    bxiw_log_info "GSL URL     : '${_gsl_url}'"
+    if [ ! -f ${bxiw_tag_downloaded} ]; then
+	bxiw_download_file ${_gsl_url} ${_gsl_tarball}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Could not download the '${_gsl_tarball}' file!"
+	    return 1
+	fi
+	touch ${bxiw_tag_downloaded}
+    else
+	bxiw_log_info "GSL tarball is already downloaded."
+    fi
+    return  0
+}
+
+
+function gsl_installer_install()
+{
+    local _gsl_opwd=$(pwd)
+    local _gsl_tarball=$(gsl_installer_get_tarball ${bxiw_package_version})
+    cd ${bxiw_cache_dir}
+    local _gsl_source_dir="$(pwd)/gsl-${bxiw_package_version}"
+    bxiw_log_info "GSL version is                : '${bxiw_package_version}'"
+    bxiw_log_info "GSL source directory is       : '${_gsl_source_dir}'"
+    if [ ! -d ${_gsl_source_dir} ]; then
+	bxiw_log_info "Unpacking source directory..."
+	tar xzf ${bxiw_cache_dir}/${_gsl_tarball}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Source directory has not been unpacked."
+	    cd ${_gsl_opwd}
+	    return 1
+	else
+	    bxiw_log_info "Source directory has been unpacked."
+	fi
+    else
+	bxiw_log_info "Source directory was already unpacked."
+    fi
+
+    # touch ${_gsl_source_dir}/LICENSE.LGPL3.txt
+
+    cd ${bxiw_build_dir}
+    bxiw_log_info "GSL build directory is        : '${bxiw_build_dir}'"
+    bxiw_log_info "GSL tag directory is          : '${bxiw_tag_dir}'"
+    bxiw_log_info "GSL installation directory is : '${bxiw_install_dir}'"
+    
+    if [ ! -f ${bxiw_build_dir}/configure.sh ]; then
+        bxiw_log_info "Copying the source directory in the build directory..."
+        cp -a ${_gsl_source_dir}/* ${bxiw_build_dir}/
+    else
+        bxiw_log_info "The source directory is already cloned in the build directory."
+        ls -1 ${bxiw_build_dir}
+    fi
+
+    # Configuration:
+    local _gsl_do_config=false
+    if [ ! -f ${bxiw_tag_configured} ]; then
+	bxiw_log_info "GSL configuration is needed."
+	_gsl_do_config=true
+    else
+	bxiw_log_info "GSL configuration is already done."
+	if [ ${bxiw_do_reconfigure} == true ]; then
+	    bxiw_log_info "Forcing GSL reconfiguration..."
+	    _gsl_do_configure=true
+	fi
+    fi
+
+    build_bin=make
+    
+    if [ ${_gsl_do_config} == true ]; then
+	bxiw_log_info "GSL configuration..."
+       ./configure \
+	    --prefix="${bxiw_install_dir}" 
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "GSL configuration failed!"
+	    cd ${_gsl_opwd}
+	    return 1
+	else
+	    touch ${bxiw_tag_configured}
+    	    bxiw_log_info "GSL is configured."
+	fi
+    else
+	bxiw_log_info "Do not configure GSL."
+    fi
+    
+    # Build:
+    local _gsl_do_build=false
+    if [ ! -f ${bxiw_tag_built} ]; then
+	bxiw_log_info "GSL build is needed."
+	_gsl_do_build=true
+    else
+	bxiw_log_info "GSL build is already done."
+	if [ ${bxiw_do_rebuild} == true ]; then
+	    bxiw_log_info "Forcing GSL rebuild..."
+	    _gsl_do_build=true
+	fi
+    fi
+
+    if [ ${_gsl_do_build} == true ]; then
+	bxiw_log_info "Building GSL..."
+	local _gsl_nbprocs=${bxiw_nbprocs}
+	if [ ${_gsl_nbprocs} -gt 2 ]; then
+	    let _gsl_nbprocs=${bxiw_nbprocs}
+	else
+	    _gsl_nbprocs=1 
+	fi
+	bxiw_log_info "#procs = ${_gsl_nbprocs}"
+	${build_bin} -j ${_gsl_nbprocs}
+	if [ $? -ne 0 ]; then
+    	    bxiw_log_error "GSL build failed!"
+    	    cd ${_gsl_opwd}
+    	    return 1
+	else
+	    touch ${bxiw_tag_built}
+    	    bxiw_log_info "GSL is built."
+	fi
+    else
+	bxiw_log_info "Do not build GSL."
+    fi
+
+    # Installation:
+    local _gsl_do_install=false
+    if [ ! -f ${bxiw_tag_installed} ]; then
+	bxiw_log_info "GSL installation is needed."
+	_gsl_do_install=true
+    else
+	bxiw_log_info "GSL installation is already done."
+	if [ ${bxiw_do_reinstall} == true ]; then
+	    _gsl_do_install=true
+	    bxiw_log_info "Forcing GSL installation..."
+	fi
+    fi
+    if [ ${bxiw_no_install} == true ]; then
+	_gsl_do_install=false
+    fi
+
+    if [ ${_gsl_do_install} == true ]; then
+	local _gsl_do_package=false
+	if [ ${bxiw_with_package} == true ]; then
+	    _gsl_do_package=true
+	fi
+	if [ ${_gsl_do_package} == true ]; then
+	    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+		bxiw_log_info "Building a binary package for GSL..."
+		gsl_installer_makedebpack
+	    else
+    		bxiw_log_error "Cannot pack GSL for '${bxiw_os_distrib_id}'!"
+    		cd ${_gsl_opwd}
+		return 1
+	    fi
+	else
+	    bxiw_log_info "Installing GSL..."
+	    ${build_bin} install
+	    if [ $? -ne 0 ]; then
+    		bxiw_log_error "GSL installation failed!"
+    		cd ${_gsl_opwd}
+    		return 1
+	    else
+		touch ${bxiw_tag_installed}
+    		bxiw_log_info "GSL is installed."
+	    fi
+	fi
+    else
+	bxiw_log_info "Do not install GSL."
+    fi
+    cd ${_gsl_opwd}
+    return  0
+}
+
+
+function gsl_installer_makedebpack()
+{
+    local _gsl_build_dir="${bxiw_build_dir}"
+    cd ${_gsl_build_dir}
+    mkdir -p ${_gsl_build_dir}/doc-pak
+    touch ${_gsl_build_dir}/description-pak
+    cat>${_gsl_build_dir}/description-pak<<EOF
+GSL C Library (Bayeux edition)
+
+This is a binary version for ${bxiw_os_distrib_id} ${bxiw_os_distrib_release} 
+usable with the Bayeux software suite.
+EOF
+ 
+    local _arch="amd64"
+    local _gsl_do_package=true
+    local _gsl_pkg_filename="bx${bxiw_package_name}_${bxiw_package_version}-${bxiw_pkg_release}_${_arch}.deb"
+    if [ -f ${package_dir}/${_gsl_pkg_filename} ]; then
+	bxiw_log_info "Package '${_gsl_pkg_filename}' exists in '${bxiw_package_dir}'."
+	_gsl_do_package=false
+    fi
+    local _gsl_requires="\
+		"
+    _gsl_requires_list=$(echo ${_gsl_requires} | tr ' ' ',')
+    _gsl_conflicts_list="libgsl-dev,libgsl0.8"
+    bxiw_log_info "Requires : ${_gsl_requires_list}!"	
+    if [ ${_gsl_do_package} == true ]; then
+	if [ "x${bxiw_os_arch}" != "xx86_64" ]; then
+	    bxiw_log_error "Unsupported architecture ${bxiw_os_arch}!"	
+	    return 1
+	fi
+	sudo checkinstall \
+	     --type="debian" \
+	     --install="no" \
+	     --fstrans="no" \
+	     --pkgname="bx${bxiw_package_name}" \
+	     --pkgversion="${bxiw_package_version}" \
+	     --pkgrelease=${bxiw_pkg_release} \
+	     --pkglicense="MIT" \
+	     --pkgsource="$(gsl_installer_get_url ${bxiw_package_version})" \
+	     --maintainer="${bxiw_pkg_maintener_email}" \
+	     --provides="bx${bxiw_package_name}" \
+	     --requires="${_gsl_requires_list}" \
+	     --conflicts="${_gsl_conflicts_list}" \
+	     --backup="no" \
+	     --pakdir="${bxiw_package_dir}" \
+	     --default \
+	     ${build_bin} install
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Debian binary package build failed!"	
+	    return 1
+	fi
+    fi	 
+    return 0
+}
+
+
+function gsl_installer_setup()
+{
+    bxiw_log_trace "gsl_installer_setup: entering..."
+    local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
+    bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
+	sed \
+	    -e "s@__GSL_INSTALL_DIR__@${bxiw_install_dir}@g" \
+	    -e "s@__GSL_VERSION__@${bxiw_package_version}@g" \
+            -e "s@__GSL_UVERSION__@${_bxsoftware_underscored_version}@g" \
+	    > ${_bxsoftware_setup_script}
+    return  0
+}
+
+bxiw_detect_os
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Unsupported OS!"
+fi
+
+bxiw_env
+bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
+# bxiw_log_info "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+gsl_installer_parse_cl ${bxiw_app_cl_remaining_argv}
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Command line parse error!"
+fi
+
+gsl_installer_prepare
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Preparation failed!"
+fi
+
+gsl_installer_set_system_dependencies
+
+gsl_installer_print
+
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "System dependencies installation failed!"
+fi
+
+gsl_installer_download
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Source archive download failed!"
+fi
+
+gsl_installer_install
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Installation failed!"
+fi
+
+if [ ${bxiw_with_package} == false ]; then
+    gsl_installer_setup
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "Setup failed!"
+    fi
+fi
+
+bxiw_exit 0
+
+# end
