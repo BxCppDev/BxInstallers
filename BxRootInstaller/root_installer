@@ -12,8 +12,10 @@ bxiw_package_name="root"
 bxiw_default_package_version="6.16.00"
 bxiw_supported_package_versions="6.20.04 6.16.00 6.12.06"
 bxiw_package_version=
+bxiw_system_install=false
 
 root_system_tbb=false
+root_with_python=false
 
 function root_installer_usage()
 {
@@ -32,6 +34,7 @@ EOF
     _bxiw_usage_options
     cat<<EOF
   --system-tbb         Use system TBB
+  --with-python        Build Python binding
 EOF
     echo ""
     return 0
@@ -49,6 +52,10 @@ function root_installer_parse_cl()
                 bxiw_exit 0
             elif [ ${opt} = "--system-tbb" ]; then
                 root_system_tbb=true
+            elif [ ${opt} = "--with-python" ]; then
+                root_with_python=true
+            elif [ ${opt} = "--without-python" ]; then
+                root_with_python=false
             else
                 bxiw_message "error" "Unsupported option '${opt}'!"
                 return 1
@@ -296,7 +303,7 @@ function root_installer_set_system_dependencies()
             # bxiw_system_packages_run="${bxiw_system_packages_run} llvm-dev"
             bxiw_pass
         fi
-    elif [ "x${bxiw_os_distrib_id}" = "xCentOS" || "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+    elif [ "x${bxiw_os_distrib_id}" = "xCentOS" -o "x${bxiw_os_distrib_id}" = "xScientific" ]; then
         bxiw_system_packages_build="cmake \
                     ninja-build \
                     make \
@@ -427,6 +434,20 @@ function root_installer_install()
         else
             tbb_opts="-Dbuiltin_tbb=ON"
         fi
+	python_opts=
+	if [ ${root_with_python} = true ]; then
+	    python_opts="-Dpython=ON" 
+	    python_opts="${python_opts} -DPYTHON_EXECUTABLE=$(which python2)" 
+	    _python_version=$(python2 --version 2>&1 | cut -d' ' -f2)
+	    _python_short_version=$(echo ${_python_version} | cut -d. -f1,2)
+	    python_opts="${python_opts} -DPYTHON_INCLUDE_DIR=$(python2-config --prefix)/include/python/${_python_version}" 
+	    python_opts="${python_opts} -DPYTHON_LIBRARY=$(python2-config --prefix)/lib/libpython${_python_short_version}.so" 
+
+
+            # -DPYTHON_EXECUTABLE="$(which python2)" \
+            # -DPYTHON_INCLUDE_DIR="/usr/include/python2.7" \
+            # -DPYTHON_LIBRARY="/usr/lib/x86_64-linux-gnu/libpython2.7.so" 
+	fi
         cmake  \
             -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
             -DCMAKE_BUILD_TYPE:STRING="Release" \
@@ -467,7 +488,7 @@ function root_installer_install()
             -Dbuiltin_afterimage=OFF \
             -Dbuiltin_clang=ON \
             -Dbuiltin_fftw3=OFF \
-            -Dbuiltin_ftgl=OFF \
+            -Dbuiltin_ftgl=ON \
             -Dbuiltin_freetype=OFF \
             -Dbuiltin_llvm=ON \
             -Droofit=ON \
@@ -479,10 +500,7 @@ function root_installer_install()
             -Dmathmore=ON \
             -Dxrootd=OFF \
             -Dvdt=OFF \
-            -Dpython=ON \
-            -DPYTHON_EXECUTABLE="$(which python2)" \
-            -DPYTHON_INCLUDE_DIR="/usr/include/python2.7" \
-            -DPYTHON_LIBRARY="/usr/lib/x86_64-linux-gnu/libpython2.7.so" \
+             ${python_opts} \
             -G Ninja \
             ${_root_source_dir}
         if [ $? -ne 0 ]; then
@@ -681,9 +699,11 @@ root_installer_set_system_dependencies
 
 root_installer_print
 
-bxiw_install_system_dependencies
-if [ $? -ne 0 ]; then
-    bxiw_exit 1 "System dependencies installation failed!"
+if [ ${bxiw_system_install} = true ]; then
+    bxiw_install_system_dependencies
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "System dependencies installation failed!"
+    fi
 fi
 
 root_installer_download
