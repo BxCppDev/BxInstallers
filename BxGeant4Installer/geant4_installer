@@ -21,6 +21,8 @@ g4_with_qt=false
 g4_no_system_qt=false
 g4_qt5_prefix=
 g4_datasets_timeout=86400
+g4_xercesc_root_dir=
+
 
 function geant4_installer_usage()
 {
@@ -40,6 +42,7 @@ Options:
   --with-buildin-datasets      Build Geant4 with builtin datasets (default: no) 
   --external-datasets-dir path Set the installation directory of external datasets (default: automatic)  
   --with-qt                    Build Geant4 with Qt support (default: no)     
+  --xercesc-root-dir path      Set the installation directory of the Xerces-C library  
 EOF
     _bxiw_usage_options
     echo ""
@@ -78,6 +81,9 @@ function geant4_installer_parse_cl()
 		g4_no_system_qt=true
 		shift 1
 		g4_qt5_prefix="$1"
+	    elif [ ${opt} == "--xercesc-root-dir" ]; then
+		shift 1
+		g4_xercesc_root_dir="$1"
 	    else
 		bxiw_message "error" "Unsupported option '${opt}'!"
 		return 1
@@ -429,7 +435,14 @@ function geant4_installer_install()
 	local _geant4_zlib_opt="-DGEANT4_USE_SYSTEM_ZLIB=ON"
 	if [ "${bxiw_package_version}" = "9.6.4" ]; then
 	    _geant4_zlib_opt="-DGEANT4_USE_SYSTEM_ZLIB=OFF"
-	fi	
+	fi
+	local _geant4_xercesc_opt=""
+	if [ "x${g4_xercesc_root_dir}" = "x" ]; then
+	    g4_xercesc_root_dir=$(pkg-config --variable=prefix xerces-c)
+	fi
+	if [ "x${g4_xercesc_root_dir}" != "x" ]; then
+	    _geant4_xercesc_opt="-DXERCESC_ROOT_DIR=${g4_xercesc_root_dir}"
+	fi
 	cmake  \
 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
 	    -DCMAKE_INSTALL_LIBDIR=lib \
@@ -442,6 +455,7 @@ function geant4_installer_install()
 	    -DGEANT4_USE_SYSTEM_EXPAT=ON \
 	    -DGEANT4_USE_GDML=ON \
 	    -DGEANT4_USE_OPENGL_X11=ON \
+	    ${_geant4_xercesc_opt} \
 	    -Wno-dev \
 	    -G Ninja \
 	    ${_geant4_source_dir}
@@ -641,10 +655,10 @@ geant4_installer_set_system_dependencies
 
 geant4_installer_print
 
-bxiw_install_system_dependencies
-if [ $? -ne 0 ]; then
-    bxiw_exit 1 "System dependencies installation failed!"
-fi
+#bxiw_install_system_dependencies
+#if [ $? -ne 0 ]; then
+#    bxiw_exit 1 "System dependencies installation failed!"
+#fi
 
 geant4_installer_download
 if [ $? -ne 0 ]; then
