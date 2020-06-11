@@ -460,10 +460,10 @@ g4datasets_installer_set_system_dependencies
 
 g4datasets_installer_print
 
-bxiw_install_system_dependencies
-if [ $? -ne 0 ]; then
-    bxiw_exit 1 "System dependencies installation failed!"
-fi
+# bxiw_install_system_dependencies
+# if [ $? -ne 0 ]; then
+#     bxiw_exit 1 "System dependencies installation failed!"
+# fi
 
 g4datasets_installer_download
 if [ $? -ne 0 ]; then
