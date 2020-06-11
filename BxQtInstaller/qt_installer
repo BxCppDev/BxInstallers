@@ -314,6 +314,9 @@ function qt_installer_install()
 	    -system-libjpeg \
 	    -system-libpng \
 	    -system-freetype \
+	    -system-sqlite \
+	    -no-sql-all \
+	    -no-doubleconversion \
             -opensource \
 	    -confirm-license \
 	    -release \
