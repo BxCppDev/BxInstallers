@@ -66,7 +66,7 @@ EOF
     cat<<EOF
   --no-system-boost   Do not use Boost system installation 
   --boost-root path   Set Boost installation path (implies --no-system-boost)
-  --system-find-boost Do not use the local FindBoost.cmake script
+  --system-find-boost Do use the local system FindBoost.cmake script
   --no-system-camp    Do not use CAMP system installation 
   --camp-prefix path  Set CAMP installation path
   --camp-dir path     Set CAMP configuration CMake directory
@@ -288,11 +288,13 @@ function bayeux_installer_prepare()
 	bxiw_log_info "Using Boost from directory : '${bayeux_boost_root}'"
     else
 	if [ "x${bayeux_boost_root}" = "x" ]; then
-	    bxiw_log_info "Checking system Boost..."
-	    dpkg -l | grep "libboost-all-dev" > /dev/null
-	    if [ $? -eq 0 ]; then
-		bxiw_log_info "Set system install path for Boost"
-		bayeux_boost_root="/usr"
+	    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+		bxiw_log_info "Checking system Boost..."
+		dpkg -l | grep "libboost-all-dev" > /dev/null
+		if [ $? -eq 0 ]; then
+		    bxiw_log_info "Set system install path for Boost"
+		    bayeux_boost_root="/usr"
+		fi
 	    fi
 	fi
      fi
@@ -452,8 +454,8 @@ function bayeux_installer_prepare()
 	bayeux_geant4_dir="${bayeux_geant4_prefix}/lib/Geant4-$(geant4-config --version | cut -d' ' -f2)"
 	if [ ! -d ${bayeux_geant4_dir} ]; then
 	    bxiw_log_warning "GEANT4 CMake directory '${bayeux_geant4_dir}' does not exist!"
+	    bayeux_geant4_dir="${bayeux_geant4_prefix}/lib64/Geant4-$(geant4-config --version | cut -d' ' -f2)"
 	fi
-	bayeux_geant4_dir="${bayeux_geant4_prefix}/lib64/Geant4-$(geant4-config --version | cut -d' ' -f2)"
 	if [ ! -d ${bayeux_geant4_dir} ]; then
 	    bxiw_log_warning "GEANT4 CMake directory '${bayeux_geant4_dir}' does not exist!"
 	fi
@@ -933,6 +935,13 @@ function bayeux_installer_install()
     fi
 
     if [ ${_bayeux_do_install} == true ]; then
+	if [ ${bayeux_system_find_boost} = true ]; then
+	    if [ -f ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig ]; then
+		bxiw_log_info "Hidding FindBoost.cmake script..."
+		mv ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig ${_bayeux_source_dir}/cmake/FindBoost.cmake
+	    fi
+	fi
+
 	local _bayeux_do_package=false
 	if [ ${bxiw_with_package} == true ]; then
 	    _bayeux_do_package=true
