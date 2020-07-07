@@ -443,10 +443,14 @@ function geant4_installer_install()
 	if [ "x${g4_xercesc_root_dir}" != "x" ]; then
 	    _geant4_xercesc_opt="-DXERCESC_ROOT_DIR=${g4_xercesc_root_dir}"
 	fi
+	local _geant4_libdir="lib"
 	cmake  \
 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
-	    -DCMAKE_INSTALL_LIBDIR=lib \
-	    -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
+	    -DCMAKE_INSTALL_LIBDIR=${_geant4_libdir} \
+	    -DCMAKE_SKIP_BUILD_RPATH=FALSE \
+	    -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE \
+	    -DCMAKE_INSTALL_RPATH="${bxiw_install_dir}/${_geant4_libdir}" \
+	    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE \
 	    -DGEANT4_BUILD_CXXSTD=c++11 \
 	    ${_geant4_datasets_opt} \
 	    ${_geant4_clhep_opt} \
@@ -655,17 +659,15 @@ geant4_installer_set_system_dependencies
 
 geant4_installer_print
 
-#bxiw_install_system_dependencies
-#if [ $? -ne 0 ]; then
-#    bxiw_exit 1 "System dependencies installation failed!"
-#fi
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+   bxiw_exit 1 "System dependencies installation failed!"
+fi
 
 geant4_installer_download
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Source archive download failed!"
 fi
-
-# bxiw_exit 0
 
 geant4_installer_install
 if [ $? -ne 0 ]; then
