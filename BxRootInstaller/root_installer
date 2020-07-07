@@ -218,9 +218,6 @@ function root_installer_set_system_dependencies()
                     libpng-dev \
                     libjpeg-dev \
                     libgif-dev \
-                    python python-dev \
-                    libpython2.7 libpython2.7-dev \
-                    python-numpy-dev \
                     libafterimage-dev \
                     libtiff5-dev \
                     liblzma-dev \
@@ -253,9 +250,6 @@ function root_installer_set_system_dependencies()
                     libpng-dev \
                     libjpeg-dev \
                     libgif-dev \
-                    python python-dev \
-                    libpython2.7 libpython2.7-dev \
-                    python-numpy-dev \
                     libafterimage-dev \
                     libtiff5-dev \
                     liblzma-dev \
@@ -266,6 +260,10 @@ function root_installer_set_system_dependencies()
                     libglew-dev \
                     libpcre3-dev \
                     "
+	if [ ${root_with_python} == true ]; then
+            bxiw_system_packages_run="${bxiw_system_packages_run} python python-dev libpython2.7 libpython2.7-dev python-numpy-dev"	    
+            bxiw_system_packages_build="${bxiw_system_packages_build} python python-dev libpython2.7 libpython2.7-dev python-numpy-dev"	    
+	fi
         if [ ${root_system_tbb} == true ]; then
             bxiw_system_packages_build="${bxiw_system_packages_build} libtbb-dev libtbb2-dbg"   
             bxiw_system_packages_run="${bxiw_system_packages_run}     libtbb-dev libtbb2-dbg"   
@@ -302,6 +300,7 @@ function root_installer_set_system_dependencies()
             # bxiw_system_packages_run="${bxiw_system_packages_run} libllvm6.0"
             # bxiw_system_packages_run="${bxiw_system_packages_run} llvm-dev"
             bxiw_pass
+        elif [ "x${bxiw_os_distrib_release}" = "x20.04" ]; then
         fi
     elif [ "x${bxiw_os_distrib_id}" = "xCentOS" -o "x${bxiw_os_distrib_id}" = "xScientific" ]; then
         bxiw_system_packages_build="cmake \
@@ -315,7 +314,6 @@ function root_installer_set_system_dependencies()
                     libXpm-devel \
                     libXft-devel \
                     libXext-devel \
-                    python \
                     redhat-lsb-core \
                     openssl-devel \
                     pcre-devel \
@@ -325,8 +323,6 @@ function root_installer_set_system_dependencies()
                     ftgl-devel \
                     fftw-devel \
                     graphviz-devel \
-                    python-devel \
-                    python-numpy-devel \
                     libxml2-devel \
                     gsl-static \
                     "
@@ -340,7 +336,6 @@ function root_installer_set_system_dependencies()
                     libXpm-devel \
                     libXft-devel \
                     libXext-devel \
-                    python \
                     redhat-lsb-core \
                     openssl-devel \
                     pcre-devel \
@@ -350,11 +345,13 @@ function root_installer_set_system_dependencies()
                     ftgl-devel \
                     fftw-devel \
                     graphviz-devel \
-                    python-devel \
-                    python-numpy-devel \
                     libxml2-devel \
                     gsl-static \
                     "
+	if [ ${root_with_python} == true ]; then
+            bxiw_system_packages_run="${bxiw_system_packages_run} python python-devel python-numpy-devel"	    
+            bxiw_system_packages_build="${bxiw_system_packages_build} python python-devel python-numpy-devel"	    
+	fi
         bxiw_pass
     fi
     return 0
@@ -440,9 +437,8 @@ function root_installer_install()
 	    python_opts="${python_opts} -DPYTHON_EXECUTABLE=$(which python2)" 
 	    _python_version=$(python2 --version 2>&1 | cut -d' ' -f2)
 	    _python_short_version=$(echo ${_python_version} | cut -d. -f1,2)
-	    python_opts="${python_opts} -DPYTHON_INCLUDE_DIR=$(python2-config --prefix)/include/python/${_python_version}" 
+	    python_opts="${python_opts} -DPYTHON_INCLUDE_DIR=$(python2-config --prefix)/include/python${_python_short_version}" 
 	    python_opts="${python_opts} -DPYTHON_LIBRARY=$(python2-config --prefix)/lib/libpython${_python_short_version}.so" 
-
 
             # -DPYTHON_EXECUTABLE="$(which python2)" \
             # -DPYTHON_INCLUDE_DIR="/usr/include/python2.7" \
@@ -699,11 +695,9 @@ root_installer_set_system_dependencies
 
 root_installer_print
 
-if [ ${bxiw_system_install} = true ]; then
-    bxiw_install_system_dependencies
-    if [ $? -ne 0 ]; then
-	bxiw_exit 1 "System dependencies installation failed!"
-    fi
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "System dependencies installation failed!"
 fi
 
 root_installer_download
