@@ -298,12 +298,22 @@ function bxiw_install_system_package()
 
 function bxiw_install_system_dependencies()
 {
-    for _syspackage in ${bxiw_system_packages_build}; do
-	bxiw_install_system_package ${_syspackage}
-	if [ $? -ne 0 ]; then
-	    return 1
-	fi
-    done
+    local _do_it=false
+    if [ ${UID} -eq 0 ]; then
+	_do_it=true
+    fi
+    LANG=C id | tr ' ' '\n' | grep ^groups= | cut -d= -f2 | tr ',' '\n' | grep "(sudo)" >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+	_do_it=true	
+    fi
+    if [ ${_do_it} == true ]; then 
+	for _syspackage in ${bxiw_system_packages_build}; do
+	    bxiw_install_system_package ${_syspackage}
+	    if [ $? -ne 0 ]; then
+		return 1
+	    fi
+	done
+    fi
     return 0
 }
 
