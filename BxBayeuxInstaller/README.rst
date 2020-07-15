@@ -7,7 +7,7 @@ Bayeux installation
 
 Bayeux installer for Ubuntu provided by the Bayeux development group.
 
-Default Bayeux version: 3.4.0
+Default Bayeux version: 3.4.2
 Supported versions: 3.4.0 3.4.1 3.4.2
 
 Requirements
@@ -31,10 +31,11 @@ Prerequisites
 
 You should first setup :
 
+* GSL >=2.4
 * BxDecay0 (recommended, CMake support),
-* CLHEP (CMake support),
-* Geant4 (9.6.4) (with Geant4 dataset, CMake support),
-* ROOT (6.16.00) (CMake support).
+* CLHEP (>= 2.1.3, CMake support),
+* Geant4 (==9.6.4) (with Geant4 dataset, CMake support),
+* ROOT (==6.16.00) (CMake support).
 
 .. code:: bash
 
@@ -60,9 +61,11 @@ Ubuntu 20.04
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
    $ mkdir -p ${BX_PACKAGE_DIR}
    $ ./bayeux_installer \
-       --package-version 3.4.1 \
+       --package-version 3.4.2 \
        --with-docs \
        --with-tests \
+       --with-bxdecay0 \
+       --with-qt \
        --with-geant4 \
        --without-werror \
        --with-qt 
@@ -82,7 +85,7 @@ Git version
 
 
 
-With a specific non system version of Boost (>1.68)
+With a specific non system version of Boost (>1.69)
 ----------------------------------------------------
 
 .. code:: bash
@@ -96,7 +99,7 @@ With a specific non system version of Boost (>1.68)
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
    $ mkdir -p ${BX_PACKAGE_DIR}
    $ ./bayeux_installer \
-       --package-version 3.4.1 \
+       --package-version 3.4.2 \
        --no-system-boost \
        --boost-root "/scratch/BxInstall/boost-1.69.0" \
        --with-docs \
