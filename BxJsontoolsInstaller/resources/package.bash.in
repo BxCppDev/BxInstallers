@@ -1,0 +1,20 @@
+# -*- mode: shell-script; -*-
+
+function bxjsontools___PACKAGE_UVERSION___setup()
+{
+    local _bx_bxjsontools_version="__PACKAGE_VERSION__"
+    local _bx_bxjsontools_install_dir="__PACKAGE_INSTALL_DIR__"
+    if [ -n "${BX_BXJSONTOOLS_INSTALL_DIR}" ]; then
+	echo >&2 "[warning] bxjsontools___PACKAGE_UVERSION___setup: BxJsontools version ${BX_BXJSONTOOLS_VERSION} is already setup !"   
+	return 1
+    fi
+    export BX_BXJSONTOOLS_INSTALL_DIR="${_bx_bxjsontools_install_dir}"
+    export BX_BXJSONTOOLS_VERSION="${_bx_bxjsontools_version}"
+    export PATH="${BX_BXJSONTOOLS_INSTALL_DIR}/bin:${PATH}"
+    echo >&2 "[info] bxjsontools___PACKAGE_UVERSION___setup: BxJsontools version ${_bx_bxjsontools_version} is now setup !"
+    return 0
+}
+export -f bxjsontools___PACKAGE_UVERSION___setup
+
+# end
+
