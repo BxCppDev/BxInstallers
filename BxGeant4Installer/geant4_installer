@@ -9,8 +9,8 @@ bxiw_app_name="geant4_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="geant4"
-bxiw_default_package_version="10.5"
-bxiw_supported_package_versions="9.6.4 10.5"
+bxiw_default_package_version="10.7"
+bxiw_supported_package_versions="9.6.4 10.5 10.7"
 bxiw_package_version=
 
 g4_with_system_clhep=true
@@ -225,6 +225,8 @@ function geant4_installer_get_tarball()
     shift 1
     if [ "x${_geant4_version}" = "x10.5" ]; then
 	echo "geant4.10.05.tar.gz"
+    elif [ "x${_geant4_version}" = "x10.7" ]; then
+	echo "geant4.10.07.tar.gz"
     elif [ "x${_geant4_version}" = "x9.6.4" ]; then
 	echo "geant4.9.6.p04.tar.gz"
     else
@@ -335,6 +337,7 @@ function geant4_installer_print()
 function geant4_installer_download()
 {
     local _geant4_tarball=$(geant4_installer_get_tarball ${bxiw_package_version})
+    bxiw_log_info "_geant4_tarball        = ${_geant4_tarball}"
     local _geant4_url=$(geant4_installer_get_url ${bxiw_package_version})
     if [ ! -f ${bxiw_tag_downloaded} ]; then
 	bxiw_download_file ${_geant4_url} ${_geant4_tarball}
@@ -358,6 +361,8 @@ function geant4_installer_install()
     local _geant4_source_dir=
     if [ "${bxiw_package_version}" = "10.5" ]; then
 	_geant4_source_dir="$(pwd)/geant4.10.05"
+    elif [ "${bxiw_package_version}" = "10.7" ]; then
+	_geant4_source_dir="$(pwd)/geant4.10.07"
     elif [ "${bxiw_package_version}" = "9.6.4" ]; then
 	_geant4_source_dir="$(pwd)/geant4.9.6.p04"
     fi
@@ -414,10 +419,9 @@ function geant4_installer_install()
 	bxiw_message "info" "GEANT4 configuration..."
 	local _geant4_datasets_opt="-DGEANT4_INSTALL_DATA=OFF"
 	if [ ${g4_with_system_clhep} = true ]; then
-	    #_geant4_clhep_opt="-DGEANT4_USE_SYSTEM_CLHEP=ON -DCLHEP_ROOT_DIR=${g4_system_clhep_dir} -DCLHEP_DIR=${g4_system_clhep_dir}"
 	    _geant4_clhep_opt="-DGEANT4_USE_SYSTEM_CLHEP=ON  -DCLHEP_ROOT_DIR=${g4_system_clhep_dir} -DCLHEP_INCLUDE_DIR=${g4_system_clhep_dir}/include "
 	fi
-	local _geant4_datasets_opt="-DGEANT4_INSTALL_DATA=ON"
+	local _geant4_datasets_opt="-DGEANT4_INSTALL_DATA=ON -DGEANT4_INSTALL_DATA_TIMEOUT=${g4_datasets_timeout}"
 	if [ ${g4_with_buildin_datasets} = false ]; then
 	    _geant4_datasets_opt="-DGEANT4_INSTALL_DATA=OFF -DGEANT4_INSTALL_DATADIR=${g4_external_datasets_dir} -DGEANT4_INSTALL_DATA_TIMEOUT=${g4_datasets_timeout}"
 	fi
@@ -443,6 +447,13 @@ function geant4_installer_install()
 	if [ "x${g4_xercesc_root_dir}" != "x" ]; then
 	    _geant4_xercesc_opt="-DXERCESC_ROOT_DIR=${g4_xercesc_root_dir}"
 	fi
+	_geant4_cxxstd_opt=
+	if [ "${bxiw_package_version}" != "10.7" ]; then
+	    _geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=c++11"
+	else
+	    _geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=11"
+	fi
+	
 	local _geant4_libdir="lib"
 	cmake  \
 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
@@ -451,7 +462,7 @@ function geant4_installer_install()
 	    -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE \
 	    -DCMAKE_INSTALL_RPATH="${bxiw_install_dir}/${_geant4_libdir}" \
 	    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE \
-	    -DGEANT4_BUILD_CXXSTD=c++11 \
+	    ${_geant4_cxxstd_opt} \
 	    ${_geant4_datasets_opt} \
 	    ${_geant4_clhep_opt} \
 	    ${_geant4_qt_opt} \
