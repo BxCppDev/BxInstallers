@@ -11,8 +11,8 @@ fi
 bxiw_app_name="g4datasets_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_package_name="g4datasets"
-bxiw_default_package_version="10.5"
-bxiw_supported_package_versions="9.6.4 10.5"
+bxiw_default_package_version="10.7"
+bxiw_supported_package_versions="9.6.4 10.5 10.7"
 if [ ${in_debian_package} == false ]; then
     if [ ! -f "$(pwd)/.bxwi_g4datasets.locate" ]; then
 	echo >&2 "[error] Please run from the Geant4 datasets installer directory!"

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# -*- mode: shell-script; -*-
+
+g4datasets_prefix=__G4DATASETS_INSTALL_DIR__
+g4datasets_version=__G4DATASETS_VERSION__
+g4datasets_setup_dir=__G4DATASETS_SETUP_DIR__
+
+function usage()
+{
+    cat<<EOF
+
+g4datasets-config [OPTION]
+
+Options:
+
+  --help      Print this help
+  --version   Print the version of Geant4 datasets
+  --prefix    Print the installation prefix path
+  --shconfig  Print the path to the setup Bash script
+  --datadir   Print the datasets installation base path
+
+EOF
+}
+
+while [ -n "$1" ]; do
+      opt="$1"
+      if [ "${opt}" == "--help" ]; then
+         usage 
+      	 exit 0
+      elif [ "${opt}" == "--version" ]; then
+         echo ${g4datasets_version} 
+      	 exit 0
+      elif [ "${opt}" == "--prefix" ]; then
+         echo ${g4datasets_prefix} 
+      	 exit 0
+      elif [ "${opt}" == "--shconfig" ]; then
+         echo "${g4datasets_setup_dir}/modules/g4datasets.bash"
+      	 exit 0
+      elif [ "${opt}" == "--datadir" ]; then
+         echo "${g4datasets_prefix}/share/Geant4Datasets-${g4datasets_version}/data" 
+      	 exit 0
+      else
+	 echo >&2 "[error] Unknown option '${opt}'!"
+	 usage 
+         exit 1
+      fi 
+      shift 1
+done
+
+usage 
+exit 0

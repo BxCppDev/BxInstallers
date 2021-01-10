@@ -3,7 +3,7 @@ Geant4 Datasets Installer for Bayeux
 ======================================
 
 :author: F.Mauger <mauger@lpccaen.in2p3.fr>
-:date: 2019-03-31
+:date: 2021-01-07
 
 
 This is the Geant4 Datasets Installer provided by the Bayeux
@@ -21,6 +21,8 @@ Usage
 .. code:: bash
 	  
    $ ./g4datasets_installer --help
+   $ ./g4datasets_installer --package-version 9.6.4
+   $ ./g4datasets_installer --package-version 10.7
 ..
 
 
