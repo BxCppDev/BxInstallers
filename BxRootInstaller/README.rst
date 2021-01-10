@@ -1,8 +1,14 @@
 =================================
-ROOT installation for Bayeux
+ROOT installation 
 =================================
 
-ROOT installation for Ubuntu 18.04.
+:author: F.Mauger <mauger@lpccaen.in2p3.fr>
+:date: 2021-01-07
+
+ROOT installer for Ubuntu provided by the Bayeux
+development group.
+
+Default ROOT version: 6.16.00
 
 Requirements
 ============
@@ -16,6 +22,26 @@ Usage
 	  
    $ ./root_installer --help
 ..
+
+Example
+=======
+
+.. code:: bash
+
+   $ export BX_CACHE_DIR="/opt/sw/${USER}/BxCache"
+   $ export BX_WORK_DIR="/opt/sw/${USER}/BxWork"
+   $ export BX_INSTALL_BASE_DIR="/opt/sw/${USER}/BxInstall"
+   $ export BX_PACKAGE_DIR="/opt/sw/${USER}/BxPackage"
+   $ mkdir -p ${BX_CACHE_DIR}
+   $ mkdir -p ${BX_WORK_DIR}
+   $ mkdir -p ${BX_INSTALL_BASE_DIR}
+   $ mkdir -p ${BX_PACKAGE_DIR}
+   $ ./root_installer --package-version 6.16.00
+   ...
+   $ tree ${BX_INSTALL_BASE_DIR}/root-6.16.00/
+   ...
+..
+
 
 Installation on Ubuntu 18.04
 ============================
@@ -44,17 +70,17 @@ Personal installation
 
       function do_root_setup()
       {
-        local _bx_geant4_version="2.4.1.0"
-        local _bx_geant4_install_dir="${HOME}/bxsoftware/geant4-2.4.1.0"
-        if [ -n "${BX_GEANT4_INSTALL_DIR}" ]; then
-          echo >&2 "[warning] do_geant4_setup: GEANT4 version ${BX_GEANT4_VERSION} is already setup !"   
+        local _bx_root_version="6.16.0"
+        local _bx_root_install_dir="${HOME}/bxsoftware/root-6.16.0"
+        if [ -n "${BX_ROOT_INSTALL_DIR}" ]; then
+          echo >&2 "[warning] do_root_setup: ROOT version ${BX_ROOT_VERSION} is already setup !"   
           return 1
         fi
-        export BX_GEANT4_INSTALL_DIR="${_bx_geant4_install_dir}"
-        export BX_GEANT4_VERSION="${_bx_geant4_version}"
-        export PATH="${BX_GEANT4_INSTALL_DIR}/bin:${PATH}"
-        export LD_LIBRARY_PATH="${BX_GEANT4_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}"
-        echo >&2 "[info] do_root_setup: GEANT4 version ${_bx_geant4_version} is now setup !"
+        export BX_ROOT_INSTALL_DIR="${_bx_root_install_dir}"
+        export BX_ROOT_VERSION="${_bx_root_version}"
+        export PATH="${BX_ROOT_INSTALL_DIR}/bin:${PATH}"
+        export LD_LIBRARY_PATH="${BX_ROOT_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}"
+        echo >&2 "[info] do_root_setup: ROOT version ${_bx_root_version} is now setup !"
         return 0
       }
       export -f do_root_setup
