@@ -1,0 +1,564 @@
+#!/usr/bin/env bash
+
+if [ ! -f "$(pwd)/.bxwi_bxprotobuftools.locate" ]; then
+    echo >&2 "[error] Please run from the BxProtobuftools installer directory!"
+    exit 1
+fi
+source $(pwd)/../lib/libbxiw.bash
+bxiw_app_name="bxprotobuftools_installer"
+bxiw_app_saved_opwd=$(pwd)
+bxiw_app_installer_prefix="$(pwd)"
+bxiw_package_name="bxprotobuftools"
+bxiw_default_package_version="1.0.0"
+bxiw_supported_package_versions="0.3.0 1.0.0"
+bxiw_package_version=
+
+boost_root=
+protobuf_root=
+use_ninja=true
+
+function bxprotobuftools_installer_usage()
+{
+    cat<<EOF
+
+bxprotobuftools_installer - BxProtobuftools library installer
+
+Synopsis:
+
+    bxprotobuftools_installer [OPTION]...
+
+Options:
+
+  --help                Print this help then exit
+EOF
+    _bxiw_usage_options
+    cat<<EOF
+  --boost-root path     Set the Boost installation path
+  --protobuf-root path  Set the Protobuf installation path
+  --no-ninja            Do not use Ninja
+EOF
+    echo ""
+    return 0
+}
+
+
+function bxprotobuftools_installer_parse_cl()
+{
+    while [ -n "$1" ]; do
+	token="$1"
+	if [ "x${token:0:1}" = "x-" ]; then
+	    opt="${token}"
+	    if [ ${opt} = "--help" ]; then
+		bxprotobuftools_installer_usage
+		bxiw_exit 0
+	    elif [ ${opt} = "--boost-root" ]; then
+		shift 1
+		boost_root="$1"
+	    elif [ ${opt} = "--protobuf-root" ]; then
+		shift 1
+		protobuf_root="$1"
+	    elif [ ${opt} = "--no-ninja" ]; then
+		use_ninja=false
+	    else
+		bxiw_log_error "Unsupported option '${opt}'!"
+		return 1
+	    fi
+	else
+	    arg="${token}"
+	fi
+	shift 1
+    done
+    return 0
+}
+
+function bxprotobuftools_installer_prepare()
+{
+    _bxiw_prepare_pre
+ 
+    if [ ${bxiw_with_gui} = true ]; then
+	
+	local _do_rebuild_repr="FALSE"
+	if [ ${bxiw_do_rebuild} = true ]; then
+	    _do_rebuild_repr="TRUE"
+	fi
+	
+	local _remove_build_dir_repr="FALSE"
+	if [ ${bxiw_remove_build_dir} = true ]; then
+	    _remove_build_dir_repr="TRUE"
+	fi
+	
+	local _remove_tarballs_repr="FALSE"
+	if [ ${bxiw_remove_tarballs} = true ]; then
+	    _remove_tarballs_repr="TRUE"
+	fi
+	
+	local _system_install_repr="FALSE"
+	if [ ${bxiw_system_install} = true ]; then
+	    _system_install_repr="TRUE"
+	fi
+
+	which yad > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    bxiw_message "[warning] yad is not installed! No GUI!"
+	else
+	    local _choices=$(yad --width=500 \
+				 --form \
+				 --title "${bxiw_package_name} installer options" \
+				 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
+				 --field="Working directory:CDIR" "${bxiw_work_dir}" \
+				 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
+				 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+				 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+				 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+				 --field="System installation:CHK" "$_system_install_repr}" \
+		  )
+	    if [ "x${_choices}" = "x" ]; then
+		bxiw_log_error "Cancelled dialog!"
+		return 1
+	    fi
+	    bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+	    bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
+	    bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
+	    _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
+	    if [ ${_do_rebuild_repr} == "TRUE" ]; then
+		bxiw_do_rebuild=true
+	    else
+		bxiw_do_rebuild=false
+	    fi
+	    _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
+	    if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+		bxiw_remove_build_dir=true
+	    else
+		bxiw_remove_build_dir=false
+	    fi
+	    _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
+	    if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+		bxiw_remove_tarballs=true
+	    else
+		bxiw_remove_tarballs=false
+	    fi
+	    _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
+	    if [ ${_system_install_repr} == "TRUE" ]; then
+		bxiw_system_install=true
+	    else
+		bxiw_system_install=false
+	    fi
+	fi
+    fi
+
+    # Boost:
+    if [ "x${boost_root}" = "x" ]; then
+	boost_root="/usr"
+    fi
+    bxiw_log_info "Use Boost installation dir : '${boost_root}'"   
+    if [ "x${boost_root}" != "x" ]; then
+	if [ ! -f "${boost_root}/include/boost/version.hpp" ]; then
+	    bxiw_log_error "Cannot find '${boost_root}/include/boost/version.hpp' file!"
+	    return 1
+	fi
+	bxiw_pass
+    fi
+
+    ### XXX
+    # Protobuf:
+    if [ "x${protobuf_root}" = "x" ]; then
+	which protoc
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Cannot find the 'protoc' executable!"
+	    return 1
+	fi
+	pkg-config --exists protobuf
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "No pkg-config support for Protocol Buffers!"
+	    return 1
+	fi
+	pkg-config --atleast-version=3.0.0 protobuf
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Invalid version of Protocol Buffers!"
+	    return 1
+	fi
+	protobuf_root=$(pkg-config --variable=prefix protobuf)
+    fi
+    bxiw_log_info "Use Protobuf installation dir : '${protobuf_root}'"   
+    if [ "x${protobuf_root}" != "x" ]; then
+	if [ ! -f "${protobuf_root}/include/google/protobuf/any.h" ]; then
+	    bxiw_log_error "Cannot find '${protobuf_root}/include/google/protobuf/any.h!"
+	    return 1
+	fi
+	bxiw_pass
+    fi
+
+    # Prepare:
+    _bxiw_prepare_post
+     
+    return 0
+}
+
+
+function bxprotobuftools_installer_get_tarball()
+{
+    local _bxprotobuftools_version="$1"
+    shift 1
+    echo "bxprotobuftools-${_bxprotobuftools_version}.tar.gz"
+    return 0
+}
+
+
+function bxprotobuftools_installer_get_url()
+{
+    local _bxprotobuftools_version="$1"
+    local _bxprotobuftools_tarball=$(bxprotobuftools_installer_get_tarball ${_bxprotobuftools_version})
+    echo "https://github.com/BxCppDev/bxprotobuftools/archive/${_bxprotobuftools_version}.tar.gz"
+    return 0
+}
+
+
+function bxprotobuftools_installer_set_system_dependencies()
+{
+    
+    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+	bxiw_system_packages_build="cmake \
+        	    pkg-config \
+        	    dpkg-dev \
+       	    	    wget \
+   		    g++ \
+		    gcc \
+		    libboost-all-dev \
+		    protobuf-compiler libprotobuf-dev libprotobuf-c-dev \
+		    "
+	if [ ${use_ninja} = true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} ninja-build"
+	else
+	    bxiw_system_packages_build="${bxiw_system_packages_build} make"
+	fi
+	if [ ${bxiw_with_package} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
+	fi
+	if [ ${bxiw_with_gui} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} yad"
+	fi
+	# if [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
+	    
+	# fi
+	bxiw_system_packages_run="g++ gcc"
+	bxiw_pass
+    elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
+	bxiw_pass
+    elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+	bxiw_pass
+    fi
+    return 0
+}
+
+
+function bxprotobuftools_installer_print()
+{
+    bxiw_print
+    return 0
+}
+
+
+function bxprotobuftools_installer_download()
+{
+    local _bxprotobuftools_tarball=$(bxprotobuftools_installer_get_tarball ${bxiw_package_version})
+    local _bxprotobuftools_url=$(bxprotobuftools_installer_get_url ${bxiw_package_version})
+    bxiw_log_info "BxProtobuftools tarball : '${_bxprotobuftools_tarball}'"
+    bxiw_log_info "BxProtobuftools URL     : '${_bxprotobuftools_url}'"
+    if [ ! -f ${bxiw_tag_downloaded} ]; then
+	bxiw_download_file ${_bxprotobuftools_url} ${_bxprotobuftools_tarball}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Could not download the '${_bxprotobuftools_tarball}' file!"
+	    return 1
+	fi
+	touch ${bxiw_tag_downloaded}
+    else
+	bxiw_log_info "BxProtobuftools tarball is already downloaded."
+    fi
+    return  0
+}
+
+
+function bxprotobuftools_installer_install()
+{
+    local _bxprotobuftools_opwd=$(pwd)
+    local _bxprotobuftools_tarball=$(bxprotobuftools_installer_get_tarball ${bxiw_package_version})
+    cd ${bxiw_cache_dir}
+    local _bxprotobuftools_source_dir="$(pwd)/bxprotobuftools-${bxiw_package_version}"
+    bxiw_log_info "BxProtobuftools version is                : '${bxiw_package_version}'"
+    bxiw_log_info "BxProtobuftools source directory is       : '${_bxprotobuftools_source_dir}'"
+    if [ ! -d ${_bxprotobuftools_source_dir} ]; then
+	bxiw_log_info "Unpacking source directory..."
+	tar xzf ${bxiw_cache_dir}/${_bxprotobuftools_tarball}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Source directory has not been unpacked."
+	    cd ${_bxprotobuftools_opwd}
+	    return 1
+	else
+	    bxiw_log_info "Source directory has been unpacked."
+	fi
+    else
+	bxiw_log_info "Source directory was already unpacked."
+    fi
+
+    cd ${bxiw_build_dir}
+    bxiw_log_info "BxProtobuftools build directory is        : '${bxiw_build_dir}'"
+    bxiw_log_info "BxProtobuftools tag directory is          : '${bxiw_tag_dir}'"
+    bxiw_log_info "BxProtobuftools installation directory is : '${bxiw_install_dir}'"
+    
+    # Configuration:
+    local _bxprotobuftools_do_config=false
+    if [ ! -f ${bxiw_tag_configured} ]; then
+	bxiw_log_info "BxProtobuftools configuration is needed."
+	_bxprotobuftools_do_config=true
+    else
+	bxiw_log_info "BxProtobuftools configuration is already done."
+	if [ ${bxiw_do_reconfigure} == true ]; then
+	    bxiw_log_info "Forcing BxProtobuftools reconfiguration..."
+	    _bxprotobuftools_do_configure=true
+	fi
+    fi
+
+    local ninja_options=
+    local build_bin=make
+    if [ ${use_ninja} = true ]; then
+	ninja_options="-G Ninja"
+	build_bin=ninja
+    fi
+    
+    if [ ${_bxprotobuftools_do_config} == true ]; then
+	bxiw_log_info "BxProtobuftools configuration..."
+	local boost_opt=
+	if [ "x${boost_root}" != "x" ]; then
+	    boost_opt="-DBOOST_ROOT:PATH=${boost_root}"
+	fi
+	local protobuf_opt=
+	if [ "x${protobuf_root}" != "x" ]; then
+	   protobuf_opt="-DPROTOBUF_ROOT:PATH=${protobuf_root}"
+	fi
+	cmake \
+	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
+	    ${boost_opt} \
+	    ${protobuf_opt} \
+	    ${ninja_options} \
+	    ${_bxprotobuftools_source_dir}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "BxProtobuftools configuration failed!"
+	    cd ${_bxprotobuftools_opwd}
+	    return 1
+	else
+	    touch ${bxiw_tag_configured}
+    	    bxiw_log_info "BxProtobuftools is configured."
+	fi
+    else
+	bxiw_log_info "Do not configure BxProtobuftools."
+    fi
+    
+    # Build:
+    local _bxprotobuftools_do_build=false
+    if [ ! -f ${bxiw_tag_built} ]; then
+	bxiw_log_info "BxProtobuftools build is needed."
+	_bxprotobuftools_do_build=true
+    else
+	bxiw_log_info "BxProtobuftools build is already done."
+	if [ ${bxiw_do_rebuild} == true ]; then
+	    bxiw_log_info "Forcing BxProtobuftools rebuild..."
+	    _bxprotobuftools_do_build=true
+	fi
+    fi
+
+    if [ ${_bxprotobuftools_do_build} == true ]; then
+	bxiw_log_info "Building BxProtobuftools..."
+	local _bxprotobuftools_nbprocs=${bxiw_nbprocs}
+	if [ ${_bxprotobuftools_nbprocs} -gt 2 ]; then
+	    let _bxprotobuftools_nbprocs=${bxiw_nbprocs}
+	else
+	    _bxprotobuftools_nbprocs=1 
+	fi
+	bxiw_log_info "#procs = ${_bxprotobuftools_nbprocs}"
+	${build_bin} -j ${_bxprotobuftools_nbprocs}
+	if [ $? -ne 0 ]; then
+    	    bxiw_log_error "BxProtobuftools build failed!"
+    	    cd ${_bxprotobuftools_opwd}
+    	    return 1
+	else
+	    touch ${bxiw_tag_built}
+    	    bxiw_log_info "BxProtobuftools is built."
+	fi
+    else
+	bxiw_log_info "Do not build BxProtobuftools."
+    fi
+
+    # Installation:
+    local _bxprotobuftools_do_install=false
+    if [ ! -f ${bxiw_tag_installed} ]; then
+	bxiw_log_info "BxProtobuftools installation is needed."
+	_bxprotobuftools_do_install=true
+    else
+	bxiw_log_info "BxProtobuftools installation is already done."
+	if [ ${bxiw_do_reinstall} == true ]; then
+	    _bxprotobuftools_do_install=true
+	    bxiw_log_info "Forcing BxProtobuftools installation..."
+	fi
+    fi
+    if [ ${bxiw_no_install} == true ]; then
+	_bxprotobuftools_do_install=false
+    fi
+
+    if [ ${_bxprotobuftools_do_install} == true ]; then
+	local _bxprotobuftools_do_package=false
+	if [ ${bxiw_with_package} == true ]; then
+	    _bxprotobuftools_do_package=true
+	fi
+	if [ ${_bxprotobuftools_do_package} == true ]; then
+	    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+		bxiw_log_info "Building a binary package for BxProtobuftools..."
+		bxprotobuftools_installer_makedebpack
+	    else
+    		bxiw_log_error "Cannot pack BxProtobuftools for '${bxiw_os_distrib_id}'!"
+    		cd ${_bxprotobuftools_opwd}
+		return 1
+	    fi
+	else
+	    bxiw_log_info "Installing BxProtobuftools..."
+	    ${build_bin} install
+	    if [ $? -ne 0 ]; then
+    		bxiw_log_error "BxProtobuftools installation failed!"
+    		cd ${_bxprotobuftools_opwd}
+    		return 1
+	    else
+		touch ${bxiw_tag_installed}
+    		bxiw_log_info "BxProtobuftools is installed."
+	    fi
+	fi
+    else
+	bxiw_log_info "Do not install BxProtobuftools."
+    fi
+    cd ${_bxprotobuftools_opwd}
+    return  0
+}
+
+
+function bxprotobuftools_installer_makedebpack()
+{
+    local _bxprotobuftools_build_dir="${bxiw_build_dir}"
+    cd ${_bxprotobuftools_build_dir}
+    mkdir -p ${_bxprotobuftools_build_dir}/doc-pak
+    touch ${_bxprotobuftools_build_dir}/description-pak
+    cat>${_bxprotobuftools_build_dir}/description-pak<<EOF
+BxProtobuftools C++ Library (Bayeux edition)
+
+This is a binary version for ${bxiw_os_distrib_id} ${bxiw_os_distrib_release} 
+usable with the Bayeux software suite.
+EOF
+ 
+    local _arch="amd64"
+    local _bxprotobuftools_do_package=true
+    local _bxprotobuftools_pkg_filename="bx${bxiw_package_name}_${bxiw_package_version}-${bxiw_pkg_release}_${_arch}.deb"
+    if [ -f ${package_dir}/${_bxprotobuftools_pkg_filename} ]; then
+	bxiw_log_info "Package '${_bxprotobuftools_pkg_filename}' exists in '${bxiw_package_dir}'."
+	_bxprotobuftools_do_package=false
+    fi
+    local _bxprotobuftools_requires="\
+		"
+    _bxprotobuftools_requires_list=$(echo ${_bxprotobuftools_requires} | tr ' ' ',')
+    _bxprotobuftools_conflicts_list="libbxprotobuftools-dev,libbxprotobuftools0.8"
+    bxiw_log_info "Requires : ${_bxprotobuftools_requires_list}!"	
+    if [ ${_bxprotobuftools_do_package} == true ]; then
+	if [ "x${bxiw_os_arch}" != "xx86_64" ]; then
+	    bxiw_log_error "Unsupported architecture ${bxiw_os_arch}!"	
+	    return 1
+	fi
+	sudo checkinstall \
+	     --type="debian" \
+	     --install="no" \
+	     --fstrans="no" \
+	     --pkgname="bx${bxiw_package_name}" \
+	     --pkgversion="${bxiw_package_version}" \
+	     --pkgrelease=${bxiw_pkg_release} \
+	     --pkglicense="MIT" \
+	     --pkgsource="$(bxprotobuftools_installer_get_url ${bxiw_package_version})" \
+	     --maintainer="${bxiw_pkg_maintener_email}" \
+	     --provides="bx${bxiw_package_name}" \
+	     --requires="${_bxprotobuftools_requires_list}" \
+	     --conflicts="${_bxprotobuftools_conflicts_list}" \
+	     --backup="no" \
+	     --pakdir="${bxiw_package_dir}" \
+	     --default \
+	     ninja install
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Debian binary package build failed!"	
+	    return 1
+	fi
+    fi	 
+    return 0
+}
+
+
+function bxprotobuftools_installer_setup()
+{
+    bxiw_log_trace "bxprotobuftools_installer_setup: entering..."
+    local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script_base="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"
+    if [ -f ${_bxsoftware_setup_script} ]; then
+	cp -f ${_bxsoftware_setup_script} ${_bxsoftware_setup_script}-save$(date -Isecond)
+    fi
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
+    bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    cat ${bxiw_app_installer_prefix}/resources/package.bash.in | \
+	sed \
+	    -e "s@__PACKAGE_INSTALL_DIR__@${bxiw_install_dir}@g" \
+	    -e "s@__PACKAGE_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__PACKAGE_UVERSION__@${_bxsoftware_underscored_version}@g" \
+	    > ${_bxsoftware_setup_script}
+    return  0
+}
+
+bxiw_detect_os
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Unsupported OS!"
+fi
+
+bxiw_env
+bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
+# bxiw_log_info "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+bxprotobuftools_installer_parse_cl ${bxiw_app_cl_remaining_argv}
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Command line parse error!"
+fi
+
+bxprotobuftools_installer_prepare
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Preparation failed!"
+fi
+
+bxprotobuftools_installer_set_system_dependencies
+
+bxprotobuftools_installer_print
+
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "System dependencies installation failed!"
+fi
+
+bxprotobuftools_installer_download
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Source archive download failed!"
+fi
+
+bxprotobuftools_installer_install
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Installation failed!"
+fi
+
+if [ ${bxiw_with_package} == false ]; then
+    bxprotobuftools_installer_setup
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "Setup failed!"
+    fi
+fi
+
+bxiw_exit 0
+
+# end
