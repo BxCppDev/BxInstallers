@@ -11,7 +11,8 @@ bxiw_app_name="bayeux_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="bayeux"
-bxiw_default_package_version="3.4.2"
+bxiw_default_package_version="3.4.4"
+bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4"
 bxiw_package_version=
 bxiw_source_git_path="https://github.com/BxCppDev/Bayeux"
 bxiw_source_git_branch="develop"
@@ -95,6 +96,7 @@ cat<<EOF
 
 Example:
 
+   $ ./bayeux_installer --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
    $ ./bayeux_installer --source-from-git --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
 
 EOF
@@ -542,7 +544,11 @@ function bayeux_installer_get_url()
 {
     local _bayeux_version="$1"
     local _bayeux_tarball=$(bayeux_installer_get_tarball ${_bayeux_version})
-    echo "https://github.com/BxCppDev/Bayeux/archive/${_bayeux_version}.tar.gz"
+    if [ "${_bayeux_version}" == "3.4.4" ]; then
+	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
+    else
+	echo "https://github.com/BxCppDev/Bayeux/archive/${_bayeux_version}.tar.gz"
+    fi
     return 0
 }
 
@@ -559,7 +565,7 @@ function bayeux_installer_set_system_dependencies()
    		    git \
    		    g++ \
 		    gcc \
-		    gnuplot \
+		    gnuplot-qt  \
 		    gnuplot-doc \
 		    gnuplot-mode \
 		    libreadline-dev \
@@ -728,12 +734,21 @@ function bayeux_installer_install()
 	else
 	    local _bayeux_tarball=$(bayeux_installer_get_tarball ${bxiw_package_version})
 	    bxiw_log_info "Unpacking source directory..."
+	    local _ar_bayeux_source_dir=$(tar xvzf bayeux-3.4.4.tar.gz | head -1 | tr -d '/')
+	    local _ar_fix_source_dir=false
+	    if [ ${_ar_bayeux_source_dir} != ${_bayeux_source_dir} ]; then
+		bxiw_log_info "Rename source directory..."
+		_ar_fix_source_dir=true
+	    fi
 	    tar xzf ${bxiw_cache_dir}/${_bayeux_tarball}
 	    if [ $? -ne 0 ]; then
 		bxiw_log_error "Source directory has not been unpacked."
 		cd ${_bayeux_opwd}
 		return 1
-	    else
+	    else 
+		if [ ${_ar_fix_source_dir} = true ]; then
+		    mv ${_ar_bayeux_source_dir} ${_bayeux_source_dir} 
+		fi
 		bxiw_log_info "Source directory '${_bayeux_source_dir}' has been unpacked."
 	    fi
 	fi
