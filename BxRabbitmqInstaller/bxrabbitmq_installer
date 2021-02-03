@@ -1,0 +1,567 @@
+#!/usr/bin/env bash
+
+if [ ! -f "$(pwd)/.bxwi_bxrabbitmq.locate" ]; then
+    echo >&2 "[error] Please run from the Bxrabbitmq installer directory!"
+    exit 1
+fi
+source $(pwd)/../lib/libbxiw.bash
+bxiw_app_name="bxrabbitmq_installer"
+bxiw_app_saved_opwd=$(pwd)
+bxiw_app_installer_prefix="$(pwd)"
+bxiw_package_name="bxrabbitmq"
+bxiw_default_package_version="1.0.0"
+bxiw_supported_package_versions="1.0.0"
+bxiw_package_version=
+
+boost_root=
+with_management=false
+bxjsontools_dir=
+use_ninja=true
+
+function bxrabbitmq_installer_usage()
+{
+    cat<<EOF
+
+bxrabbitmq_installer - Bxrabbitmq library installer
+
+Synopsis:
+
+    bxrabbitmq_installer [OPTION]...
+
+Options:
+
+  --help               Print this help then exit
+EOF
+    _bxiw_usage_options
+    cat<<EOF
+  --boost-root path    Set the Boost installation path
+  --with-management    Build the BxRabbitMQ with server management support
+  --bxjsontools-dir path
+  		       Set the BxJsontools CMake config path (implies --with-management)
+  --no-ninja           Do not use Ninja
+EOF
+    echo ""
+    return 0
+}
+
+
+function bxrabbitmq_installer_parse_cl()
+{
+    while [ -n "$1" ]; do
+	token="$1"
+	if [ "x${token:0:1}" = "x-" ]; then
+	    opt="${token}"
+	    if [ ${opt} = "--help" ]; then
+		bxrabbitmq_installer_usage
+		bxiw_exit 0
+	    elif [ ${opt} = "--boost-root" ]; then
+		shift 1
+		boost_root="$1"
+	    elif [ ${opt} = "--bxjsontools-dir" ]; then
+		shift 1
+		bxjsontools_dir="$1"
+	    elif [ ${opt} = "--without-management" ]; then
+		with_management=false
+	    elif [ ${opt} = "--with-management" ]; then
+		with_management=true
+	    elif [ ${opt} = "--no-ninja" ]; then
+		use_ninja=false
+	    else
+		bxiw_log_error "Unsupported option '${opt}'!"
+		return 1
+	    fi
+	else
+	    arg="${token}"
+	fi
+	shift 1
+    done
+    return 0
+}
+
+function bxrabbitmq_installer_prepare()
+{
+    _bxiw_prepare_pre
+ 
+    if [ ${bxiw_with_gui} = true ]; then
+	
+	local _do_rebuild_repr="FALSE"
+	if [ ${bxiw_do_rebuild} = true ]; then
+	    _do_rebuild_repr="TRUE"
+	fi
+	
+	local _remove_build_dir_repr="FALSE"
+	if [ ${bxiw_remove_build_dir} = true ]; then
+	    _remove_build_dir_repr="TRUE"
+	fi
+	
+	local _remove_tarballs_repr="FALSE"
+	if [ ${bxiw_remove_tarballs} = true ]; then
+	    _remove_tarballs_repr="TRUE"
+	fi
+	
+	local _system_install_repr="FALSE"
+	if [ ${bxiw_system_install} = true ]; then
+	    _system_install_repr="TRUE"
+	fi
+
+	which yad > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    bxiw_message "[warning] yad is not installed! No GUI!"
+	else
+	    local _choices=$(yad --width=500 \
+				 --form \
+				 --title "${bxiw_package_name} installer options" \
+				 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
+				 --field="Working directory:CDIR" "${bxiw_work_dir}" \
+				 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
+				 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+				 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+				 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+				 --field="System installation:CHK" "$_system_install_repr}" \
+		  )
+	    if [ "x${_choices}" = "x" ]; then
+		bxiw_log_error "Cancelled dialog!"
+		return 1
+	    fi
+	    bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+	    bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
+	    bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
+	    _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
+	    if [ ${_do_rebuild_repr} == "TRUE" ]; then
+		bxiw_do_rebuild=true
+	    else
+		bxiw_do_rebuild=false
+	    fi
+	    _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
+	    if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+		bxiw_remove_build_dir=true
+	    else
+		bxiw_remove_build_dir=false
+	    fi
+	    _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
+	    if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+		bxiw_remove_tarballs=true
+	    else
+		bxiw_remove_tarballs=false
+	    fi
+	    _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
+	    if [ ${_system_install_repr} == "TRUE" ]; then
+		bxiw_system_install=true
+	    else
+		bxiw_system_install=false
+	    fi
+	fi
+    fi
+
+    if [ ${with_management} = true ] ; then
+	bxiw_log_info "with_management=${with_management}"
+	# BxJsontools:
+	if [ "x${bxjsontools_dir}" = "x" ]; then
+	    which bxjsontools-query 2>&1 > /dev/null
+	    if [ $? -eq 0 ]; then
+		bxjsontools_dir="$(bxjsontools-query --cmakedir)"
+	    # else
+	    # 	bxjsontools_dir="/usr"
+	    fi
+	fi
+	if [ "x${bxjsontools_dir}" = "x" ]; then
+	    bxiw_log_error "Cannot find a proper BxJsontools installation!"
+	    return 1
+	fi
+	bxiw_log_info "Use BxJsontools installation dir : '${bxjsontools_dir}'"
+	
+	if [ "x${bxjsontools_dir}" != "x" ]; then
+	    if [ ! -f "${bxjsontools_dir}/BxJsontoolsConfig.cmake" ]; then
+		bxiw_log_error "Cannot find '${bxjsontools_dir}/BxJsontoolsConfig.cmake' file!"
+		return 1
+	    fi
+	    bxiw_pass
+	fi
+    fi
+    
+    # Prepare:
+    _bxiw_prepare_post
+     
+    return 0
+}
+
+
+function bxrabbitmq_installer_get_tarball()
+{
+    local _bxrabbitmq_version="$1"
+    shift 1
+    echo "bxrabbitmq-${_bxrabbitmq_version}.tar.gz"
+    return 0
+}
+
+
+function bxrabbitmq_installer_get_url()
+{
+    local _bxrabbitmq_version="$1"
+    local _bxrabbitmq_tarball=$(bxrabbitmq_installer_get_tarball ${_bxrabbitmq_version})
+    ### echo "https://github.com/tegesoft/bxrabbitmq/archive/${_bxrabbitmq_version}.tar.gz"
+    ### echo "https://github.com/fw4spl-org/bxrabbitmq/archive/${_bxrabbitmq_version}.tar.gz"
+    echo "https://github.com/BxCppDev/bxrabbitmq/archive/${_bxrabbitmq_version}.tar.gz"
+    return 0
+}
+
+
+function bxrabbitmq_installer_set_system_dependencies()
+{
+    
+    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+	bxiw_system_packages_build="cmake \
+        	    pkg-config \
+        	    dpkg-dev \
+       	    	    wget \
+   		    g++ \
+		    gcc \
+		    libboost-all-dev \
+		    librabbitmq-dev \
+		    "
+	if [ ${with_management} = true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} \
+	        libcurlpp-dev libcurl4-openssl-dev libcurl4"
+	fi
+	if [ ${use_ninja} = true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} ninja-build"
+	else
+	    bxiw_system_packages_build="${bxiw_system_packages_build} make"
+	fi
+	if [ ${bxiw_with_package} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
+	fi
+	if [ ${bxiw_with_gui} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} yad"
+	fi
+	# if [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
+	    
+	# fi
+	bxiw_system_packages_run="g++ gcc"
+	bxiw_pass
+    elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
+	bxiw_pass
+    elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+	bxiw_pass
+    fi
+    return 0
+}
+
+
+function bxrabbitmq_installer_print()
+{
+    bxiw_print
+    return 0
+}
+
+
+function bxrabbitmq_installer_download()
+{
+    local _bxrabbitmq_tarball=$(bxrabbitmq_installer_get_tarball ${bxiw_package_version})
+    local _bxrabbitmq_url=$(bxrabbitmq_installer_get_url ${bxiw_package_version})
+    bxiw_log_info "Bxrabbitmq tarball : '${_bxrabbitmq_tarball}'"
+    bxiw_log_info "Bxrabbitmq URL     : '${_bxrabbitmq_url}'"
+    if [ ! -f ${bxiw_tag_downloaded} ]; then
+	bxiw_download_file ${_bxrabbitmq_url} ${_bxrabbitmq_tarball}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Could not download the '${_bxrabbitmq_tarball}' file!"
+	    return 1
+	fi
+	touch ${bxiw_tag_downloaded}
+    else
+	bxiw_log_info "Bxrabbitmq tarball is already downloaded."
+    fi
+    return  0
+}
+
+
+function bxrabbitmq_installer_install()
+{
+    local _bxrabbitmq_opwd=$(pwd)
+    local _bxrabbitmq_tarball=$(bxrabbitmq_installer_get_tarball ${bxiw_package_version})
+    cd ${bxiw_cache_dir}
+    local _bxrabbitmq_source_dir="$(pwd)/bxrabbitmq-${bxiw_package_version}"
+    bxiw_log_info "Bxrabbitmq version is                : '${bxiw_package_version}'"
+    bxiw_log_info "Bxrabbitmq source directory is       : '${_bxrabbitmq_source_dir}'"
+    if [ ! -d ${_bxrabbitmq_source_dir} ]; then
+	bxiw_log_info "Unpacking source directory..."
+	tar xzf ${bxiw_cache_dir}/${_bxrabbitmq_tarball}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Source directory has not been unpacked."
+	    cd ${_bxrabbitmq_opwd}
+	    return 1
+	else
+	    bxiw_log_info "Source directory has been unpacked."
+	fi
+    else
+	bxiw_log_info "Source directory was already unpacked."
+    fi
+
+    cd ${bxiw_build_dir}
+    bxiw_log_info "Bxrabbitmq build directory is        : '${bxiw_build_dir}'"
+    bxiw_log_info "Bxrabbitmq tag directory is          : '${bxiw_tag_dir}'"
+    bxiw_log_info "Bxrabbitmq installation directory is : '${bxiw_install_dir}'"
+    
+    # Configuration:
+    local _bxrabbitmq_do_config=false
+    if [ ! -f ${bxiw_tag_configured} ]; then
+	bxiw_log_info "Bxrabbitmq configuration is needed."
+	_bxrabbitmq_do_config=true
+    else
+	bxiw_log_info "Bxrabbitmq configuration is already done."
+	if [ ${bxiw_do_reconfigure} == true ]; then
+	    bxiw_log_info "Forcing Bxrabbitmq reconfiguration..."
+	    _bxrabbitmq_do_configure=true
+	fi
+    fi
+
+    bxiw_log_info "use_ninja=${use_ninja}"
+    ninja_options=
+    build_bin=make
+    if [ ${use_ninja} = true ]; then
+	ninja_options="-G Ninja"
+	build_bin=ninja
+    fi
+
+    bxiw_log_info "with_management=${with_management}"
+    
+    if [ ${_bxrabbitmq_do_config} == true ]; then
+	bxiw_log_info "Bxrabbitmq configuration..."
+	boost_options=
+	if [ "x${boost_root}" != "x" ]; then
+	    boost_options="-DBOOST_ROOT:PATH=${boost_root}"
+	fi
+	management_options=
+	if [ ${with_management} = true ]; then
+	    management_options="-DBXRABBITMQ_WITH_MANAGER=ON -DBxJsontools_DIR:PATH=${bxjsontools_dir}"
+	else
+	    management_options="-DBXRABBITMQ_WITH_MANAGER=OFF"
+	fi
+	bxiw_log_info "management_options=${management_options}"
+	cmake \
+	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
+	    ${boost_options} \
+	    ${management_options} \
+	    ${ninja_options} \
+	    ${_bxrabbitmq_source_dir}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Bxrabbitmq configuration failed!"
+	    cd ${_bxrabbitmq_opwd}
+	    return 1
+	else
+	    touch ${bxiw_tag_configured}
+    	    bxiw_log_info "Bxrabbitmq is configured."
+	fi
+    else
+	bxiw_log_info "Do not configure Bxrabbitmq."
+    fi
+    
+    # Build:
+    local _bxrabbitmq_do_build=false
+    if [ ! -f ${bxiw_tag_built} ]; then
+	bxiw_log_info "Bxrabbitmq build is needed."
+	_bxrabbitmq_do_build=true
+    else
+	bxiw_log_info "Bxrabbitmq build is already done."
+	if [ ${bxiw_do_rebuild} == true ]; then
+	    bxiw_log_info "Forcing Bxrabbitmq rebuild..."
+	    _bxrabbitmq_do_build=true
+	fi
+    fi
+
+    if [ ${_bxrabbitmq_do_build} == true ]; then
+	bxiw_log_info "Building Bxrabbitmq..."
+	local _bxrabbitmq_nbprocs=${bxiw_nbprocs}
+	if [ ${_bxrabbitmq_nbprocs} -gt 2 ]; then
+	    let _bxrabbitmq_nbprocs=${bxiw_nbprocs}
+	else
+	    _bxrabbitmq_nbprocs=1 
+	fi
+	bxiw_log_info "#procs = ${_bxrabbitmq_nbprocs}"
+	${build_bin} -j ${_bxrabbitmq_nbprocs}
+	if [ $? -ne 0 ]; then
+    	    bxiw_log_error "Bxrabbitmq build failed!"
+    	    cd ${_bxrabbitmq_opwd}
+    	    return 1
+	else
+	    touch ${bxiw_tag_built}
+    	    bxiw_log_info "Bxrabbitmq is built."
+	fi
+    else
+	bxiw_log_info "Do not build Bxrabbitmq."
+    fi
+
+    # Installation:
+    local _bxrabbitmq_do_install=false
+    if [ ! -f ${bxiw_tag_installed} ]; then
+	bxiw_log_info "Bxrabbitmq installation is needed."
+	_bxrabbitmq_do_install=true
+    else
+	bxiw_log_info "Bxrabbitmq installation is already done."
+	if [ ${bxiw_do_reinstall} == true ]; then
+	    _bxrabbitmq_do_install=true
+	    bxiw_log_info "Forcing Bxrabbitmq installation..."
+	fi
+    fi
+    if [ ${bxiw_no_install} == true ]; then
+	_bxrabbitmq_do_install=false
+    fi
+
+    if [ ${_bxrabbitmq_do_install} == true ]; then
+	local _bxrabbitmq_do_package=false
+	if [ ${bxiw_with_package} == true ]; then
+	    _bxrabbitmq_do_package=true
+	fi
+	if [ ${_bxrabbitmq_do_package} == true ]; then
+	    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+		bxiw_log_info "Building a binary package for Bxrabbitmq..."
+		bxrabbitmq_installer_makedebpack
+	    else
+    		bxiw_log_error "Cannot pack Bxrabbitmq for '${bxiw_os_distrib_id}'!"
+    		cd ${_bxrabbitmq_opwd}
+		return 1
+	    fi
+	else
+	    bxiw_log_info "Installing Bxrabbitmq..."
+	    ${build_bin} install
+	    if [ $? -ne 0 ]; then
+    		bxiw_log_error "Bxrabbitmq installation failed!"
+    		cd ${_bxrabbitmq_opwd}
+    		return 1
+	    else
+		touch ${bxiw_tag_installed}
+    		bxiw_log_info "Bxrabbitmq is installed."
+	    fi
+	fi
+    else
+	bxiw_log_info "Do not install Bxrabbitmq."
+    fi
+    cd ${_bxrabbitmq_opwd}
+    return  0
+}
+
+
+function bxrabbitmq_installer_makedebpack()
+{
+    local _bxrabbitmq_build_dir="${bxiw_build_dir}"
+    cd ${_bxrabbitmq_build_dir}
+    mkdir -p ${_bxrabbitmq_build_dir}/doc-pak
+    touch ${_bxrabbitmq_build_dir}/description-pak
+    cat>${_bxrabbitmq_build_dir}/description-pak<<EOF
+Bxrabbitmq C++ Library (Bayeux edition)
+
+This is a binary version for ${bxiw_os_distrib_id} ${bxiw_os_distrib_release} 
+usable with the Bayeux software suite.
+EOF
+ 
+    local _arch="amd64"
+    local _bxrabbitmq_do_package=true
+    local _bxrabbitmq_pkg_filename="bx${bxiw_package_name}_${bxiw_package_version}-${bxiw_pkg_release}_${_arch}.deb"
+    if [ -f ${package_dir}/${_bxrabbitmq_pkg_filename} ]; then
+	bxiw_log_info "Package '${_bxrabbitmq_pkg_filename}' exists in '${bxiw_package_dir}'."
+	_bxrabbitmq_do_package=false
+    fi
+    local _bxrabbitmq_requires="\
+		"
+    _bxrabbitmq_requires_list=$(echo ${_bxrabbitmq_requires} | tr ' ' ',')
+    _bxrabbitmq_conflicts_list="libbxrabbitmq-dev,libbxrabbitmq0.8"
+    bxiw_log_info "Requires : ${_bxrabbitmq_requires_list}!"	
+    if [ ${_bxrabbitmq_do_package} == true ]; then
+	if [ "x${bxiw_os_arch}" != "xx86_64" ]; then
+	    bxiw_log_error "Unsupported architecture ${bxiw_os_arch}!"	
+	    return 1
+	fi
+	sudo checkinstall \
+	     --type="debian" \
+	     --install="no" \
+	     --fstrans="no" \
+	     --pkgname="bx${bxiw_package_name}" \
+	     --pkgversion="${bxiw_package_version}" \
+	     --pkgrelease=${bxiw_pkg_release} \
+	     --pkglicense="MIT" \
+	     --pkgsource="$(bxrabbitmq_installer_get_url ${bxiw_package_version})" \
+	     --maintainer="${bxiw_pkg_maintener_email}" \
+	     --provides="bx${bxiw_package_name}" \
+	     --requires="${_bxrabbitmq_requires_list}" \
+	     --conflicts="${_bxrabbitmq_conflicts_list}" \
+	     --backup="no" \
+	     --pakdir="${bxiw_package_dir}" \
+	     --default \
+	     ninja install
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Debian binary package build failed!"	
+	    return 1
+	fi
+    fi	 
+    return 0
+}
+
+
+function bxrabbitmq_installer_setup()
+{
+    bxiw_log_trace "bxrabbitmq_installer_setup: entering..."
+    local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script_base="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"
+    if [ -f ${_bxsoftware_setup_script} ]; then
+	cp -f ${_bxsoftware_setup_script} ${_bxsoftware_setup_script}-save$(date -Isecond)
+    fi
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
+    bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    cat ${bxiw_app_installer_prefix}/resources/package.bash.in | \
+	sed \
+	    -e "s@__PACKAGE_INSTALL_DIR__@${bxiw_install_dir}@g" \
+	    -e "s@__PACKAGE_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__PACKAGE_UVERSION__@${_bxsoftware_underscored_version}@g" \
+	    > ${_bxsoftware_setup_script}
+    return  0
+}
+
+bxiw_detect_os
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Unsupported OS!"
+fi
+
+bxiw_env
+bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
+# bxiw_log_info "bxiw_app_cl_remaining_argv=${bxiw_app_cl_remaining_argv}"
+bxrabbitmq_installer_parse_cl ${bxiw_app_cl_remaining_argv}
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Command line parse error!"
+fi
+
+bxrabbitmq_installer_prepare
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Preparation failed!"
+fi
+
+bxrabbitmq_installer_set_system_dependencies
+
+bxrabbitmq_installer_print
+
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "System dependencies installation failed!"
+fi
+
+bxrabbitmq_installer_download
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Source archive download failed!"
+fi
+
+bxrabbitmq_installer_install
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Installation failed!"
+fi
+
+if [ ${bxiw_with_package} == false ]; then
+    bxrabbitmq_installer_setup
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "Setup failed!"
+    fi
+fi
+
+bxiw_exit 0
+
+# end

@@ -1,0 +1,20 @@
+# -*- mode: shell-script; -*-
+
+function bxrabbitmq___PACKAGE_UVERSION___setup()
+{
+    local _bx_bxrabbitmq_version="__PACKAGE_VERSION__"
+    local _bx_bxrabbitmq_install_dir="__PACKAGE_INSTALL_DIR__"
+    if [ -n "${BX_BXRABBITMQ_INSTALL_DIR}" ]; then
+	echo >&2 "[warning] bxrabbitmq___PACKAGE_UVERSION___setup: Bxrabbitmq version ${BX_BXRABBITMQ_VERSION} is already setup !"   
+	return 1
+    fi
+    export BX_BXRABBITMQ_INSTALL_DIR="${_bx_bxrabbitmq_install_dir}"
+    export BX_BXRABBITMQ_VERSION="${_bx_bxrabbitmq_version}"
+    export PATH="${BX_BXRABBITMQ_INSTALL_DIR}/bin:${PATH}"
+    echo >&2 "[info] bxrabbitmq___PACKAGE_UVERSION___setup: Bxrabbitmq version ${_bx_bxrabbitmq_version} is now setup !"
+    return 0
+}
+export -f bxrabbitmq___PACKAGE_UVERSION___setup
+
+# end
+

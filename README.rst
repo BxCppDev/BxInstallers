@@ -3,12 +3,12 @@ BxInstallers
 ===================================
 
 :author: F.Mauger <mauger@lpccaen.in2p3.fr>
-:date: 2019-09-19
+:date: 2021-02-03
 
 
 BxInstallers  provides some  build/install scripts  for semi-automated
 installation of  some software libraries  of interest. This  is useful
-for testing, mostly on Ubuntu Linux.
+for testing, mostly on Ubuntu Linux (18.04 and 20.04).
 
 List of supported software libraries
 ====================================
@@ -20,12 +20,18 @@ List of supported software libraries
 * ``BxGeant4DatasetsInstaller`` : Installer for the GEANT4 datasets
 * ``BxGeant4Installer`` : Installer for the GEANT4 Simulation Toolkit
 * ``BxRootInstaller`` : Installer for the ROOT library
+* ``BxDecay0Installer`` : Installer for the BxDecay0 library
 * ``BxBayeuxInstaller`` : Installer for the Bayeux library
-* ``BxProtobuf`` : Installer for the Google Protocol Buffers library
+* ``BxProtobuftoolsInstaller`` : Installer for the BxProtocoltools library
+* ``BxJsontoolsInstaller`` : Installer for the BxJsontools library
+* ``BxRabbitmqInstaller`` : Installer for the BxRabbitmq library
 
-  Protobuf's Java support is not possible  yet because of a bug in the
-  installation                                                    (see
-  https://github.com/protocolbuffers/protobuf/issues/4269).
+..
+     Protobuf's Java support is not possible  yet because of a bug in the
+     installation                                                    (see
+.. https://github.com/protocolbuffers/protobuf/issues/4269).
+
+.. * ``BxProtobufInstaller`` : Installer for the Google Protocol Buffers library
 
 
 Description
@@ -68,10 +74,10 @@ Example:
 
 .. code:: shell
 
-   $ export BX_CACHE_DIR="/scratch/sw/BxCache"
-   $ export BX_WORK_DIR="/scratch/sw/BxWork"
-   $ export BX_INSTALL_BASE_DIR="/scratch/sw/BxInstall"
-   $ export BX_PACKAGE_DIR="/scratch/sw/BxPackage"
+   $ export BX_CACHE_DIR="/opt/sw/BxSoftware/BxCache"
+   $ export BX_WORK_DIR="/opt/sw/BxSoftware/BxWork"
+   $ export BX_INSTALL_BASE_DIR="/opt/sw/BxSoftware/BxInstall"
+   $ export BX_PACKAGE_DIR="/opt/sw/BxSoftware/BxPackage"
    $ mkdir -p ${BX_CACHE_DIR}
    $ mkdir -p ${BX_WORK_DIR}
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
@@ -85,7 +91,7 @@ Example:
    $ cd ../BxQtInstaller/
    $ ./qt_installer --package-version 5.13.2 
    $ cd ../BxRootInstaller/
-   $ ./root_installer --package-version 5.13.2 
+   $ ./root_installer --package-version 6.16.00 
 ..
 
 
