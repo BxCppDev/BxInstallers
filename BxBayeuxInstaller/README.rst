@@ -61,7 +61,7 @@ Ubuntu 20.04
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
    $ mkdir -p ${BX_PACKAGE_DIR}
    $ ./bayeux_installer \
-       --package-version 3.4.2 \
+       --package-version 3.4.4 \
        --with-docs \
        --with-tests \
        --with-bxdecay0 \
@@ -99,7 +99,7 @@ With a specific non system version of Boost (>1.69)
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
    $ mkdir -p ${BX_PACKAGE_DIR}
    $ ./bayeux_installer \
-       --package-version 3.4.2 \
+       --package-version 3.4.4 \
        --no-system-boost \
        --boost-root "/scratch/BxInstall/boost-1.69.0" \
        --with-docs \

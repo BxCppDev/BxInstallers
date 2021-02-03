@@ -1048,14 +1048,29 @@ function bayeux_installer_setup()
 {
     bxiw_log_trace "bayeux_installer_setup: entering..."
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script_base="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"
+    if [ -f ${_bxsoftware_setup_script} ]; then
+	cp -f ${_bxsoftware_setup_script} ${_bxsoftware_setup_script}-save$(date -Isecond)
+    fi
     local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
     bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    # local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    # local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    # local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"
+    # if [ -f ${_bxsoftware_setup_script} ]; then
+    # 	cp -f ${_bxsoftware_setup_script} ${_bxsoftware_setup_script}-save$(date -Isecond)
+    # fi
+    # local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
+    # bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
     bxiw_log_info " - Using installing dir : '${bxiw_install_dir}'..."
     bxiw_log_info " - Using version        : '${bxiw_package_version}'..."
-    cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
+    cat ${bxiw_app_installer_prefix}/resources/package.bash.in | \
 	sed \
-	    -e "s@__BAYEUX_INSTALL_DIR__@${bxiw_install_dir}@g" \
-	    -e "s@__BAYEUX_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__PACKAGE_INSTALL_DIR__@${bxiw_install_dir}@g" \
+	    -e "s@__PACKAGE_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__PACKAGE_UVERSION__@${_bxsoftware_underscored_version}@g" \
 	    > ${_bxsoftware_setup_script}
     return  0
 }
@@ -1099,7 +1114,7 @@ if [ $? -ne 0 ]; then
     bxiw_exit 1 "Installation failed!"
 fi
 
-bxiw_exit 0
+# bxiw_exit 0
 
 if [ ${bxiw_with_package} == false ]; then
     bayeux_installer_setup
