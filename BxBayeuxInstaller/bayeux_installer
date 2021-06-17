@@ -741,9 +741,9 @@ function bayeux_installer_install()
 	else
 	    local _bayeux_tarball=$(bayeux_installer_get_tarball ${bxiw_package_version})
 	    bxiw_log_info "Unpacking source directory..."
-	    local _ar_bayeux_source_dir=$(tar xvzf bayeux-3.4.4.tar.gz | head -1 | tr -d '/')
+	    local _ar_bayeux_source_dir=$(tar xvzf bayeux-${bxiw_package_version}.tar.gz | head -1 | tr -d '/')
 	    local _ar_fix_source_dir=false
-	    if [ ${_ar_bayeux_source_dir} != ${_bayeux_source_dir} ]; then
+	    if [ "${_ar_bayeux_source_dir}" != "${_bayeux_source_dir}" ]; then
 		bxiw_log_info "Rename source directory..."
 		_ar_fix_source_dir=true
 	    fi
