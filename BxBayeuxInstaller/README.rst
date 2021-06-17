@@ -8,7 +8,7 @@ Bayeux installation
 Bayeux installer for Ubuntu provided by the Bayeux development group.
 
 Default Bayeux version: 3.4.4
-Supported versions: 3.4.0 3.4.1 3.4.2 3.4.3 3.4.4
+Supported versions: 3.4.0 3.4.1 3.4.2 3.4.3 3.4.4 3.5.0
 
 Requirements
 ============
