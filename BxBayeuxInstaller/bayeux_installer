@@ -48,6 +48,7 @@ bayeux_with_docs=false
 bayeux_with_devtools=true
 bayeux_with_testing=false
 bayeux_with_werror=true
+bayeux_minimal_build=false
 
 function bayeux_installer_usage()
 {
@@ -82,6 +83,7 @@ EOF
   --without-docs      Bayeux is built without documentation (default)
   --with-tests        Bayeux is built with tests
   --without-tests     Bayeux is built without tests (default)
+  --minimal-build     Bayeux is built with minimal set of modules
   --with-geant4       Bayeux is built with Geant4
   --without-geant4    Bayeux is built without Geant4 (default)
   --with-werror       Bayeux is built with compiler warnings as errors (default)
@@ -118,6 +120,8 @@ function bayeux_installer_parse_cl()
 		bayeux_no_system_boost=true
 	    elif [ ${opt} = "--no-system-camp" ]; then
 		bayeux_no_system_camp=true
+	    elif [ ${opt} = "--minimal-build" ]; then
+		bayeux_minimal_build=true
 	    elif [ ${opt} = "--camp-prefix" ]; then
 		shift 1
 		bayeux_camp_prefix="$1"
@@ -411,30 +415,32 @@ function bayeux_installer_prepare()
     
     # ROOT:
     bayeux_root_prefix=""
-    if [ "x${bayeux_root_prefix}" = "x" ]; then
-	which root-config > /dev/null 2>&1
-	if [ $? -ne 0 ]; then
-	    bxiw_log_error "Cannot find ROOT 'root-config' script!"
-	    return 1
+    if [ ${bayeux_minimal_build} = false ]; then
+	if [ "x${bayeux_root_prefix}" = "x" ]; then
+	    which root-config > /dev/null 2>&1
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Cannot find ROOT 'root-config' script!"
+		return 1
+	    fi
+	    bayeux_root_prefix="$(root-config --prefix)"
 	fi
-	bayeux_root_prefix="$(root-config --prefix)"
+	if [ "x${bayeux_root_prefix}" = "x" ]; then
+	    bxiw_log_error "Missing ROOT prefix!"
+	    return 1 
+	fi
+	if [ ! -d "${bayeux_root_prefix}" ]; then
+	    bxiw_log_error "ROOT directory '${bayeux_root_prefix}' does not exist!"
+	    return 1 
+	fi
+	bayeux_root_dir="${bayeux_root_prefix}/share/root/cmake"
+	if [ ! -d ${bayeux_root_dir} ]; then
+	    bxiw_log_error "ROOT CMake directory '${bayeux_root_dir}' does not exist!"
+	    return 1 
+	fi
+	bxiw_log_info "Using ROOT from directory : '${bayeux_root_dir}'"
     fi
-    if [ "x${bayeux_root_prefix}" = "x" ]; then
-	bxiw_log_error "Missing ROOT prefix!"
-	return 1 
-    fi
-    if [ ! -d "${bayeux_root_prefix}" ]; then
-	bxiw_log_error "ROOT directory '${bayeux_root_prefix}' does not exist!"
-	return 1 
-    fi
-    bayeux_root_dir="${bayeux_root_prefix}/share/root/cmake"
-    if [ ! -d ${bayeux_root_dir} ]; then
-	bxiw_log_error "ROOT CMake directory '${bayeux_root_dir}' does not exist!"
-	return 1 
-    fi
-    bxiw_log_info "Using ROOT from directory : '${bayeux_root_dir}'"
 
-    if [ ${bayeux_with_geant4} = true ]; then
+    if [ ${bayeux_minimal_build} = false -a ${bayeux_with_geant4} = true ]; then
 	# Geant4:
 	bayeux_geant4_prefix=""
 	if [ "x${bayeux_geant4_prefix}" = "x" ]; then
@@ -639,6 +645,7 @@ function bayeux_installer_print()
     bxiw_log_info "bayeux_camp_dir           = '${bayeux_camp_dir}'"
     bxiw_log_info "bayeux_clhep_prefix       = '${bayeux_clhep_prefix}'"
     bxiw_log_info "bayeux_clhep_dir          = '${bayeux_clhep_dir}'"
+    bxiw_log_info "bayeux_minimal_build      = ${bayeux_minimal_build}"
     bxiw_log_info "bayeux_root_prefix        = '${bayeux_root_prefix}'"
     bxiw_log_info "bayeux_root_dir           = '${bayeux_root_dir}'"
     bxiw_log_info "bayeux_with_bxdecay0      = ${bayeux_with_bxdecay0}"
@@ -777,6 +784,8 @@ function bayeux_installer_install()
     fi
 
     if [ ${_bayeux_do_config} == true ]; then
+	all_modules="ON"
+
 	bxiw_log_info "Bayeux configuration..."
 	local _boost_options=
 	if [ "x${bayeux_boost_root}" != "x" ]; then
@@ -805,6 +814,14 @@ function bayeux_installer_install()
 	if [ "x${bayeux_root_dir}" != "x" ]; then
 	    _root_options="-DROOT_DIR:PATH=${bayeux_root_dir}"
 	fi
+	local _minimal_option=
+	if [ ${bayeux_minimal_build} = true ]; then
+	    _minimal_option="-DBAYEUX_MINIMAL_BUILD"
+	    bayeux_with_geant4=false
+	    bayeux_with_bxdecay0=false
+	    all_modules="OFF"
+	fi
+
 	local _geant4_options="-DBAYEUX_WITH_GEANT4_MODULE=OFF"
 	if [ ${bayeux_with_geant4} = true ]; then
 	    _geant4_options="-DBAYEUX_WITH_GEANT4_MODULE=ON -DGeant4_DIR=${bayeux_geant4_dir}"
@@ -859,6 +876,7 @@ function bayeux_installer_install()
 	    ${_boost_options} \
 	    ${_camp_options} \
 	    ${_clhep_options} \
+	    ${_minimal_options} \
 	    ${_root_options} \
 	    ${_bxdecay0_options} \
 	    ${_geant4_options} \
@@ -873,16 +891,16 @@ function bayeux_installer_install()
 	    ${_qt_option4} \
 	    -DBAYEUX_COMPILER_ERROR_ON_WARNING=${_werror} \
 	    -DBAYEUX_WITH_IWYU_CHECK=OFF \
-	    -DBAYEUX_WITH_BRIO=ON \
-	    -DBAYEUX_WITH_CUTS=ON \
-	    -DBAYEUX_WITH_MYGSL=ON \
-	    -DBAYEUX_WITH_MATERIALS=ON \
-	    -DBAYEUX_WITH_DPP=ON \
-	    -DBAYEUX_WITH_GEOMTOOLS=ON \
-	    -DBAYEUX_WITH_EMFIELD=ON \
-	    -DBAYEUX_WITH_GENBB=ON \
-	    -DBAYEUX_WITH_GENVTX=ON \
-	    -DBAYEUX_WITH_MCTOOLS=ON \
+	    -DBAYEUX_WITH_BRIO=${all_modules} \
+	    -DBAYEUX_WITH_CUTS=${all_modules} \
+	    -DBAYEUX_WITH_MYGSL=${all_modules} \
+	    -DBAYEUX_WITH_MATERIALS=${all_modules} \
+	    -DBAYEUX_WITH_DPP=${all_modules} \
+	    -DBAYEUX_WITH_GEOMTOOLS=${all_modules} \
+	    -DBAYEUX_WITH_EMFIELD=${all_modules} \
+	    -DBAYEUX_WITH_GENBB=${all_modules} \
+	    -DBAYEUX_WITH_GENVTX=${all_modules} \
+	    -DBAYEUX_WITH_MCTOOLS=${all_modules} \
 	    -DBAYEUX_WITH_LAHAGUE=OFF \
   	    -G Ninja \
 	    ${_bayeux_source_dir}
