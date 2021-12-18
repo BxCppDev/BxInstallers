@@ -242,7 +242,10 @@ function geant4_installer_get_url()
     local _geant4_version="$1"
     shift 1
     local _geant4_tarball=$(geant4_installer_get_tarball ${_geant4_version})
-    echo "http://geant4.cern.ch/support/source/${_geant4_tarball}"
+    # echo "http://geant4.cern.ch/support/source/${_geant4_tarball}"
+    # http://cern.ch/geant4-data/releases/geant4.9.6.p04.tar.gz
+    echo "http://cern.ch/geant4-data/releases/${_geant4_tarball}"
+    # echo "https://geant4-data.web.cern.ch/releases/${_geant4_tarball}"
     return 0
 }
 
