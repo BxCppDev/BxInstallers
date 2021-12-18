@@ -99,7 +99,7 @@ directories used to build and install libraries:
 * ``BX_INSTALL_BASE_DIR``  : overrides  the default  installation base
   directory (for final installation).
 * ``BX_CONFIG_DIR``  : overrides  the default  configuration
-  directory (for configuration scripts ans files).
+  directory (for configuration scripts and files).
 * ``BX_PACKAGE_DIR`` (optional, for experts only) :  overrides  the  package  directory  to  store
   generated Debian packages.
 
@@ -109,7 +109,7 @@ should, in principle, download the source archive (or the git repo) from the pro
 unpack it, configure it, compile it from the working directory then install it. A setup shell script
 is also generated for further activation by the user.
 
-If some extra system packages are required, some ``apt`` commands are run before the
+If some extra system packages are required, some ``apt`` commands are run on Ubuntu before the
 build stage (need some *sudo* access).
 
 
@@ -121,7 +121,7 @@ build stage (need some *sudo* access).
 
    .. code:: shell
 
-      $ mkdir -p "/opt/sw/BxSoftware"
+      $ mkdir -p /opt/sw/BxSoftware
       $ export BX_CACHE_DIR="/opt/sw/BxSoftware/BxCache"
       $ export BX_WORK_DIR="/opt/sw/BxSoftware/BxWork"
       $ export BX_INSTALL_BASE_DIR="/opt/sw/BxSoftware/BxInstall"
@@ -163,7 +163,7 @@ We also assume that you are in the sudoers or equivalent to allow some
 system package installation when needed.
 
 We recommend not to use your *home* directory for such a big installation but rather
-to create and use some other directory (here ``opt/swtest``) that does not need to be backuped.
+to create and use some other directory (here ``/opt/swtest``) that does not need to be backuped.
 
 Preparation
 ---------------
@@ -392,7 +392,7 @@ Final setup
 	 /opt/swtest/BxSoftware/BxInstall/bayeux-3.5.0
       ..
 
-      This will setup Bayeux with all its dependencies.
+      This will setup/activate Bayeux with all its dependencies.
    
    #. Any project that needs Bayeux to be built and run must use the above
       procedure.
