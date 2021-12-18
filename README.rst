@@ -186,15 +186,16 @@ Create specific working and installation directories and environment variables:
    $ tree /opt/swtest/BxSoftware
 ..
 
-CAMP installation
------------------
-
-.. code:: shell
-
-   $ cd ./BxCampInstaller/
-   $ ./camp_installer  --package-version "0.8.4"
-   $ ls -l ${BX_CONFIG_DIR}/modules/camp@0.8.4.bash
 ..
+   CAMP installation
+   -----------------
+
+   .. code:: shell
+
+      $ cd ./BxCampInstaller/
+      $ ./camp_installer  --package-version "0.8.4"
+      $ ls -l ${BX_CONFIG_DIR}/modules/camp@0.8.4.bash
+   ..
 
 
 CLHEP installation
@@ -287,12 +288,6 @@ Bayeux  installation
       [info] geant4_9_6_4_setup: GEANT4 version 9.6.4 is now setup !
       $ geant4-config --prefix
       /opt/swtest/BxSoftware/BxInstall/geant4-9.6.4/bin/..
-
-      $ source ${BX_CONFIG_DIR}/modules/camp@0.8.4.bash
-      $ camp_setup
-      [info] camp_setup: CAMP version 0.8.4 is now setup !
-      $ echo $BX_CAMP_INSTALL_DIR 
-      /opt/swtest/BxSoftware/BxInstall/camp-0.8.4
  
       $ source ${BX_CONFIG_DIR}/modules/bxdecay0@1.0.12.bash
       $ bxdecay0_1_0_12_setup 
@@ -301,6 +296,14 @@ Bayeux  installation
       /opt/swtest/BxSoftware/BxInstall/bxdecay0-1.0.12
    ..
 
+.. $ source ${BX_CONFIG_DIR}/modules/camp@0.8.4.bash
+   $ camp_setup
+   [info] camp_setup: CAMP version 0.8.4 is now setup !
+   $ echo $BX_CAMP_INSTALL_DIR 
+   /opt/swtest/BxSoftware/BxInstall/camp-0.8.4
+
+
+   
 #. Installation:
 
    .. code:: shell
@@ -338,9 +341,10 @@ Final setup
       
    #. Create a bash script : ``/opt/swtest/BxSoftware/BxConfig/bayeux_run_setup.bash``
 
+.. source ${BX_CONFIG_DIR}/modules/camp@0.8.4.bash
+
       .. code:: shell
 
-	 source ${BX_CONFIG_DIR}/modules/camp@0.8.4.bash
 	 source ${BX_CONFIG_DIR}/modules/root@6.16.00.bash
 	 source ${BX_CONFIG_DIR}/modules/clhep@2.1.4.2.bash
 	 source ${BX_CONFIG_DIR}/modules/g4datasets@9.6.4.bash
@@ -350,7 +354,6 @@ Final setup
 
 	 function bayeux_3_5_0_run_setup()
 	 {
-	   camp_setup
 	   clhep_2_1_4_2_setup
 	   root_6_16_00_setup 
 	   g4datasets_9_6_4_setup       
@@ -378,7 +381,6 @@ Final setup
       .. code:: shell
 	  
 	 $ bayeux_run_setup
-	 [info] camp_setup: CAMP version 0.8.4 is now setup !
 	 [info] clhep_2_1_4_2_setup: CLHEP version 2.1.4.2 is now setup !
 	 [info] root_6_16_00_setup: ROOT version 6.16.00 is now setup !
 	 [info] g4datasets_9_6_4_setup: Geant4 datasets version 9.6.4 is now setup !
@@ -401,10 +403,11 @@ Final setup
 Final remark
 =================
 
-In principle, after all the software you need has been installed and setup, you
-can remove the contents of the *cache* and *work* directories to save storage space
-on your system. I found generally useful to preserve the *cache* directory in order to be able
-to reprocess some installation off line.
+In principle, after  all the software you need has  been installed and
+setup,  you  can  remove  the  contents  of  the  *cache*  and  *work*
+directories to  save storage space  on your system. I  found generally
+useful  to preserve  the  *cache* directory  in order  to  be able  to
+reprocess some installation off line.
 
 
 .. end
