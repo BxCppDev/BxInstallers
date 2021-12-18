@@ -298,7 +298,7 @@ Bayeux  installation
       $ bxdecay0_1_0_12_setup 
       [info] bxdecay0_1_0_12_setup: BxDecay0 version 1.0.12 is now setup !
       $ bxdecay0-config --prefix
-      /opt/swtest/BxSoftware/BxInstall/bxdecay0-1.0.1
+      /opt/swtest/BxSoftware/BxInstall/bxdecay0-1.0.12
    ..
 
 #. Installation:
@@ -310,11 +310,18 @@ Bayeux  installation
       $ ls -l ${BX_CONFIG_DIR}/modules/bayeux@3.5.0.bash
    ..
 
-.. raw:: pdf
+#. Setup:
 
-   PageBreak
-..
+   .. code:: shell
 
+      $ source ${BX_CONFIG_DIR}/modules/bayeux@3.5.0.bash
+      $ bayeux_3_5_0_setup 
+      [info] bayeux_3_5_0_setup: Bayeux version 3.5.0 is now setup !
+      $ bxquery --prefix
+      /opt/swtest/BxSoftware/BxInstall/bayeux-3.5.0 
+   ..	  
+
+ 
 Final setup
 =================
 
@@ -371,6 +378,18 @@ Final setup
       .. code:: shell
 	  
 	 $ bayeux_run_setup
+	 [info] camp_setup: CAMP version 0.8.4 is now setup !
+	 [info] clhep_2_1_4_2_setup: CLHEP version 2.1.4.2 is now setup !
+	 [info] root_6_16_00_setup: ROOT version 6.16.00 is now setup !
+	 [info] g4datasets_9_6_4_setup: Geant4 datasets version 9.6.4 is now setup !
+	 [info] geant4_9_6_4_setup: GEANT4 version 9.6.4 is now setup !
+	 [info] bxdecay0_1_0_12_setup: BxDecay0 version 1.0.12 is now setup !
+	 [info] bayeux_3_5_0_setup: Bayeux version 3.5.0 is now setup !
+	 [notice] Bayeux 3.5.0 is setup.
+	 $ bxquery --version
+	 3.5.0
+	 $ bxquery --prefix
+	 /opt/swtest/BxSoftware/BxInstall/bayeux-3.5.0
       ..
 
       This will setup Bayeux with all its dependencies.
@@ -383,7 +402,7 @@ Final remark
 =================
 
 In principle, after all the software you need has been installed and setup, you
-can remove the contents of the *cache* and *work* directories to save storage place
+can remove the contents of the *cache* and *work* directories to save storage space
 on your system. I found generally useful to preserve the *cache* directory in order to be able
 to reprocess some installation off line.
 
