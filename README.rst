@@ -88,7 +88,7 @@ install libraries:
 These  directories  may need  a  huge  amount  of free  storage  space
 (several GB) because some third party software packages are really big
 (ROOT,  Geant4  and  associated  datasets...) and  also  the  building
-process use quite a large amount  of storage.  Please make sure you
+process uses quite a large amount  of storage.  Please make sure you
 can find such a large space on your disks.
  
 BxInstallers supports  a few  environment variables to  locate working
