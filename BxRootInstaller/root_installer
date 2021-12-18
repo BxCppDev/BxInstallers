@@ -173,6 +173,8 @@ function root_installer_get_tarball()
         echo "root_v${_root_version}.source.tar.gz"
     elif [ "x${_root_version}" = "x6.12.06" ]; then
         echo "root_v${_root_version}.source.tar.gz"
+    elif [ "x${_root_version}" = "x6.20.04" ]; then
+        echo "root_v${_root_version}.source.tar.gz"
     else
         echo >&2 "[error] Unsupported version '${_root_version}'!"
         return 1
@@ -227,7 +229,8 @@ function root_installer_set_system_dependencies()
                     libftgl-dev \
                     libglew-dev \
                     libpcre3-dev \
-                    "
+                   "
+
         if [ ${bxiw_with_package} == true ]; then
             bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
         fi
@@ -260,6 +263,10 @@ function root_installer_set_system_dependencies()
                     libglew-dev \
                     libpcre3-dev \
                     "
+	if [ ${bxiw_package_version} == "6.20.04" ]; then
+	    bxiw_system_packages_run="${bxiw_system_packages_run} libzstd-dev" 
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libzstd-dev" 
+	fi
 	if [ ${root_with_python} == true ]; then
             bxiw_system_packages_run="${bxiw_system_packages_run} python python-dev libpython2.7 libpython2.7-dev python-numpy-dev"	    
             bxiw_system_packages_build="${bxiw_system_packages_build} python python-dev libpython2.7 libpython2.7-dev python-numpy-dev"	    

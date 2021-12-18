@@ -39,17 +39,24 @@ bxiw_default_cache_directory="${HOME}/bxsoftware/_cache.d"
 bxiw_default_working_directory="${HOME}/bxsoftware/_work.d"
 bxiw_default_install_base_dir="${HOME}/bxsoftware/install"
 bxiw_default_package_dir="${HOME}/bxsoftware/_package.d"
-bxiw_setup_dir="${HOME}/.bxsoftware.d"
+### bxiw_default_setup_dir="${HOME}/.bxsoftware.d"
+bxiw_default_setup_dir="${HOME}/bxsoftware/config"
+if [ "x${BX_CONFIG_DIR}" != "x" ]; then
+    bxiw_setup_dir="${BX_CONFIG_DIR}"
+else
+    bxiw_setup_dir="${bxiw_default_setup_dir}"
+fi
 if [ ${UID} -eq 0 ]; then
     bxiw_default_cache_directory="/var/bxsoftware/cache.d"    
     bxiw_default_working_directory="/var/bxsoftware/work.d"    
     bxiw_default_install_base_dir="/opt/bxsoftware/install"    
-    bxiw_default_package_dir="/var/bxsoftware/package.d"
+    bxiw_default_package_dir="/var/bxsoftware/config"
     bxiw_setup_dir="/etc/bxsoftware"
 fi
 if [ "x${bxiw_setup_module_dir}" = "x" ]; then
     bxiw_setup_module_dir=
 fi
+bxiw_setup_external_dir=
 bxiw_default_timeout_seconds=3600
 bxiw_source_from_git=false
 # Next one seems not used !
@@ -547,6 +554,16 @@ function _bxiw_prepare_post()
 	    bxiw_log_info "Setup directory '${bxiw_setup_module_dir}' is created!"
 	fi
     fi
+    
+    if [ ! -d ${bxiw_setup_external_dir} ]; then
+	mkdir -p ${bxiw_setup_external_dir}
+	if [ $? -ne 0 ]; then
+    	    bxiw_log_error "Creation of directory '${bxiw_setup_external_dir}' failed!"
+	    return 1
+	else
+	    bxiw_log_info "Setup directory '${bxiw_setup_external_dir}' is created!"
+	fi
+    fi
  
     return 0
 }
@@ -600,6 +617,10 @@ function _bxiw_prepare_pre()
 
     if [ "x${bxiw_setup_module_dir}" = "x" ]; then
 	bxiw_setup_module_dir="${bxiw_setup_dir}/modules"
+    fi
+
+    if [ "x${bxiw_setup_external_dir}" = "x" ]; then
+	bxiw_setup_external_dir="${bxiw_setup_dir}/external"
     fi
  
     if [ "x${bxiw_pkg_maintener_email}" = "x" ]; then
