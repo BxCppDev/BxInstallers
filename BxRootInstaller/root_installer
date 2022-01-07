@@ -17,6 +17,10 @@ bxiw_system_install=false
 root_system_tbb=false
 root_with_python=false
 
+bxiw_message "info" "Autodetected #procs = ${bxiw_nbprocs}"
+# bxiw_nbprocs=2
+# bxiw_message "info" "fixed: #procs = ${bxiw_nbprocs}"
+
 function root_installer_usage()
 {
     cat<<EOF
@@ -693,6 +697,11 @@ root_installer_parse_cl ${bxiw_app_cl_remaining_argv}
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Command line parse error!"
 fi
+# bxiw_nbprocs=2
+# bxiw_message "info" "fixed: #procs = ${bxiw_nbprocs}"
+# bxiw_exit 0
+
+
 
 root_installer_prepare
 if [ $? -ne 0 ]; then

@@ -342,6 +342,9 @@ function _bxiw_usage_options()
   --no-install         Build only
   --system-install     Perform a system installation
   --timeout duration   Set the timeout duration for downloading files (in seconds)
+  --nprocs value       Set the maximum number of processors to be used at compile time (autodetected)
+                       NB: A specific build process may decide to use only a fraction of the 
+                           available processors.
 EOF
     
     if [ ${__bxiw_enable_source_from_git} == true ]; then
@@ -426,6 +429,9 @@ function bxiw_parse_cl()
 	    elif [ ${opt} = "--timeout" ]; then
 		shift 1
 		bxiw_timeout_seconds=$1
+	    elif [ ${opt} = "--nprocs" ]; then
+		shift 1
+		bxiw_nbprocs=$1		
 	    elif [ ${__bxiw_disable_package} == false -a ${opt} = "--no-pkg-build" ]; then
 		bxiw_with_package=false
 	    elif [ ${__bxiw_disable_package} == false -a ${opt} = "--pkg-build" ]; then
@@ -755,7 +761,6 @@ function bxiw_download_file()
     cd ${_opwd}
     return 0
 }
-
 
 ### export __libbxiw_loaded=1
 ### fi # __libbxiw_loaded
