@@ -11,8 +11,8 @@ bxiw_app_name="bayeux_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="bayeux"
-bxiw_default_package_version="3.5.0"
-bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4 3.5.0"
+bxiw_default_package_version="3.5.1"
+bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4 3.5.0 3.5.1"
 bxiw_package_version=
 bxiw_source_git_path="https://github.com/BxCppDev/Bayeux"
 bxiw_source_git_branch="develop"
@@ -550,7 +550,11 @@ function bayeux_installer_get_url()
 {
     local _bayeux_version="$1"
     local _bayeux_tarball=$(bayeux_installer_get_tarball ${_bayeux_version})
-    if [ "${_bayeux_version}" == "3.4.4" -o "${_bayeux_version}" == "3.5.0" ]; then
+    if [ "${_bayeux_version}" == "3.4.4" ]; then
+	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
+    elif [ "${_bayeux_version}" == "3.5.0" ]; then
+	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
+    elif [ "${_bayeux_version}" == "3.5.1" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     else
 	echo "https://github.com/BxCppDev/Bayeux/archive/${_bayeux_version}.tar.gz"

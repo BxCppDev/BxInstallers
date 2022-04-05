@@ -61,7 +61,7 @@ Ubuntu 20.04
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
    $ mkdir -p ${BX_PACKAGE_DIR}
    $ ./bayeux_installer \
-       --package-version 3.4.4 \
+       --package-version 3.5.1 \
        --with-docs \
        --with-tests \
        --with-bxdecay0 \
