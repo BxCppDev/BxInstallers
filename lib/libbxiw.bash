@@ -47,9 +47,9 @@ else
     bxiw_setup_dir="${bxiw_default_setup_dir}"
 fi
 if [ ${UID} -eq 0 ]; then
-    bxiw_default_cache_directory="/var/bxsoftware/cache.d"    
-    bxiw_default_working_directory="/var/bxsoftware/work.d"    
-    bxiw_default_install_base_dir="/opt/bxsoftware/install"    
+    bxiw_default_cache_directory="/var/bxsoftware/cache.d"
+    bxiw_default_working_directory="/var/bxsoftware/work.d"
+    bxiw_default_install_base_dir="/opt/bxsoftware/install"
     bxiw_default_package_dir="/var/bxsoftware/config"
     bxiw_setup_dir="/etc/bxsoftware"
 fi
@@ -60,7 +60,7 @@ bxiw_setup_external_dir=
 bxiw_default_timeout_seconds=3600
 bxiw_source_from_git=false
 # Next one seems not used !
-bxiw_source_dir=  
+bxiw_source_dir=
 bxiw_source_git_path=
 bxiw_source_git_branch=
 bxiw_timeout_seconds=0
@@ -176,12 +176,12 @@ function bxiw_exit()
     shift 1
     local error_message="$@"
     if [ "x${error_message}" != "x" -a ${error_code} -ne 0 ]; then
-	bxiw_log_error "${error_message}" 
+	bxiw_log_error "${error_message}"
     fi
     if [ -n "${bxiw_app_saved_pwd}" ]; then
 	cd ${bxiw_app_saved_pwd}
     fi
-    exit ${error_code} 
+    exit ${error_code}
 }
 
 
@@ -217,17 +217,17 @@ function bxiw_env()
 	bxiw_cache_dir="${BX_CACHE_DIR}"
 	bxiw_log_info "Cache directory is set from the BX_CACHE_DIR environment variable: '${bxiw_cache_dir}'"
     fi
-    
+
     if [ "x${BX_WORK_DIR}" != "x" ]; then
 	bxiw_work_dir="${BX_WORK_DIR}"
 	bxiw_log_info "Work directory is set from the BX_WORK_DIR environment variable: '${bxiw_work_dir}'"
     fi
-    
+
     if [ "x${BX_INSTALL_BASE_DIR}" != "x" ]; then
 	bxiw_install_base_dir="${BX_INSTALL_BASE_DIR}"
 	bxiw_log_info "Installation base directory is set from the BX_INSTALL_BASE_DIR environment variable: '${bxiw_install_base_dir}'"
     fi
-   
+
     if [ "x${BX_PACKAGE_DIR}" != "x" ]; then
 	bxiw_package_dir="${BX_PACKAGE_DIR}"
 	bxiw_log_info "Package directory is set from the BX_PACKAGE_DIR environment variable: '${bxiw_package_dir}'"
@@ -245,7 +245,7 @@ function bxiw_check_installed_system_package()
     if [ "x${_syspackage_name}" = "x" ]; then
 	bxiw_exit 1 "Missing system package name!"
     fi
-    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+    if [[ "x${bxiw_os_distrib_id}" = "xUbuntu" || "x${bxiw_os_distrib_id}" = "xLinuxMint" ]]; then
 	### dpkg-query -l ${_syspackage_name}
 	dpkg-query -s ${_syspackage_name} > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
@@ -285,7 +285,7 @@ function bxiw_install_system_package()
 	bxiw_log_info "System package '${_syspackage_name}' is already installed"
     else
 	bxiw_log_info "Installing system package '${_syspackage_name}'..."
-	if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+	if [[ "x${bxiw_os_distrib_id}" = "xUbuntu" || "x${bxiw_os_distrib_id}" = "xLinuxMint" ]]; then
 	    sudo apt-get install ${_syspackage_name}
 	    _error_code=$?
 	elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
@@ -311,9 +311,9 @@ function bxiw_install_system_dependencies()
     fi
     LANG=C id | tr ' ' '\n' | grep ^groups= | cut -d= -f2 | tr ',' '\n' | grep "(sudo)" >/dev/null 2>&1
     if [ $? -eq 0 ]; then
-	_do_it=true	
+	_do_it=true
     fi
-    if [ ${_do_it} == true ]; then 
+    if [ ${_do_it} == true ]; then
 	for _syspackage in ${bxiw_system_packages_build}; do
 	    bxiw_install_system_package ${_syspackage}
 	    if [ $? -ne 0 ]; then
@@ -328,36 +328,36 @@ function bxiw_install_system_dependencies()
 function _bxiw_usage_options()
 {
     cat<<EOF
-  --package-version version  
+  --package-version version
                        Set the version of the software
   --gui                Activate GUI
   --work-dir path      Set the working directory (build/tag)
-  --cache-dir path     Set the cache directory 
+  --cache-dir path     Set the cache directory
   --install-dir path   Set the installation directory
   --delete-tags	       Delete all existing tag files
-  --reconfigure	       Force reconfigure      
-  --no-build           Configuration only      
-  --rebuild	       Force rebuild      
-  --reinstall	       Force reinstallation      
+  --reconfigure	       Force reconfigure
+  --no-build           Configuration only
+  --rebuild	       Force rebuild
+  --reinstall	       Force reinstallation
   --no-install         Build only
   --system-install     Perform a system installation
   --timeout duration   Set the timeout duration for downloading files (in seconds)
   --nprocs value       Set the maximum number of processors to be used at compile time (autodetected)
-                       NB: A specific build process may decide to use only a fraction of the 
+                       NB: A specific build process may decide to use only a fraction of the
                            available processors.
 EOF
-    
+
     if [ ${__bxiw_enable_source_from_git} == true ]; then
 	cat<<EOF
   --source-from-git    Built from the Git development branch
   --source-git-path path
-                       Set the Git repository path of the source 
+                       Set the Git repository path of the source
   --source-git-branch name
-                       Set the Git branch to use as source repository 
+                       Set the Git branch to use as source repository
 EOF
-	
+
     fi
-    
+
     if [ ${__bxiw_disable_package} == false ]; then
 	cat<<EOF
   --no-pkg-build       Do not build the package
@@ -365,9 +365,9 @@ EOF
   --pkg-maintener      Set the package maintener email address
   --pkg-release        Set the package release number
 EOF
-	
+
     fi
-    
+
     return 0
 }
 
@@ -423,7 +423,7 @@ function bxiw_parse_cl()
 	    elif [ ${opt} = "--remove-tarballs" ]; then
 		bxiw_remove_tarballs=true
 	    elif [ ${opt} = "--gui" ]; then
-		bxiw_with_gui=true	
+		bxiw_with_gui=true
 	    elif [ ${opt} = "--system-install" ]; then
 		bxiw_system_install=true
 	    elif [ ${opt} = "--timeout" ]; then
@@ -431,7 +431,7 @@ function bxiw_parse_cl()
 		bxiw_timeout_seconds=$1
 	    elif [ ${opt} = "--nprocs" ]; then
 		shift 1
-		bxiw_nbprocs=$1		
+		bxiw_nbprocs=$1
 	    elif [ ${__bxiw_disable_package} == false -a ${opt} = "--no-pkg-build" ]; then
 		bxiw_with_package=false
 	    elif [ ${__bxiw_disable_package} == false -a ${opt} = "--pkg-build" ]; then
@@ -482,7 +482,7 @@ function _bxiw_prepare_post()
 	bxiw_log_info "Deleting existing tag files..."
 	rm -f ${bxiw_tag_dir}/*.tag
     fi
-    
+
     if [ ! -d ${bxiw_cache_dir} ]; then
 	mkdir -p ${bxiw_cache_dir}
 	if [ $? -ne 0 ]; then
@@ -494,12 +494,12 @@ function _bxiw_prepare_post()
     else
 	bxiw_log_info "Cache directory '${bxiw_cache_dir}' already exists!"
     fi
-     
+
     if [ ${bxiw_do_rebuild} == true -a -d ${bxiw_build_dir} ]; then
 	bxiw_log_info "Removing existing '${bxiw_build_dir}' build directory..."
 	rm -fr ${bxiw_build_dir}
     fi
-        
+
     if [ ! -d ${bxiw_build_dir} ]; then
 	mkdir -p ${bxiw_build_dir}
 	if [ $? -ne 0 ]; then
@@ -509,7 +509,7 @@ function _bxiw_prepare_post()
 	    bxiw_log_info "Build directory '${bxiw_build_dir}' is created!"
 	fi
     fi
-         
+
     if [ ! -d ${bxiw_tag_dir} ]; then
 	mkdir -p ${bxiw_tag_dir}
 	if [ $? -ne 0 ]; then
@@ -519,7 +519,7 @@ function _bxiw_prepare_post()
 	    bxiw_log_info "Build directory '${bxiw_tag_dir}' is created!"
 	fi
     fi
-    
+
     if [ ${bxiw_with_package} == true ]; then
 	bxiw_system_install=true
 	if [ ! -d ${bxiw_package_dir} ]; then
@@ -532,10 +532,10 @@ function _bxiw_prepare_post()
 	    fi
 	fi
     fi
-         
+
     if [ ${bxiw_system_install} == true ]; then
 	bxiw_install_dir="/usr"
-    else     
+    else
 	if [ ! -d ${bxiw_install_base_dir} ]; then
 	    mkdir -p ${bxiw_install_base_dir}
 	    if [ $? -ne 0 ]; then
@@ -550,7 +550,7 @@ function _bxiw_prepare_post()
 	    bxiw_install_dir="${_default_install_directory}"
 	fi
     fi
-    
+
     if [ ! -d ${bxiw_setup_module_dir} ]; then
 	mkdir -p ${bxiw_setup_module_dir}
 	if [ $? -ne 0 ]; then
@@ -560,7 +560,7 @@ function _bxiw_prepare_post()
 	    bxiw_log_info "Setup directory '${bxiw_setup_module_dir}' is created!"
 	fi
     fi
-    
+
     if [ ! -d ${bxiw_setup_external_dir} ]; then
 	mkdir -p ${bxiw_setup_external_dir}
 	if [ $? -ne 0 ]; then
@@ -570,7 +570,7 @@ function _bxiw_prepare_post()
 	    bxiw_log_info "Setup directory '${bxiw_setup_external_dir}' is created!"
 	fi
     fi
- 
+
     return 0
 }
 
@@ -582,7 +582,7 @@ function _bxiw_prepare_pre()
     if [ ${bxiw_system_install} = true -a ${bxiw_uid} -ne 0 ]; then
 	bxiw_exit 1 "Invalid priviledge for a system installation!"
     fi
-    
+
     if [ "x${bxiw_builder}" = "x" ]; then
 	bxiw_builder="make"
     fi
@@ -592,7 +592,7 @@ function _bxiw_prepare_pre()
 	    bxiw_source_git_branch="develop"
 	fi
      fi
-    
+
     if [ "x${bxiw_package_version}" = "x" ]; then
 	if [ ${__bxiw_enable_source_from_git} == true -a ${bxiw_source_from_git} == true ]; then
 	    bxiw_package_version="${bxiw_source_git_branch}"
@@ -628,7 +628,7 @@ function _bxiw_prepare_pre()
     if [ "x${bxiw_setup_external_dir}" = "x" ]; then
 	bxiw_setup_external_dir="${bxiw_setup_dir}/external"
     fi
- 
+
     if [ "x${bxiw_pkg_maintener_email}" = "x" ]; then
 	bxiw_pkg_maintener_email="${bxiw_default_pkg_maintener_email}"
     fi
@@ -636,7 +636,7 @@ function _bxiw_prepare_pre()
     if [ ${bxiw_pkg_release} -eq 0 ]; then
 	bxiw_pkg_release=${bxiw_default_pkg_release}
     fi
-     
+
     return 0
 }
 
@@ -699,7 +699,7 @@ function bxiw_git_clone_and_branch()
     local _git_branch="$1"
     shift 1
     local _git_local_dir="$1"
-    shift 1 
+    shift 1
     bxiw_log_trace "Git repository URL       : '${_git_url}'"
     bxiw_log_trace "Git branch               : '${_git_branch}'"
     bxiw_log_trace "Git local copy directory : '${_git_local_dir}'"
@@ -726,7 +726,7 @@ function bxiw_git_clone_and_branch()
 	bxiw_log_info "Git local copy directory '${_git_local_dir}' already exists in '${bxiw_cache_dir}'!"
     fi
     cd ${_opwd}
-    return 0   
+    return 0
 }
 
 
@@ -736,7 +736,7 @@ function bxiw_download_file()
     local _url="$1"
     shift 1
     local _file="$1"
-    shift 1 
+    shift 1
     bxiw_log_trace "URL : '${_url}'"
     bxiw_log_trace "File to be dowloaded : '${_file}'"
     if  [ "x${_file}" = "x" ]; then
