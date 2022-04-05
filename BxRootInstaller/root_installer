@@ -312,7 +312,7 @@ function root_installer_set_system_dependencies()
             # bxiw_system_packages_run="${bxiw_system_packages_run} llvm-dev"
             bxiw_pass
         elif [ "x${bxiw_os_distrib_release}" = "x20.04" ]; then
-	    bxiw_pass
+            bxiw_pass
         fi
     elif [ "x${bxiw_os_distrib_id}" = "xCentOS" -o "x${bxiw_os_distrib_id}" = "xScientific" ]; then
         bxiw_system_packages_build="cmake \
@@ -506,7 +506,8 @@ function root_installer_install()
             -Dsqlite=ON \
             -Dssl=ON \
             -Dmathmore=ON \
-            -Dxrootd=OFF \
+            -Dxrootd=ON \
+            -Dbuiltin_xrootd=ON \
             -Dvdt=OFF \
              ${python_opts} \
             -G Ninja \
