@@ -66,10 +66,10 @@ Options:
 EOF
     _bxiw_usage_options
     cat<<EOF
-  --no-system-boost   Do not use Boost system installation 
+  --no-system-boost   Do not use Boost system installation
   --boost-root path   Set Boost installation path (implies --no-system-boost)
   --system-find-boost Do use the local system FindBoost.cmake script
-  --no-system-camp    Do not use CAMP system installation 
+  --no-system-camp    Do not use CAMP system installation
   --camp-prefix path  Set CAMP installation path
   --camp-dir path     Set CAMP configuration CMake directory
   --with-qt           Bayeux is built with Qt5 support
@@ -87,7 +87,7 @@ EOF
   --with-geant4       Bayeux is built with Geant4
   --without-geant4    Bayeux is built without Geant4 (default)
   --with-werror       Bayeux is built with compiler warnings as errors (default)
-  --without-werror    Bayeux is built without  compiler warnings as errors 
+  --without-werror    Bayeux is built without  compiler warnings as errors
   --cxx-11            Bayeux is built with C++11 support (default)
   --cxx-14            Bayeux is built with C++14 support
   --cxx-17            Bayeux is built with C++17 support
@@ -102,7 +102,7 @@ Example:
    $ ./bayeux_installer --source-from-git --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
 
 EOF
- 
+
     return 0
 }
 
@@ -174,9 +174,9 @@ function bayeux_installer_parse_cl()
 	    elif [ ${opt} = "--cxx-20" ]; then
 		bayeux_cxx_std="20"
 	    elif [ ${opt} = "--with-werror" ]; then
-		bayeux_with_werror=true 
+		bayeux_with_werror=true
 	    elif [ ${opt} = "--without-werror" ]; then
-		bayeux_with_werror=false 
+		bayeux_with_werror=false
 	    else
 		bxiw_log_error "Unsupported option '${opt}'!"
 		return 1
@@ -192,24 +192,24 @@ function bayeux_installer_parse_cl()
 function bayeux_installer_prepare()
 {
     _bxiw_prepare_pre
-  
+
     if [ ${bxiw_with_gui} = true ]; then
-	
+
 	local _do_rebuild_repr="FALSE"
 	if [ ${bxiw_do_rebuild} = true ]; then
 	    _do_rebuild_repr="TRUE"
 	fi
-	
+
 	local _remove_build_dir_repr="FALSE"
 	if [ ${bxiw_remove_build_dir} = true ]; then
 	    _remove_build_dir_repr="TRUE"
 	fi
-	
+
 	local _remove_tarballs_repr="FALSE"
 	if [ ${bxiw_remove_tarballs} = true ]; then
 	    _remove_tarballs_repr="TRUE"
 	fi
-	
+
 	local _system_install_repr="FALSE"
 	if [ ${bxiw_system_install} = true ]; then
 	    _system_install_repr="TRUE"
@@ -304,7 +304,7 @@ function bayeux_installer_prepare()
 	    fi
 	fi
      fi
-   
+
     if [ "x${bayeux_boost_root}" != "x" ]; then
 	if [ ! -f "${bayeux_boost_root}/include/boost/version.hpp" ]; then
 	    bxiw_log_error "Cannot find '${bayeux_boost_root}/include/boost/version.hpp' file!"
@@ -314,7 +314,7 @@ function bayeux_installer_prepare()
 	bxiw_log_info "Found Boost version='${bayeux_boost_version}' for Bayeux"
 	bxiw_pass
     fi
-    
+
     # CAMP:
     if [ "x${bayeux_camp_dir}" = "x" ]; then
 	if [ ${bayeux_no_system_camp} == true ]; then
@@ -331,32 +331,32 @@ function bayeux_installer_prepare()
 	    fi
 	    if [ "x${bayeux_camp_prefix}" = "x" ]; then
 		bxiw_log_error "Missing CAMP prefix!"
-		return 1 
+		return 1
 	    fi
 	    if [ ! -d "${bayeux_camp_prefix}" ]; then
 		bxiw_log_error "CAMP directory '${bayeux_camp_prefix}' does not exist!"
-		return 1 
+		return 1
 	    fi
 	fi
 	if [ "x${bayeux_camp_prefix}" != "x" ]; then
 	    if [ ! -d ${bayeux_camp_prefix} ]; then
 		bxiw_log_error "CAMP installation directory '${bayeux_camp_prefix}' does not exist!"
-		return 1 
+		return 1
 	    fi
 	fi
 	bayeux_camp_dir="${bayeux_camp_prefix}/lib/camp/cmake"
     fi
-    
+
     if [ ! -d ${bayeux_camp_dir} ]; then
 	bxiw_log_error "CAMP CMake directory '${bayeux_camp_dir}' does not exist!"
-	return 1 
+	return 1
     fi
     bxiw_log_info "Using CAMP from directory : '${bayeux_camp_dir}'"
     # else
     # 	bayeux_camp_prefix="/usr"
     # 	bayeux_camp_dir="${bayeux_camp_prefix}/lib/camp/cmake"
     # fi
-   
+
     if [ "x${bayeux_camp_prefix}" != "x" ]; then
 	if [ ! -f "${bayeux_camp_prefix}/include/camp/version.hpp" ]; then
 	    bxiw_log_error "Cannot find '${bayeux_camp_prefix}/include/camp/version.hpp' file!"
@@ -366,10 +366,10 @@ function bayeux_installer_prepare()
 	bxiw_log_info "Found CAMP version='${bayeux_camp_version}' for Bayeux"
 	bxiw_pass
     fi
-    
+
     # CLHEP:
     if [ "x${bayeux_clhep_dir}" = "x" ]; then
-	
+
 	if [ "x${bayeux_clhep_prefix}" = "x" ]; then
 	    which clhep-config > /dev/null 2>&1
 	    if [ $? -ne 0 ]; then
@@ -380,15 +380,15 @@ function bayeux_installer_prepare()
 	fi
 	if [ "x${bayeux_clhep_prefix}" = "x" ]; then
 	    bxiw_log_error "Missing CLHEP prefix!"
-	    return 1 
+	    return 1
 	fi
 	if [ ! -d "${bayeux_clhep_prefix}" ]; then
 	    bxiw_log_error "CLHEP directory '${bayeux_clhep_prefix}' does not exist!"
-	    return 1 
+	    return 1
 	fi
 	bayeux_clhep_dir="${bayeux_clhep_prefix}/lib/CLHEP-$(clhep-config --version | cut -d' ' -f2)"
     fi
-    
+
     if [ ! -d ${bayeux_clhep_dir} ]; then
 	bxiw_log_warning "CLHEP CMake directory '${bayeux_clhep_dir}' does not exist!"
 	bayeux_clhep_dir=""
@@ -409,10 +409,10 @@ function bayeux_installer_prepare()
 	fi
 	if [ "x${bayeux_bxdecay0_dir}" = "x" ]; then
 	    bxiw_log_error "Missing BxDecay0 dir prefix!"
-	    return 1 
+	    return 1
 	fi
     fi
-    
+
     # ROOT:
     bayeux_root_prefix=""
     if [ ${bayeux_minimal_build} = false ]; then
@@ -426,16 +426,16 @@ function bayeux_installer_prepare()
 	fi
 	if [ "x${bayeux_root_prefix}" = "x" ]; then
 	    bxiw_log_error "Missing ROOT prefix!"
-	    return 1 
+	    return 1
 	fi
 	if [ ! -d "${bayeux_root_prefix}" ]; then
 	    bxiw_log_error "ROOT directory '${bayeux_root_prefix}' does not exist!"
-	    return 1 
+	    return 1
 	fi
 	bayeux_root_dir="${bayeux_root_prefix}/share/root/cmake"
 	if [ ! -d ${bayeux_root_dir} ]; then
 	    bxiw_log_error "ROOT CMake directory '${bayeux_root_dir}' does not exist!"
-	    return 1 
+	    return 1
 	fi
 	bxiw_log_info "Using ROOT from directory : '${bayeux_root_dir}'"
     fi
@@ -453,11 +453,11 @@ function bayeux_installer_prepare()
 	fi
 	if [ "x${bayeux_geant4_prefix}" = "x" ]; then
 	    bxiw_log_error "Missing GEANT4 prefix!"
-	    return 1 
+	    return 1
 	fi
 	if [ ! -d "${bayeux_geant4_prefix}" ]; then
 	    bxiw_log_error "GEANT4 directory '${bayeux_geant4_prefix}' does not exist!"
-	    return 1 
+	    return 1
 	fi
 	bayeux_geant4_dir="${bayeux_geant4_prefix}/lib/Geant4-$(geant4-config --version | cut -d' ' -f2)"
 	if [ ! -d ${bayeux_geant4_dir} ]; then
@@ -471,10 +471,10 @@ function bayeux_installer_prepare()
 	    bxiw_log_info "Using GEANT4 from directory : '${bayeux_geant4_dir}'"
 	else
 	    bxiw_log_error "GEANT4 CMake directory was not found!"
-	    return 1 
+	    return 1
 	fi
     fi
-    
+
     if [ ${bayeux_with_qt} = true ]; then
 	# Qt5:
 	if [ ${bayeux_no_system_qt} == true ]; then
@@ -490,10 +490,10 @@ function bayeux_installer_prepare()
 	    bayeux_qt5_dir="${bayeux_qt5_prefix}/lib/cmake"
 	else
 	    if [ "x${bxiw_os_name}" = "xLinux" ]; then
-		if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+		if [[ "x${bxiw_os_distrib_id}" = "xUbuntu" || "x${bxiw_os_distrib_id}" = "xLinuxMint" ]]; then
 		    bayeux_qt5_prefix="/usr"
 		    bayeux_qt5_dir="${bayeux_qt5_prefix}/lib/x86_64-linux-gnu/cmake"
-		elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
+        elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
 		    bayeux_qt5_prefix="/usr"
 		    bayeux_qt5_dir="${bayeux_qt5_prefix}/lib64/cmake"
 		fi
@@ -502,11 +502,11 @@ function bayeux_installer_prepare()
 		return 1
 	    fi
 	fi
-	
+
 	### bayeux_qt5_dir="${bayeux_qt5_prefix}/lib/x86_64-linux-gnu/cmake"
 	if [ ! -d ${bayeux_qt5_dir} ]; then
 	    bxiw_log_error "Qt5 CMake config dir '${bayeux_qt5_dir}' does not exist!"
-	    return 1 
+	    return 1
 	fi
 	bayeux_qt5core_dir="${bayeux_qt5_dir}/Qt5Core"
 	bayeux_qt5gui_dir="${bayeux_qt5_dir}/Qt5Gui"
@@ -514,25 +514,25 @@ function bayeux_installer_prepare()
 	bayeux_qt5svg_dir="${bayeux_qt5_dir}/Qt5Svg"
 	if [ ! -d ${bayeux_qt5core_dir} ]; then
 	    bxiw_log_error "Qt5Core CMake config dir '${bayeux_qt5core_dir}' does not exist!"
-	    return 1 
+	    return 1
 	fi
 	if [ ! -d ${bayeux_qt5gui_dir} ]; then
 	    bxiw_log_error "Qt5Gui CMake config dir '${bayeux_qt5gui_dir}' does not exist!"
-	    return 1 
+	    return 1
 	fi
 	if [ ! -d ${bayeux_qt5widgets_dir} ]; then
 	    bxiw_log_error "Qt5Widgets CMake config dir '${bayeux_qt5widgets_dir}' does not exist!"
-	    return 1 
+	    return 1
 	fi
 	if [ ! -d ${bayeux_qt5svg_dir} ]; then
 	    bxiw_log_error "Qt5Svg CMake config dir '${bayeux_qt5svg_dir}' does not exist!"
-	    return 1 
+	    return 1
 	fi
     fi
 
     # Prepare:
     _bxiw_prepare_post
-     
+
     return 0
 }
 
@@ -561,7 +561,7 @@ function bayeux_installer_get_url()
 
 function bayeux_installer_set_system_dependencies()
 {
-    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+    if [[ "x${bxiw_os_distrib_id}" = "xUbuntu" || "x${bxiw_os_distrib_id}" = "xLinuxMint" ]]; then
 	bxiw_system_packages_build="cmake \
    	  	    ninja-build \
    	  	    make \
@@ -613,13 +613,13 @@ function bayeux_installer_set_system_dependencies()
 		rst2pdf \
 		"
 	fi
-	
+
 	# if [ "x${bxiw_os_distrib_release}" = "x16.04" ]; then
 	#     bxiw_system_packages_build="${bxiw_system_packages_build} libreadline-dev"
 	# elif [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
-	#     bxiw_system_packages_build="${bxiw_system_packages_build} libreadline-dev"	    
+	#     bxiw_system_packages_build="${bxiw_system_packages_build} libreadline-dev"
 	# fi
-	# bxiw_system_packages_build="${bxiw_system_packages_build} readline-common"	    
+	# bxiw_system_packages_build="${bxiw_system_packages_build} readline-common"
 	if [ "x${bxiw_os_distrib_release}" = "x20.04" ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libxerces-c-dev"
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libcamp-dev"
@@ -747,14 +747,16 @@ function bayeux_installer_install()
 		bxiw_log_info "Rename source directory..."
 		_ar_fix_source_dir=true
 	    fi
+        echo "bxiw_cache_dir = ${bxiw_cache_dir}"
+        echo "_bayeux_tarball = ${_bayeux_tarball}"
 	    tar xzf ${bxiw_cache_dir}/${_bayeux_tarball}
 	    if [ $? -ne 0 ]; then
 		bxiw_log_error "Source directory has not been unpacked."
 		cd ${_bayeux_opwd}
 		return 1
-	    else 
+	    else
 		if [ ${_ar_fix_source_dir} = true ]; then
-		    mv ${_ar_bayeux_source_dir} ${_bayeux_source_dir} 
+		    mv ${_ar_bayeux_source_dir} ${_bayeux_source_dir}
 		fi
 		bxiw_log_info "Source directory '${_bayeux_source_dir}' has been unpacked."
 	    fi
@@ -791,7 +793,7 @@ function bayeux_installer_install()
 	if [ "x${bayeux_boost_root}" != "x" ]; then
 	    _boost_options="-DBOOST_ROOT:PATH=${bayeux_boost_root} -DBoost_ADDITIONAL_VERSIONS=${bayeux_boost_version}"
 	    bxiw_log_info "Boost options = ${_boost_options}"
-	else 
+	else
 	    bxiw_log_info "No Boost root"
 	fi
 	if [ ${bayeux_system_find_boost} = true ]; then
@@ -915,7 +917,7 @@ function bayeux_installer_install()
     else
 	bxiw_log_info "Do not configure Bayeux."
     fi
-    
+
     # Build:
     local _bayeux_do_build=false
     if [ ! -f ${bxiw_tag_built} ]; then
@@ -935,7 +937,7 @@ function bayeux_installer_install()
 	if [ ${_bayeux_nbprocs} -gt 2 ]; then
 	    let _bayeux_nbprocs=${bxiw_nbprocs}-1
 	else
-	    _bayeux_nbprocs=1 
+	    _bayeux_nbprocs=1
 	fi
 	bxiw_log_info "#procs = ${_bayeux_nbprocs}"
 	ninja -j ${_bayeux_nbprocs}
@@ -980,7 +982,7 @@ function bayeux_installer_install()
 	    _bayeux_do_package=true
 	fi
 	if [ ${_bayeux_do_package} == true ]; then
-	    if [ "x${bxiw_os_distrib_id}" = "xUbuntu" ]; then
+	    if [[ "x${bxiw_os_distrib_id}" = "xUbuntu" || "x${bxiw_os_distrib_id}" = "xLinuxMint" ]]; then
 		bxiw_log_info "Building a binary package for Bayeux..."
 		bayeux_installer_makedebpack
 	    else
@@ -1015,7 +1017,7 @@ function bayeux_installer_makedebpack()
     mkdir -p ${_bayeux_build_dir}/doc-pak
     touch ${_bayeux_build_dir}/description-pak
     cat>${_bayeux_build_dir}/description-pak<<EOF
-Bayeux Library 
+Bayeux Library
 
 This is a binary version for ${bxiw_os_distrib_id} ${bxiw_os_distrib_release}.
 EOF
@@ -1030,10 +1032,10 @@ EOF
 		"
     _bayeux_requires_list=$(echo ${_bayeux_requires} | tr ' ' ',')
     _bayeux_conflicts_list="libbayeux-dev,libbayeux0.8"
-    bxiw_log_info "Requires : ${_bayeux_requires_list}!"	
+    bxiw_log_info "Requires : ${_bayeux_requires_list}!"
     if [ ${_bayeux_do_package} == true ]; then
 	if [ "x${bxiw_os_arch}" != "xx86_64" ]; then
-	    bxiw_log_error "Unsupported architecture ${bxiw_os_arch}!"	
+	    bxiw_log_error "Unsupported architecture ${bxiw_os_arch}!"
 	    return 1
 	fi
 	sudo checkinstall \
@@ -1054,10 +1056,10 @@ EOF
 	     --default \
 	     ninja install
 	if [ $? -ne 0 ]; then
-	    bxiw_log_error "Debian binary package build failed!"	
+	    bxiw_log_error "Debian binary package build failed!"
 	    return 1
 	fi
-    fi	 
+    fi
     return 0
 }
 
