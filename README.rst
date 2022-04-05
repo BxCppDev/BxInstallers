@@ -3,7 +3,7 @@ BxInstallers
 ===================================
 
 :author: F.Mauger <mauger@lpccaen.in2p3.fr>
-:date: 2021-12-18
+:date: 2022-04-05
 
 
 BxInstallers provides  some build/install/setup shell scripts  for the
@@ -104,13 +104,14 @@ directories used to build and install libraries:
   generated Debian packages.
 
 
-Each supported software package is associated to  specific installation script which
-should, in principle, download the source archive (or the git repo) from the proper location on the web,
-unpack it, configure it, compile it from the working directory then install it. A setup shell script
-is also generated for further activation by the user.
+Each supported software package is associated to specific installation
+script which should, in principle, download the source archive (or the
+git repo)  from the proper location  on the web, unpack  it, configure
+it, compile  it from the  working directory  then install it.  A setup
+shell script is also generated for further activation by the user.
 
-If some extra system packages are required, some ``apt`` commands are run on Ubuntu before the
-build stage (need some *sudo* access).
+If some extra system packages  are required, some ``apt`` commands are
+run on Ubuntu before the build stage (need some *sudo* access).
 
 
 
@@ -155,15 +156,16 @@ build stage (need some *sudo* access).
 Ubuntu 20.04
 ==============
 
-This section  illustrates a  typical configure-build-installation-setup procedure
-for the Bayeux library and  all its dependencies on a Ubuntu  20.04 LTS system. We
-assume that *Bash* is the default shell.
+This section illustrates  a typical configure-build-installation-setup
+procedure for the Bayeux library and  all its dependencies on a Ubuntu
+20.04 LTS system. We assume that *Bash* is the default shell.
 
 We also assume that you are in the sudoers or equivalent to allow some
 system package installation when needed.
 
-We recommend not to use your *home* directory for such a big installation but rather
-to create and use some other directory (here ``/opt/swtest``) that does not need to be backuped.
+We  recommend  not  to  use  your *home*  directory  for  such  a  big
+installation but rather  to create and use some  other directory (here
+``/opt/swtest``) that does not need to be backuped.
 
 Preparation
 ---------------
@@ -264,8 +266,8 @@ BxDecay0  installation
 .. code:: shell
 	  
    $ cd ../BxDecay0Installer
-   $ ./bxdecay0_installer --package-version "1.0.12"
-   $ ls -l ${BX_CONFIG_DIR}/modules/bxdecay0@1.0.12.bash
+   $ ./bxdecay0_installer --package-version "1.1.0"
+   $ ls -l ${BX_CONFIG_DIR}/modules/bxdecay0@1.1.0.bash
 ..
    
 
@@ -289,11 +291,11 @@ Bayeux  installation
       $ geant4-config --prefix
       /opt/swtest/BxSoftware/BxInstall/geant4-9.6.4/bin/..
  
-      $ source ${BX_CONFIG_DIR}/modules/bxdecay0@1.0.12.bash
-      $ bxdecay0_1_0_12_setup 
-      [info] bxdecay0_1_0_12_setup: BxDecay0 version 1.0.12 is now setup !
+      $ source ${BX_CONFIG_DIR}/modules/bxdecay0@1.1.0.bash
+      $ bxdecay0_1_1_0_setup 
+      [info] bxdecay0_1_1_0_setup: BxDecay0 version 1.1.0 is now setup !
       $ bxdecay0-config --prefix
-      /opt/swtest/BxSoftware/BxInstall/bxdecay0-1.0.12
+      /opt/swtest/BxSoftware/BxInstall/bxdecay0-1.1.0
    ..
 
 .. $ source ${BX_CONFIG_DIR}/modules/camp@0.8.4.bash
@@ -349,7 +351,7 @@ Final setup
 	 source ${BX_CONFIG_DIR}/modules/clhep@2.1.4.2.bash
 	 source ${BX_CONFIG_DIR}/modules/g4datasets@9.6.4.bash
 	 source ${BX_CONFIG_DIR}/modules/geant4@9.6.4.bash
- 	 source ${BX_CONFIG_DIR}/modules/bxdecay0@1.0.12.bash
+ 	 source ${BX_CONFIG_DIR}/modules/bxdecay0@1.1.0.bash
 	 source ${BX_CONFIG_DIR}/modules/bayeux@3.5.0.bash
 
 	 function bayeux_3_5_0_run_setup()
@@ -358,7 +360,7 @@ Final setup
 	   root_6_16_00_setup 
 	   g4datasets_9_6_4_setup       
 	   geant4_9_6_4_setup
-	   bxdecay0_1_0_12_setup  
+	   bxdecay0_1_1_0_setup  
 	   bayeux_3_5_0_setup 
 	   echo >&2 "[notice] Bayeux 3.5.0 is setup."
 	 }
@@ -385,7 +387,7 @@ Final setup
 	 [info] root_6_16_00_setup: ROOT version 6.16.00 is now setup !
 	 [info] g4datasets_9_6_4_setup: Geant4 datasets version 9.6.4 is now setup !
 	 [info] geant4_9_6_4_setup: GEANT4 version 9.6.4 is now setup !
-	 [info] bxdecay0_1_0_12_setup: BxDecay0 version 1.0.12 is now setup !
+	 [info] bxdecay0_1_1_0_setup: BxDecay0 version 1.1.0 is now setup !
 	 [info] bayeux_3_5_0_setup: Bayeux version 3.5.0 is now setup !
 	 [notice] Bayeux 3.5.0 is setup.
 	 $ bxquery --version
