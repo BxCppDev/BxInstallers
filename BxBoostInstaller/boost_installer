@@ -59,24 +59,24 @@ function boost_installer_parse_cl()
 function boost_installer_prepare()
 {
     _bxiw_prepare_pre
- 
+
     if [ ${bxiw_with_gui} = true ]; then
-        
+
         local _do_rebuild_repr="FALSE"
         if [ ${bxiw_do_rebuild} = true ]; then
             _do_rebuild_repr="TRUE"
         fi
-        
+
         local _remove_build_dir_repr="FALSE"
         if [ ${bxiw_remove_build_dir} = true ]; then
             _remove_build_dir_repr="TRUE"
         fi
-        
+
         local _remove_tarballs_repr="FALSE"
         if [ ${bxiw_remove_tarballs} = true ]; then
             _remove_tarballs_repr="TRUE"
         fi
-        
+
         local _system_install_repr="FALSE"
         if [ ${bxiw_system_install} = true ]; then
             _system_install_repr="TRUE"
@@ -130,7 +130,7 @@ function boost_installer_prepare()
             fi
         fi
     fi
-    
+
     boost_libs="atomic,chrono,date_time,filesystem,graph,iostreams,locale,log,math,program_options,python,random,regex,serialization,system,thread"
     local _boost_version="${bxiw_package_version}"
     bxiw_log_info "_boost_version = '${_boost_version}'"
@@ -143,7 +143,7 @@ function boost_installer_prepare()
 
     # Prepare:
     _bxiw_prepare_post
-     
+
     return 0
 }
 
@@ -173,7 +173,7 @@ function boost_installer_get_url()
 {
     local _boost_version="$1"
     local _boost_tarball=$(boost_installer_get_tarball ${_boost_version})
-    echo "https://dl.bintray.com/boostorg/release/${_boost_version}/source/${_boost_tarball}"
+    echo "https://boostorg.jfrog.io/artifactory/main/release/${_boost_version}/source/${_boost_tarball}"
     # echo "https://sourceforge.net/projects/boost/${_boost_version}/${_boost_tarball}/download"
     return 0
 }
@@ -204,7 +204,7 @@ function boost_installer_set_system_dependencies()
                 zlib1g \
                 bzip2 \
                 libxml2 \
-                "       
+                "
         if [ "x${bxiw_os_distrib_release}" = "x18.04" ]; then
             bxiw_system_packages_build="${bxiw_system_packages_build} \
                     libicu60 \
@@ -305,7 +305,7 @@ function boost_installer_install()
             _boost_do_configure=true
         fi
     fi
- 
+
     if [ ${_boost_do_config} == true ]; then
         bxiw_log_info "BOOST configuration..."
         ./bootstrap.sh \
@@ -344,7 +344,7 @@ function boost_installer_install()
         if [ ${_boost_nbprocs} -gt 2 ]; then
             let _boost_nbprocs=${bxiw_nbprocs}
         else
-            _boost_nbprocs=1 
+            _boost_nbprocs=1
         fi
         bxiw_log_info "#procs = ${_boost_nbprocs}"
         ./b2 stage
@@ -421,8 +421,8 @@ function boost_installer_makedebpack()
     cat>${_boost_build_dir}/description-pak<<EOF
 Boost C++ Library (Bayeux edition)
 
-This is a binary version for Ubuntu 18.04 
-usable with the Bayeux software suite. 
+This is a binary version for Ubuntu 18.04
+usable with the Bayeux software suite.
 EOF
 
     local _arch="amd64"
@@ -442,11 +442,11 @@ EOF
           "
     _boost_requires_list=$(echo ${_boost_requires} | tr ' ' ',')
     # _boost_conflicts_list=""
-    ###      --conflicts="${_boost_conflicts_list}" 
-    bxiw_log_info "Requires : ${_boost_requires_list}!"       
+    ###      --conflicts="${_boost_conflicts_list}"
+    bxiw_log_info "Requires : ${_boost_requires_list}!"
     if [ ${_boost_do_package} == true ]; then
         if [ "x${os_arch}" != "xx86_64" ]; then
-            bxiw_log_error "Unsupported architecture ${os_arch}!"     
+            bxiw_log_error "Unsupported architecture ${os_arch}!"
             return 1
         fi
         sudo checkinstall \
@@ -466,10 +466,10 @@ EOF
              --default \
              ninja install
         if [ $? -ne 0 ]; then
-            bxiw_log_error "Debian binary package build failed!"      
+            bxiw_log_error "Debian binary package build failed!"
             return 1
         fi
-    fi   
+    fi
     return 0
 }
 
