@@ -3,12 +3,12 @@ Bayeux installation
 =================================
 
 :author: F.Mauger <mauger@lpccaen.in2p3.fr>
-:date: 2020-05-20
+:date: 2021-02-01
 
 Bayeux installer for Ubuntu provided by the Bayeux development group.
 
-Default Bayeux version: 3.4.2
-Supported versions: 3.4.0 3.4.1 3.4.2
+Default Bayeux version: 3.4.4
+Supported versions: 3.4.0 3.4.1 3.4.2 3.4.3 3.4.4 3.5.0
 
 Requirements
 ============
@@ -61,7 +61,7 @@ Ubuntu 20.04
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
    $ mkdir -p ${BX_PACKAGE_DIR}
    $ ./bayeux_installer \
-       --package-version 3.4.2 \
+       --package-version 3.4.4 \
        --with-docs \
        --with-tests \
        --with-bxdecay0 \
@@ -99,7 +99,7 @@ With a specific non system version of Boost (>1.69)
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
    $ mkdir -p ${BX_PACKAGE_DIR}
    $ ./bayeux_installer \
-       --package-version 3.4.2 \
+       --package-version 3.4.4 \
        --no-system-boost \
        --boost-root "/scratch/BxInstall/boost-1.69.0" \
        --with-docs \

@@ -11,7 +11,8 @@ bxiw_app_name="bayeux_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="bayeux"
-bxiw_default_package_version="3.4.2"
+bxiw_default_package_version="3.5.0"
+bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4 3.5.0"
 bxiw_package_version=
 bxiw_source_git_path="https://github.com/BxCppDev/Bayeux"
 bxiw_source_git_branch="develop"
@@ -47,6 +48,7 @@ bayeux_with_docs=false
 bayeux_with_devtools=true
 bayeux_with_testing=false
 bayeux_with_werror=true
+bayeux_minimal_build=false
 
 function bayeux_installer_usage()
 {
@@ -81,6 +83,7 @@ EOF
   --without-docs      Bayeux is built without documentation (default)
   --with-tests        Bayeux is built with tests
   --without-tests     Bayeux is built without tests (default)
+  --minimal-build     Bayeux is built with minimal set of modules
   --with-geant4       Bayeux is built with Geant4
   --without-geant4    Bayeux is built without Geant4 (default)
   --with-werror       Bayeux is built with compiler warnings as errors (default)
@@ -95,6 +98,7 @@ cat<<EOF
 
 Example:
 
+   $ ./bayeux_installer --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
    $ ./bayeux_installer --source-from-git --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
 
 EOF
@@ -116,6 +120,8 @@ function bayeux_installer_parse_cl()
 		bayeux_no_system_boost=true
 	    elif [ ${opt} = "--no-system-camp" ]; then
 		bayeux_no_system_camp=true
+	    elif [ ${opt} = "--minimal-build" ]; then
+		bayeux_minimal_build=true
 	    elif [ ${opt} = "--camp-prefix" ]; then
 		shift 1
 		bayeux_camp_prefix="$1"
@@ -409,30 +415,32 @@ function bayeux_installer_prepare()
     
     # ROOT:
     bayeux_root_prefix=""
-    if [ "x${bayeux_root_prefix}" = "x" ]; then
-	which root-config > /dev/null 2>&1
-	if [ $? -ne 0 ]; then
-	    bxiw_log_error "Cannot find ROOT 'root-config' script!"
-	    return 1
+    if [ ${bayeux_minimal_build} = false ]; then
+	if [ "x${bayeux_root_prefix}" = "x" ]; then
+	    which root-config > /dev/null 2>&1
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Cannot find ROOT 'root-config' script!"
+		return 1
+	    fi
+	    bayeux_root_prefix="$(root-config --prefix)"
 	fi
-	bayeux_root_prefix="$(root-config --prefix)"
+	if [ "x${bayeux_root_prefix}" = "x" ]; then
+	    bxiw_log_error "Missing ROOT prefix!"
+	    return 1 
+	fi
+	if [ ! -d "${bayeux_root_prefix}" ]; then
+	    bxiw_log_error "ROOT directory '${bayeux_root_prefix}' does not exist!"
+	    return 1 
+	fi
+	bayeux_root_dir="${bayeux_root_prefix}/share/root/cmake"
+	if [ ! -d ${bayeux_root_dir} ]; then
+	    bxiw_log_error "ROOT CMake directory '${bayeux_root_dir}' does not exist!"
+	    return 1 
+	fi
+	bxiw_log_info "Using ROOT from directory : '${bayeux_root_dir}'"
     fi
-    if [ "x${bayeux_root_prefix}" = "x" ]; then
-	bxiw_log_error "Missing ROOT prefix!"
-	return 1 
-    fi
-    if [ ! -d "${bayeux_root_prefix}" ]; then
-	bxiw_log_error "ROOT directory '${bayeux_root_prefix}' does not exist!"
-	return 1 
-    fi
-    bayeux_root_dir="${bayeux_root_prefix}/share/root/cmake"
-    if [ ! -d ${bayeux_root_dir} ]; then
-	bxiw_log_error "ROOT CMake directory '${bayeux_root_dir}' does not exist!"
-	return 1 
-    fi
-    bxiw_log_info "Using ROOT from directory : '${bayeux_root_dir}'"
 
-    if [ ${bayeux_with_geant4} = true ]; then
+    if [ ${bayeux_minimal_build} = false -a ${bayeux_with_geant4} = true ]; then
 	# Geant4:
 	bayeux_geant4_prefix=""
 	if [ "x${bayeux_geant4_prefix}" = "x" ]; then
@@ -542,7 +550,11 @@ function bayeux_installer_get_url()
 {
     local _bayeux_version="$1"
     local _bayeux_tarball=$(bayeux_installer_get_tarball ${_bayeux_version})
-    echo "https://github.com/BxCppDev/Bayeux/archive/${_bayeux_version}.tar.gz"
+    if [ "${_bayeux_version}" == "3.4.4" -o "${_bayeux_version}" == "3.5.0" ]; then
+	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
+    else
+	echo "https://github.com/BxCppDev/Bayeux/archive/${_bayeux_version}.tar.gz"
+    fi
     return 0
 }
 
@@ -559,7 +571,7 @@ function bayeux_installer_set_system_dependencies()
    		    git \
    		    g++ \
 		    gcc \
-		    gnuplot \
+		    gnuplot-qt  \
 		    gnuplot-doc \
 		    gnuplot-mode \
 		    libreadline-dev \
@@ -633,6 +645,7 @@ function bayeux_installer_print()
     bxiw_log_info "bayeux_camp_dir           = '${bayeux_camp_dir}'"
     bxiw_log_info "bayeux_clhep_prefix       = '${bayeux_clhep_prefix}'"
     bxiw_log_info "bayeux_clhep_dir          = '${bayeux_clhep_dir}'"
+    bxiw_log_info "bayeux_minimal_build      = ${bayeux_minimal_build}"
     bxiw_log_info "bayeux_root_prefix        = '${bayeux_root_prefix}'"
     bxiw_log_info "bayeux_root_dir           = '${bayeux_root_dir}'"
     bxiw_log_info "bayeux_with_bxdecay0      = ${bayeux_with_bxdecay0}"
@@ -728,12 +741,21 @@ function bayeux_installer_install()
 	else
 	    local _bayeux_tarball=$(bayeux_installer_get_tarball ${bxiw_package_version})
 	    bxiw_log_info "Unpacking source directory..."
+	    local _ar_bayeux_source_dir=$(tar xvzf bayeux-${bxiw_package_version}.tar.gz | head -1 | tr -d '/')
+	    local _ar_fix_source_dir=false
+	    if [ "${_ar_bayeux_source_dir}" != "${_bayeux_source_dir}" ]; then
+		bxiw_log_info "Rename source directory..."
+		_ar_fix_source_dir=true
+	    fi
 	    tar xzf ${bxiw_cache_dir}/${_bayeux_tarball}
 	    if [ $? -ne 0 ]; then
 		bxiw_log_error "Source directory has not been unpacked."
 		cd ${_bayeux_opwd}
 		return 1
-	    else
+	    else 
+		if [ ${_ar_fix_source_dir} = true ]; then
+		    mv ${_ar_bayeux_source_dir} ${_bayeux_source_dir} 
+		fi
 		bxiw_log_info "Source directory '${_bayeux_source_dir}' has been unpacked."
 	    fi
 	fi
@@ -762,6 +784,8 @@ function bayeux_installer_install()
     fi
 
     if [ ${_bayeux_do_config} == true ]; then
+	all_modules="ON"
+
 	bxiw_log_info "Bayeux configuration..."
 	local _boost_options=
 	if [ "x${bayeux_boost_root}" != "x" ]; then
@@ -790,6 +814,14 @@ function bayeux_installer_install()
 	if [ "x${bayeux_root_dir}" != "x" ]; then
 	    _root_options="-DROOT_DIR:PATH=${bayeux_root_dir}"
 	fi
+	local _minimal_option=
+	if [ ${bayeux_minimal_build} = true ]; then
+	    _minimal_option="-DBAYEUX_MINIMAL_BUILD"
+	    bayeux_with_geant4=false
+	    bayeux_with_bxdecay0=false
+	    all_modules="OFF"
+	fi
+
 	local _geant4_options="-DBAYEUX_WITH_GEANT4_MODULE=OFF"
 	if [ ${bayeux_with_geant4} = true ]; then
 	    _geant4_options="-DBAYEUX_WITH_GEANT4_MODULE=ON -DGeant4_DIR=${bayeux_geant4_dir}"
@@ -844,6 +876,7 @@ function bayeux_installer_install()
 	    ${_boost_options} \
 	    ${_camp_options} \
 	    ${_clhep_options} \
+	    ${_minimal_options} \
 	    ${_root_options} \
 	    ${_bxdecay0_options} \
 	    ${_geant4_options} \
@@ -858,16 +891,16 @@ function bayeux_installer_install()
 	    ${_qt_option4} \
 	    -DBAYEUX_COMPILER_ERROR_ON_WARNING=${_werror} \
 	    -DBAYEUX_WITH_IWYU_CHECK=OFF \
-	    -DBAYEUX_WITH_BRIO=ON \
-	    -DBAYEUX_WITH_CUTS=ON \
-	    -DBAYEUX_WITH_MYGSL=ON \
-	    -DBAYEUX_WITH_MATERIALS=ON \
-	    -DBAYEUX_WITH_DPP=ON \
-	    -DBAYEUX_WITH_GEOMTOOLS=ON \
-	    -DBAYEUX_WITH_EMFIELD=ON \
-	    -DBAYEUX_WITH_GENBB=ON \
-	    -DBAYEUX_WITH_GENVTX=ON \
-	    -DBAYEUX_WITH_MCTOOLS=ON \
+	    -DBAYEUX_WITH_BRIO=${all_modules} \
+	    -DBAYEUX_WITH_CUTS=${all_modules} \
+	    -DBAYEUX_WITH_MYGSL=${all_modules} \
+	    -DBAYEUX_WITH_MATERIALS=${all_modules} \
+	    -DBAYEUX_WITH_DPP=${all_modules} \
+	    -DBAYEUX_WITH_GEOMTOOLS=${all_modules} \
+	    -DBAYEUX_WITH_EMFIELD=${all_modules} \
+	    -DBAYEUX_WITH_GENBB=${all_modules} \
+	    -DBAYEUX_WITH_GENVTX=${all_modules} \
+	    -DBAYEUX_WITH_MCTOOLS=${all_modules} \
 	    -DBAYEUX_WITH_LAHAGUE=OFF \
   	    -G Ninja \
 	    ${_bayeux_source_dir}
@@ -1033,14 +1066,29 @@ function bayeux_installer_setup()
 {
     bxiw_log_trace "bayeux_installer_setup: entering..."
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script_base="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"
+    if [ -f ${_bxsoftware_setup_script} ]; then
+	cp -f ${_bxsoftware_setup_script} ${_bxsoftware_setup_script}-save$(date -Isecond)
+    fi
     local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
     bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    # local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    # local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    # local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"
+    # if [ -f ${_bxsoftware_setup_script} ]; then
+    # 	cp -f ${_bxsoftware_setup_script} ${_bxsoftware_setup_script}-save$(date -Isecond)
+    # fi
+    # local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
+    # bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
     bxiw_log_info " - Using installing dir : '${bxiw_install_dir}'..."
     bxiw_log_info " - Using version        : '${bxiw_package_version}'..."
-    cat ${bxiw_app_installer_prefix}/resources/${bxiw_package_name}.bash.in | \
+    cat ${bxiw_app_installer_prefix}/resources/package.bash.in | \
 	sed \
-	    -e "s@__BAYEUX_INSTALL_DIR__@${bxiw_install_dir}@g" \
-	    -e "s@__BAYEUX_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__PACKAGE_INSTALL_DIR__@${bxiw_install_dir}@g" \
+	    -e "s@__PACKAGE_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__PACKAGE_UVERSION__@${_bxsoftware_underscored_version}@g" \
 	    > ${_bxsoftware_setup_script}
     return  0
 }
@@ -1084,7 +1132,7 @@ if [ $? -ne 0 ]; then
     bxiw_exit 1 "Installation failed!"
 fi
 
-bxiw_exit 0
+# bxiw_exit 0
 
 if [ ${bxiw_with_package} == false ]; then
     bayeux_installer_setup

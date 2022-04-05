@@ -3,13 +3,13 @@ CLHEP installation for Bayeux
 =================================
 
 :author: F.Mauger <mauger@lpccaen.in2p3.fr>
-:date: 2019-04-18
+:date: 2021-01-07
 
 CLHEP installer for Ubuntu provided by the Bayeux
 development group.
 
 * Default CLHEP version: 2.4.1.0
-* Supported versions: 2.1.3.1 2.1.4.2 2.4.1.0
+* Supported versions: 2.1.3.1 2.1.4.2 2.4.1.0 2.4.4.0
 
 Requirements
 ============
@@ -22,7 +22,7 @@ Usage
 .. code:: bash
 	  
    $ ./clhep_installer --help
-   $ ./clhep_installer --package-version 2.1.4.2 
+   $ ./clhep_installer --package-version 2.4.4.0 
 ..
 
 Installation on Ubuntu 18.04
@@ -39,25 +39,25 @@ Installation as standard user
    .. code:: bash
 	  
       $ ./clhep_installer \
-	  --work-dir "${HOME}/.bxsoftware/work.d" \
-	  --install-dir "${HOME}/bxsoftware/install/clhep-2.4.1.0" 
+	  --work-dir "/tmp/.bxsoftware/work.d" \
+	  --install-dir "/opt/sw/bxsoftware/install/clhep-2.4.4.0" 
    ..
 
 2. Use the setup script:
    
-   A Bash setup script ``${HOME}/.bxsoftware.d/modules/clhep@2.4.1.0.bash`` is installed in your
-   home directory. It automatically source the setup script above.
+   A Bash setup script ``${HOME}/.bxsoftware.d/modules/clhep@2.4.4.0.bash`` is installed in your
+   home directory. It automatically sources the setup script above.
 
    .. code:: bash
 
-      $ source ~/.bxsoftware.d/modules/clhep@2.4.1.0.bash
+      $ source ~/.bxsoftware.d/modules/clhep@2.4.4.0.bash
    ..
 
    To activate CLHEP from a Bash shell, do:
 
    .. code:: bash
 
-      $ clhep_2_4_1_0_setup
+      $ clhep_2_4_4_0_setup
       $ which clhep-config
       $ clhep-config --version 
    ..
@@ -69,7 +69,7 @@ Installation as root
 
    .. code:: bash
 	  
-      $ sudo ./clhep_installer --system-install --package-version 2.1.4.2 
+      $ sudo ./clhep_installer --system-install --package-version 2.4.4.0 
    ..
 
 2. Use the setup script:
@@ -89,7 +89,7 @@ Build and make a binary package
 
 VERY EXPERIMENTAL
 
-Generate a ``bxclhep_2.4.1.0-1_amd64.deb`` binary Debian package:
+Generate a ``bxclhep_2.4.4.0-1_amd64.deb`` binary Debian package:
 
 .. code:: bash
 	  
@@ -102,14 +102,14 @@ Check the package:
 
 .. code:: bash
 	  
-   $ dpkg -c bxclhep_2.4.1.0-1_amd64.deb
+   $ dpkg -c bxclhep_2.4.4.0-1_amd64.deb
 ..
 
 Then install the package:
 
 .. code:: bash
 	  
-   $ sudo dpkg -i bxclhep_2.4.1.0-1_amd64.deb
+   $ sudo dpkg -i bxclhep_2.4.4.0-1_amd64.deb
 ..
 
 

@@ -8,12 +8,12 @@ GEANT4 installation for Bayeux
 GEANT4 installer for Ubuntu provided by the Bayeux
 development group.
 
-Supported versions: 9.6.4 10.5
+Supported versions: 9.6.4 10.5 10.7
 
 Requirements
 ============
 
-1. ``bxclhep`` package  if no system install is available
+1. ``bxclhep-installer`` package  if no system install is available
 2. ``bxg4datasets-installer`` package  
 
 
@@ -23,6 +23,8 @@ Usage
 .. code:: bash
 	  
    $ ./geant4_installer --help
+   $ ./geant4_installer --package-version 9.6.4
+   $ ./geant4_installer --package-version 10.7
 ..
 
 Installation on Ubuntu 18.04/20.04
@@ -33,6 +35,7 @@ Preparation
 
 .. code:: bash
 
+   $ sudo apt-get install libxerces-c-dev
    $ clhep_setup        # or clhep_2_1_4_2_setup
    $ g4datasets_setup   # or g4datasets_9_6_4_setup
 ..

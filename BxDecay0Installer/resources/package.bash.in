@@ -1,0 +1,20 @@
+# -*- mode: shell-script; -*-
+
+function bxdecay0___BXDECAY0_UVERSION___setup()
+{
+    local _bx_bxdecay0_version="__BXDECAY0_VERSION__"
+    local _bx_bxdecay0_install_dir="__BXDECAY0_INSTALL_DIR__"
+    if [ -n "${BX_BXDECAY0_INSTALL_DIR}" ]; then
+	echo >&2 "[warning] bxdecay0___BXDECAY0_UVERSION___setup: BxDecay0 version ${BX_BXDECAY0_VERSION} is already setup !"   
+	return 1
+    fi
+    export BX_BXDECAY0_INSTALL_DIR="${_bx_bxdecay0_install_dir}"
+    export BX_BXDECAY0_VERSION="${_bx_bxdecay0_version}"
+    export PATH="${BX_BXDECAY0_INSTALL_DIR}/bin:${PATH}"
+    echo >&2 "[info] bxdecay0___BXDECAY0_UVERSION___setup: BxDecay0 version ${_bx_bxdecay0_version} is now setup !"
+    return 0
+}
+export -f bxdecay0___BXDECAY0_UVERSION___setup
+
+# end
+

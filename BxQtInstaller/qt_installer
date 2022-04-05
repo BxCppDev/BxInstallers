@@ -153,14 +153,20 @@ function qt_installer_prepare()
 function qt_installer_get_tarball()
 {
     local _qt_version="$1"
+    shift 1
+    local _qt_module="$1"
+    if [ "x${_qt_module}" = "x" ]; then
+	_qt_module="base"
+    fi
     if [ "x${_qt_version}" = "x5.13.2" ]; then
-	echo "qtbase-everywhere-src-${_qt_version}.tar.xz"
+	echo "qt${_qt_module}-everywhere-src-${_qt_version}.tar.xz"
     else
         echo >&2 "[error] Unsupported version '${_qt_version}'!"
         return 1
     fi
     return 0
 }
+
 
 function qt_short_version()
 {
@@ -175,7 +181,13 @@ function qt_installer_get_url()
     ### http://download.qt.io/archive/qt/5.13/5.13.2/submodules/qtbase-everywhere-src-5.13.2.tar.xz
     
     local _qt_version="$1"
-    local _qt_tarball=$(qt_installer_get_tarball ${_qt_version})
+    shift 1
+    local _qt_module="$1"
+    shift 1
+    if [ "x${qt_module}" = "x" ]; then
+	_qt_module="base"
+    fi
+    local _qt_tarball=$(qt_installer_get_tarball ${_qt_version} ${_qt_module})
     echo "https://download.qt.io/official_releases/qt/$(qt_short_version ${_qt_version})/${_qt_version}/submodules/${_qt_tarball}"
     return 0
 }
@@ -239,8 +251,15 @@ function qt_installer_print()
 
 function qt_installer_download()
 {
-    local _qt_tarball=$(qt_installer_get_tarball ${bxiw_package_version})
-    local _qt_url=$(qt_installer_get_url ${bxiw_package_version})
+    local _qt_tarball=$(qt_installer_get_tarball ${bxiw_package_version} base)
+    local _qt_url=$(qt_installer_get_url ${bxiw_package_version} base)
+    bxiw_download_file ${_qt_url} ${_qt_tarball}
+    if [ $? -ne 0 ]; then
+        bxiw_message "error" "Could not download the '${_qt_tarball}' file!"
+        return 1
+    fi
+    local _qt_tarball=$(qt_installer_get_tarball ${bxiw_package_version} svg)
+    local _qt_url=$(qt_installer_get_url ${bxiw_package_version} svg)
     bxiw_download_file ${_qt_url} ${_qt_tarball}
     if [ $? -ne 0 ]; then
         bxiw_message "error" "Could not download the '${_qt_tarball}' file!"
@@ -252,11 +271,12 @@ function qt_installer_download()
 function qt_installer_install()
 {
     local _qt_opwd=$(pwd)
-    local _qt_tarball=$(qt_installer_get_tarball ${bxiw_package_version})
-    cd ${bxiw_cache_dir}
-    local _qt_source_dir="$(pwd)/qtbase-everywhere-src-${bxiw_package_version}"
     bxiw_log_info "Qt version is                : '${bxiw_package_version}'"
-    bxiw_log_info "Qt source directory is       : '${_qt_source_dir}'"
+    cd ${bxiw_cache_dir}
+
+    local _qt_tarball=$(qt_installer_get_tarball ${bxiw_package_version} base)
+    local _qt_source_dir="$(pwd)/qtbase-everywhere-src-${bxiw_package_version}"
+    bxiw_log_info "Qt Base source directory is       : '${_qt_source_dir}'"
     if [ ! -d ${_qt_source_dir} ]; then
         bxiw_log_info "Unpacking source directory..."
         tar xJf ${bxiw_cache_dir}/${_qt_tarball}
@@ -264,19 +284,16 @@ function qt_installer_install()
             bxiw_log_error "Source directory has not been unpacked."
             cd ${_qt_opwd}
             return 1
-        else
-            bxiw_log_info "Source directory has been unpacked."
         fi
+        bxiw_log_info "Source directory has been unpacked."        
     else
         bxiw_log_info "Source directory was already unpacked."
     fi
-
     bxiw_log_info "Qt build directory is        : '${bxiw_build_dir}'"
     bxiw_log_info "Qt tag directory is          : '${bxiw_tag_dir}'"
     bxiw_log_info "Qt installation directory is : '${bxiw_install_dir}'"
-
     if [ ! -f ${bxiw_build_dir}/configure ]; then
-        bxiw_log_info "Copying the source directory in the build directory..."
+        bxiw_log_info "Copying Qt Base the source directory in the build directory..."
         cp -af ${_qt_source_dir}/* ${bxiw_build_dir}/
         cp -f ${_qt_source_dir}/.qmake.conf ${bxiw_build_dir}/
         cp -f ${_qt_source_dir}/.tag ${bxiw_build_dir}/
@@ -285,6 +302,35 @@ function qt_installer_install()
         bxiw_log_info "The source directory is already cloned in the build directory."
         ls -1 ${bxiw_build_dir}
     fi
+    
+    # local _qt_tarball=$(qt_installer_get_tarball ${bxiw_package_version} svg)
+    # local _qt_source_dir="$(pwd)/qtsvg-everywhere-src-${bxiw_package_version}"
+    # bxiw_log_info "Qt Svg source directory is       : '${_qt_source_dir}'"
+    # if [ ! -d ${_qt_source_dir} ]; then
+    #     bxiw_log_info "Unpacking source directory..."
+    #     tar xJf ${bxiw_cache_dir}/${_qt_tarball}
+    #     if [ $? -ne 0 ]; then
+    #         bxiw_log_error "Source directory has not been unpacked."
+    #         cd ${_qt_opwd}
+    #         return 1
+    #     fi
+    #     bxiw_log_info "Source directory has been unpacked."        
+    # else
+    #     bxiw_log_info "Source directory was already unpacked."
+    # fi
+    # bxiw_log_info "Qt build directory is        : '${bxiw_build_dir}'"
+    # bxiw_log_info "Qt tag directory is          : '${bxiw_tag_dir}'"
+    # bxiw_log_info "Qt installation directory is : '${bxiw_install_dir}'"
+    # bxiw_log_info "Copying the Qt Svg source directory in the build directory..."
+    # cp -af ${_qt_source_dir}/dist/* ${bxiw_build_dir}/dist/
+    # cp -af ${_qt_source_dir}/doc/* ${bxiw_build_dir}/doc/
+    # cp -af ${_qt_source_dir}/examples/* ${bxiw_build_dir}/examples/
+    # cp -af ${_qt_source_dir}/include/* ${bxiw_build_dir}/include/
+    # cp -af ${_qt_source_dir}/src/* ${bxiw_build_dir}/src/
+    # cp -af ${_qt_source_dir}/tests/* ${bxiw_build_dir}/tests/
+    # #cp -f ${_qt_source_dir}/.qmake.conf ${bxiw_build_dir}/
+    # #cp -f ${_qt_source_dir}/.tag ${bxiw_build_dir}/
+    # ls -1 ${bxiw_build_dir}    
 
     cd ${bxiw_build_dir}
     # pwd
@@ -546,6 +592,8 @@ qt_installer_download
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Source archive download failed!"
 fi
+
+bxiw_exit 1 "Stop"
 
 qt_installer_install
 if [ $? -ne 0 ]; then
