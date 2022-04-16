@@ -9,8 +9,8 @@ bxiw_app_name="geant4_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="geant4"
-bxiw_default_package_version="10.7"
-bxiw_supported_package_versions="9.6.4 10.5 10.7"
+bxiw_default_package_version="11.0"
+bxiw_supported_package_versions="9.6.4 10.5 10.7 11.0"
 bxiw_package_version=
 
 g4_with_system_clhep=true
@@ -223,7 +223,9 @@ function geant4_installer_get_tarball()
 {
     local _geant4_version="$1"
     shift 1
-    if [ "x${_geant4_version}" = "x10.5" ]; then
+    if [ "x${_geant4_version}" = "x11.0" ]; then
+	echo "geant4-v11.0.1.tar.gz"
+    elif [ "x${_geant4_version}" = "x10.5" ]; then
 	echo "geant4.10.05.tar.gz"
     elif [ "x${_geant4_version}" = "x10.7" ]; then
 	echo "geant4.10.07.tar.gz"
@@ -364,6 +366,8 @@ function geant4_installer_install()
     local _geant4_source_dir=
     if [ "${bxiw_package_version}" = "10.5" ]; then
 	_geant4_source_dir="$(pwd)/geant4.10.05"
+    elif [ "${bxiw_package_version}" = "11.0" ]; then
+	_geant4_source_dir="$(pwd)/geant4-v11.0.1"
     elif [ "${bxiw_package_version}" = "10.7" ]; then
 	_geant4_source_dir="$(pwd)/geant4.10.07"
     elif [ "${bxiw_package_version}" = "9.6.4" ]; then
@@ -451,10 +455,15 @@ function geant4_installer_install()
 	    _geant4_xercesc_opt="-DXERCESC_ROOT_DIR=${g4_xercesc_root_dir}"
 	fi
 	_geant4_cxxstd_opt=
-	if [ "${bxiw_package_version}" != "10.7" ]; then
-	    _geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=c++11"
-	else
+	echo >&2 "[DEVEL] bxiw_package_version=${bxiw_package_version}"
+	if [ "${bxiw_package_version}" == "10.7" ]; then
 	    _geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=11"
+	elif [ "${bxiw_package_version}" == "11.0" ]; then
+	    echo >&2 "[DEVEL] TEST"
+	    _geant4_cxxstd_opt="-DCMAKE_CXX_STANDARD=17"
+	else
+	    echo >&2 "[DEVEL] TEST2"
+	    _geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=c++11"
 	fi
 	
 	local _geant4_libdir="lib"
