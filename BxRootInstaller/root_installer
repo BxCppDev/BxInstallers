@@ -9,13 +9,16 @@ bxiw_app_name="root_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="root"
-bxiw_default_package_version="6.16.00"
-bxiw_supported_package_versions="6.20.04 6.16.00 6.12.06"
+bxiw_default_package_version="6.26.02"
+bxiw_supported_package_versions="6.26.02 6.20.04 6.16.00 6.12.06"
 bxiw_package_version=
 bxiw_system_install=false
 
 root_system_tbb=false
 root_with_python=false
+root_cxx_options=""
+
+
 
 bxiw_message "info" "Autodetected #procs = ${bxiw_nbprocs}"
 # bxiw_nbprocs=2
@@ -39,6 +42,15 @@ EOF
     cat<<EOF
   --system-tbb         Use system TBB
   --with-python        Build Python binding
+  --cxx11              Use C++11 (not for recent versions of ROOT)
+  --cxx14              Use C++14
+  --cxx17              Use C++17
+  --cxx17              Use C++20
+
+Examples:
+
+   root_installer --package-version 6.26.02 --cxx17
+
 EOF
     echo ""
     return 0
@@ -60,6 +72,14 @@ function root_installer_parse_cl()
                 root_with_python=true
             elif [ ${opt} = "--without-python" ]; then
                 root_with_python=false
+            elif [ ${opt} = "--cxx11" ]; then
+		root_cxx_options="-DCMAKE_CXX_STANDARD=11"
+            elif [ ${opt} = "--cxx14" ]; then
+		root_cxx_options="-DCMAKE_CXX_STANDARD=14"
+            elif [ ${opt} = "--cxx17" ]; then
+		root_cxx_options="-DCMAKE_CXX_STANDARD=17"
+            elif [ ${opt} = "--cxx20" ]; then
+		root_cxx_options="-DCMAKE_CXX_STANDARD=20"
             else
                 bxiw_message "error" "Unsupported option '${opt}'!"
                 return 1
@@ -175,6 +195,8 @@ function root_installer_get_tarball()
     local _root_patch=""
     if [ "x${_root_version}" = "x6.16.00" ]; then
         echo "root_v${_root_version}.source.tar.gz"
+    elif [ "x${_root_version}" = "x6.26.02" ]; then
+        echo "root_v${_root_version}.source.tar.gz"
     elif [ "x${_root_version}" = "x6.12.06" ]; then
         echo "root_v${_root_version}.source.tar.gz"
     elif [ "x${_root_version}" = "x6.20.04" ]; then
@@ -270,6 +292,14 @@ function root_installer_set_system_dependencies()
 	if [ ${bxiw_package_version} == "6.20.04" ]; then
 	    bxiw_system_packages_run="${bxiw_system_packages_run} libzstd-dev" 
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libzstd-dev" 
+	fi
+	if [ ${bxiw_package_version} == "6.26.02" ]; then
+	    bxiw_system_packages_run="${bxiw_system_packages_run} nlohmann-json3-dev" 
+	    bxiw_system_packages_build="${bxiw_system_packages_build} nlohmann-json3-dev" 
+	    bxiw_system_packages_run="${bxiw_system_packages_run} libxxhash-dev" 
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libxxhash-dev" 
+	    bxiw_system_packages_run="${bxiw_system_packages_run} libgl2ps-dev" 
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libgl2ps-dev" 
 	fi
 	if [ ${root_with_python} == true ]; then
             bxiw_system_packages_run="${bxiw_system_packages_run} python python-dev libpython2.7 libpython2.7-dev python-numpy-dev"	    
@@ -456,6 +486,12 @@ function root_installer_install()
             # -DPYTHON_INCLUDE_DIR="/usr/include/python2.7" \
             # -DPYTHON_LIBRARY="/usr/lib/x86_64-linux-gnu/libpython2.7.so" 
 	fi
+	if [ "${bxiw_package_version}" <= "6.16.00" ]; then
+	    if [ "x${root_cxx_options}" = "x" ]; then
+		root_cxx_options="-Dcxx11=ON"
+	    fi
+	fi
+	bxiw_message "info" "ROOT CXX options=${root_cxx_options}"
         cmake  \
             -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
             -DCMAKE_BUILD_TYPE:STRING="Release" \
@@ -486,7 +522,6 @@ function root_installer_install()
             -Dsapdb=OFF \
             -Dsrp=OFF \
             -Dunuran=OFF \
-            -Dcxx11=ON \
             -Dfail-on-missing=ON \
             -Dgnuinstall=ON \
             -Dexplicitlink=ON \
@@ -510,7 +545,8 @@ function root_installer_install()
             -Dbuiltin_xrootd=ON \
             -Dvdt=OFF \
              ${python_opts} \
-            -G Ninja \
+             -G Ninja \
+	     ${root_cxx_options} \
             ${_root_source_dir}
         if [ $? -ne 0 ]; then
             bxiw_message "error" "ROOT configuration failed!"

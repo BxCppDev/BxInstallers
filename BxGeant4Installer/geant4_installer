@@ -22,6 +22,8 @@ g4_no_system_qt=false
 g4_qt5_prefix=
 g4_datasets_timeout=86400
 g4_xercesc_root_dir=
+g4_with_mt=false
+g4_tls_model="global-dynamic"
 
 
 function geant4_installer_usage()
@@ -42,7 +44,16 @@ Options:
   --with-buildin-datasets      Build Geant4 with builtin datasets (default: no) 
   --external-datasets-dir path Set the installation directory of external datasets (default: automatic)  
   --with-qt                    Build Geant4 with Qt support (default: no)     
-  --xercesc-root-dir path      Set the installation directory of the Xerces-C library  
+  --xercesc-root-dir path      Set the installation directory of the Xerces-C library
+  --with-mt                    Build Geant4 with multithreading support (default: no)     
+  --without-mt                 Build Geant4 without multithreading support     
+  --tls-model MODEL            Build Geant4 with a specific TLS model (default: "global-dynamic")
+  	      		       Supported values: 'initial-exec' 'local-exec' 'global-dynamic' 'local-dynamic'
+   
+Example:
+
+  $ ./geant4_installer --package-version 11.0 --with-mt --tls-model "global-dynamic"
+
 EOF
     _bxiw_usage_options
     echo ""
@@ -81,9 +92,16 @@ function geant4_installer_parse_cl()
 		g4_no_system_qt=true
 		shift 1
 		g4_qt5_prefix="$1"
+	    elif [ ${opt} = "--with-mt" ]; then
+		g4_with_mt=true
+	    elif [ ${opt} = "--without-mt" ]; then
+		g4_with_mt=false
 	    elif [ ${opt} == "--xercesc-root-dir" ]; then
 		shift 1
 		g4_xercesc_root_dir="$1"
+	    elif [ ${opt} == "--tls-model" ]; then
+		shift 1
+		g4_tls_model="$1"
 	    else
 		bxiw_message "error" "Unsupported option '${opt}'!"
 		return 1
@@ -454,19 +472,43 @@ function geant4_installer_install()
 	if [ "x${g4_xercesc_root_dir}" != "x" ]; then
 	    _geant4_xercesc_opt="-DXERCESC_ROOT_DIR=${g4_xercesc_root_dir}"
 	fi
-	_geant4_cxxstd_opt=
-	echo >&2 "[DEVEL] bxiw_package_version=${bxiw_package_version}"
+	local _geant4_cxxstd_opt=
+	# echo >&2 "[DEVEL] bxiw_package_version=${bxiw_package_version}"
 	if [ "${bxiw_package_version}" == "10.7" ]; then
 	    _geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=11"
 	elif [ "${bxiw_package_version}" == "11.0" ]; then
-	    echo >&2 "[DEVEL] TEST"
+	    # echo >&2 "[DEVEL] TEST"
 	    _geant4_cxxstd_opt="-DCMAKE_CXX_STANDARD=17"
 	else
-	    echo >&2 "[DEVEL] TEST2"
+	    # echo >&2 "[DEVEL] TEST2"
 	    _geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=c++11"
 	fi
 	
+	# Only for Geant4 >= 10:
+	local _geant4_mt_opts=
+	if [ ${g4_with_mt} == true ]; then
+	    _geant4_mt_opts="-DGEANT4_BUILD_MULTITHREADED=ON"
+	    if [ "x${g4_tls_model}" == "x" ]; then
+		g4_tls_model="initial-exec"
+	    fi
+
+	    if [ "${g4_tls_model}" == "global-dynamic" ]; then
+		_geant4_mt_opts="${_geant4_mt_opts} -DGEANT4_BUILD_TLS_MODEL=global-dynamic "
+	    elif [ "${g4_tls_model}" == "initial-exec" ]; then
+		_geant4_mt_opts="${_geant4_mt_opts} -DGEANT4_BUILD_TLS_MODEL=initial-exec "
+	    elif [ "${g4_tls_model}" == "local-exec" ]; then
+		_geant4_mt_opts="${_geant4_mt_opts} -DGEANT4_BUILD_TLS_MODEL=local-exec "
+	    elif [ "${g4_tls_model}" == "local-dynamic" ]; then
+		_geant4_mt_opts="${_geant4_mt_opts} -DGEANT4_BUILD_TLS_MODEL=local-dynamic "
+	    else
+		bxiw_message "error" "GEANT4 does not support TLS model '${g4_tls_model}'!"
+		cd ${_geant4_opwd}
+		return 1
+	    fi
+	fi	
+	bxiw_message "info" "GEANT4 built with TLS model='${g4_tls_model}'"
 	local _geant4_libdir="lib"
+	
 	cmake  \
 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
 	    -DCMAKE_INSTALL_LIBDIR=${_geant4_libdir} \
@@ -483,6 +525,7 @@ function geant4_installer_install()
 	    -DGEANT4_USE_GDML=ON \
 	    -DGEANT4_USE_OPENGL_X11=ON \
 	    ${_geant4_xercesc_opt} \
+	    ${_geant4_mt_opts} \
 	    -Wno-dev \
 	    -G Ninja \
 	    ${_geant4_source_dir}
