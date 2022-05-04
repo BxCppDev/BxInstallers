@@ -99,8 +99,8 @@ directories used to build and install libraries:
 * ``BX_INSTALL_BASE_DIR``  : overrides  the default  installation base
   directory (for final installation).
 * ``BX_CONFIG_DIR``  : overrides  the default  configuration
-  directory (for configuration scripts and files).
-* ``BX_PACKAGE_DIR`` (optional, for experts only) :  overrides  the  package  directory  to  store
+  directory (for configuration scripts).
+* ``BX_PACKAGE_DIR`` (optional, for experts only, experimental) :  overrides  the  package  directory  to  store
   generated Debian packages.
 
 

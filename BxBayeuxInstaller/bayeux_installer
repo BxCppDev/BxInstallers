@@ -98,7 +98,7 @@ cat<<EOF
 
 Example:
 
-   $ ./bayeux_installer --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
+   $ ./bayeux_installer --package-version 3.5.2 --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
    $ ./bayeux_installer --source-from-git --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
 
 EOF
@@ -555,6 +555,8 @@ function bayeux_installer_get_url()
     elif [ "${_bayeux_version}" == "3.5.0" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.1" ]; then
+	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
+    elif [ "${_bayeux_version}" == "3.5.2" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     else
 	echo "https://github.com/BxCppDev/Bayeux/archive/${_bayeux_version}.tar.gz"
