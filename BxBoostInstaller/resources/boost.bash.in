@@ -1,20 +1,20 @@
 # -*- mode: shell-script; -*-
 
-function boost___BOOST_UVERSION___setup()
+function load_boost___BOOST_UVERSION___setup()
 {
     local _bx_boost_version="__BOOST_VERSION__"
     local _bx_boost_install_dir="__BOOST_INSTALL_DIR__"
     if [ -n "${BX_BOOST_INSTALL_DIR}" ]; then
-	echo >&2 "[warning] boost___BOOST_UVERSION___setup: BOOST version ${BX_BOOST_VERSION} is already setup !"   
+	echo >&2 "[warning] load_boost___BOOST_UVERSION___setup: BOOST version ${BX_BOOST_VERSION} is already setup !"   
 	return 1
     fi
     export BX_BOOST_INSTALL_DIR="${_bx_boost_install_dir}"
     export BX_BOOST_VERSION="${_bx_boost_version}"
-    echo >&2 "[info] boost___BOOST_UVERSION___setup: BOOST version ${_bx_boost_version} is now setup !"
+    echo >&2 "[info] load_boost___BOOST_UVERSION___setup: BOOST version ${_bx_boost_version} is now setup !"
     return 0
 }
-export -f boost___BOOST_UVERSION___setup
-alias boost_setup='boost___BOOST_UVERSION___setup'
+export -f load_boost___BOOST_UVERSION___setup
+# alias boost_setup='load_boost___BOOST_UVERSION___setup'
 
 # end
 

@@ -75,13 +75,13 @@ install libraries:
   for    the    installed    software.      By    default,    it    is
   ``${HOME}/bxsoftware/install``  for a  standard  user (without  root
   proviledges) and ``/opt/bxsoftware/install`` for the root user.
-* The *configuration* base directory is the directory
-  for    the    configuration scripts associated to installed    software (*modules*).
-  By    default,    it    is
-  ``${HOME}/bxsoftware/config``  for a  standard  user (without  root
-  proviledges) and ``/opt/bxsoftware/config`` for the root user.
-* The (experimental) *package*  directory is the  directory where to  store generated
-  Debian        packages.        By        default,       it        is
+* The  *configuration*  base  directory   is  the  directory  for  the
+  configuration scripts associated  to installed software (*modules*).
+  By default, it is  ``${HOME}/bxsoftware/config`` for a standard user
+  (without  root proviledges)  and ``/opt/bxsoftware/config``  for the
+  root user.
+* The  (experimental) *package*  directory is  the directory  where to
+  store   generated    Debian   packages.     By   default,    it   is
   ``${HOME}/bxsoftware/_package.d`` for a  standard user (without root
   proviledges) and ``/var/bxsoftware/package.d`` for the root user.
 
@@ -100,8 +100,8 @@ directories used to build and install libraries:
   directory (for final installation).
 * ``BX_CONFIG_DIR``  : overrides  the default  configuration
   directory (for configuration scripts).
-* ``BX_PACKAGE_DIR`` (optional, for experts only, experimental) :  overrides  the  package  directory  to  store
-  generated Debian packages.
+* ``BX_PACKAGE_DIR``  (optional,  for  experts only,  experimental)  :
+  overrides the package directory to store generated Debian packages.
 
 
 Each supported software package is associated to specific installation
@@ -118,7 +118,8 @@ run on Ubuntu before the build stage (need some *sudo* access).
   
 **Example:**
 
-#. Prepare your environment (here we do not consider access modes for simplicity):
+#. Prepare your environment (here we  do not consider access modes for
+   simplicity):
 
    .. code:: shell
 
@@ -170,7 +171,8 @@ installation but rather  to create and use some  other directory (here
 Preparation
 ---------------
 
-Create specific working and installation directories and environment variables:
+Create specific  working and installation directories  and environment
+variables:
 
 .. code:: shell
 
