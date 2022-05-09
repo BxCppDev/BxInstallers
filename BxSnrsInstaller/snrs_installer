@@ -1,0 +1,662 @@
+#!/usr/bin/env bash
+
+if [ ! -f "$(pwd)/.bxwi_snrs.locate" ]; then
+    echo >&2 "[error] Please run from the SNRS installer directory!"
+    exit 1
+fi
+
+source $(pwd)/../lib/libbxiw.bash
+__bxiw_enable_source_from_git=true
+bxiw_app_name="snrs_installer"
+bxiw_app_saved_opwd=$(pwd)
+bxiw_app_installer_prefix="$(pwd)"
+bxiw_package_name="snrs"
+bxiw_default_package_version="1.1"
+bxiw_supported_package_versions="1.1"
+bxiw_package_version=
+bxiw_source_git_path="https://github.com/SuperNEMO-DBD/SNRS"
+bxiw_source_git_branch="develop"
+
+snrs_bayeux_dir=
+snrs_bayeux_version=
+snrs_with_docs=false
+snrs_with_testing=false
+snrs_with_werror=false
+
+function snrs_installer_usage()
+{
+    cat<<EOF
+
+snrs_installer - SNRS library installer
+
+Synopsis:
+
+    snrs_installer [OPTION]...
+
+Options:
+
+  --help              Print this help then exit
+EOF
+    _bxiw_usage_options
+    cat<<EOF
+  --snrs-prefix path  Set SNRS installation path (only for SNRS >=4.1)
+  --with-docs         SNRS is built with documentation
+  --without-docs      SNRS is built without documentation (default)
+  --with-tests        SNRS is built with tests
+  --without-tests     SNRS is built without tests (default)
+  --with-werror       SNRS is built with compiler warnings as errors (default)
+  --without-werror    SNRS is built without  compiler warnings as errors
+EOF
+    echo ""
+    cat<<EOF
+
+Example:
+
+   $ ./snrs_installer --package-version 4.0.3 --with-tests --with-docs
+   $ ./snrs_installer --source-from-git --with-tests --with-docs
+ 
+EOF
+
+    return 0
+}
+
+
+function snrs_installer_parse_cl()
+{
+    while [ -n "$1" ]; do
+	token="$1"
+	if [ "x${token:0:1}" = "x-" ]; then
+	    opt="${token}"
+	    if [ ${opt} = "--help" ]; then
+		snrs_installer_usage
+		bxiw_exit 0
+	    elif [ ${opt} = "--snrs-prefix" ]; then
+		shift 1
+		snrs_snrs_prefix="$1"
+	    elif [ ${opt} = "--with-docs" ]; then
+		snrs_with_docs=true
+	    elif [ ${opt} = "--without-docs" ]; then
+		snrs_with_docs=false
+	    elif [ ${opt} = "--with-tests" ]; then
+		snrs_with_testing=true
+	    elif [ ${opt} = "--without-tests" ]; then
+		snrs_with_testing=false
+	    elif [ ${opt} = "--with-werror" ]; then
+		snrs_with_werror=true
+	    elif [ ${opt} = "--without-werror" ]; then
+		snrs_with_werror=false
+	    else
+		bxiw_log_error "Unsupported option '${opt}'!"
+		return 1
+	    fi
+	else
+	    arg="${token}"
+	fi
+	shift 1
+    done
+    return 0
+}
+
+function snrs_installer_prepare()
+{
+    _bxiw_prepare_pre
+
+    if [ ${bxiw_with_gui} = true ]; then
+
+	local _do_rebuild_repr="FALSE"
+	if [ ${bxiw_do_rebuild} = true ]; then
+	    _do_rebuild_repr="TRUE"
+	fi
+
+	local _remove_build_dir_repr="FALSE"
+	if [ ${bxiw_remove_build_dir} = true ]; then
+	    _remove_build_dir_repr="TRUE"
+	fi
+
+	local _remove_tarballs_repr="FALSE"
+	if [ ${bxiw_remove_tarballs} = true ]; then
+	    _remove_tarballs_repr="TRUE"
+	fi
+
+	local _system_install_repr="FALSE"
+	if [ ${bxiw_system_install} = true ]; then
+	    _system_install_repr="TRUE"
+	fi
+
+	which yad > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    bxiw_message "[warning] yad is not installed! No GUI!"
+	else
+	    local _choices=$(yad --width=500 \
+				 --form \
+				 --title "${bxiw_package_name} installer options" \
+				 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
+				 --field="Working directory:CDIR" "${bxiw_work_dir}" \
+				 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
+				 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+				 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+				 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+				 --field="System installation:CHK" "$_system_install_repr}" \
+		  )
+	    if [ "x${_choices}" = "x" ]; then
+		bxiw_log_info "Cancelled dialog!"
+		return 1
+	    fi
+	    bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+	    bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
+	    bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
+	    _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
+	    if [ ${_do_rebuild_repr} == "TRUE" ]; then
+		bxiw_do_rebuild=true
+	    else
+		bxiw_do_rebuild=false
+	    fi
+	    _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
+	    if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+		bxiw_remove_build_dir=true
+	    else
+		bxiw_remove_build_dir=false
+	    fi
+	    _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
+	    if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+		bxiw_remove_tarballs=true
+	    else
+		bxiw_remove_tarballs=false
+	    fi
+	    _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
+	    if [ ${_system_install_repr} == "TRUE" ]; then
+		bxiw_system_install=true
+	    else
+		bxiw_system_install=false
+	    fi
+	fi
+    fi
+
+    # Bayeux:
+    if [ "x${snrs_bayeux_dir}" = "x" ]; then
+	which bxquery > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Cannot find Bayeux 'bxquery' script!"
+	    return 1
+	fi
+	snrs_bayeux_dir="$(bxquery --cmakedir)"
+	snrs_bayeux_version="$(bxquery --version)"
+	bxiw_log_info "Using Bayeux ${snrs_bayeux_version} from directory : '${snrs_bayeux_dir}'"
+    fi
+    if [ "x${snrs_bayeux_dir}" = "x" ]; then
+	bxiw_log_error "Missing Bayeux dir prefix!"
+	return 1
+    fi
+
+    local _snrs_version="${bxiw_package_version}"
+    bxiw_log_info "SNRS version : ${_snrs_version}"
+    bxiw_log_info "Bayeux version : ${snrs_bayeux_version}"
+    if [ "${_snrs_version}" == "1.1.0" ]; then
+	if [ "x${snrs_bayeux_version}" \< "3.5.2" ]; then
+	    bxiw_log_error "Bayeux version ${snrs_bayeux_version} does not fit ${_snrs_version} (please use 3.5.2)!"
+	    return 1	    	    
+	fi
+    fi
+
+    # Prepare:
+    _bxiw_prepare_post
+
+    return 0
+}
+
+
+function snrs_installer_get_tarball()
+{
+    local _snrs_version="$1"
+    shift 1
+    if [ "${_snrs_version}" == "1.1" ]; then
+	echo "SNRS-${_snrs_version}.tar.gz"
+    else
+	bxiw_log_error "SNRS version '${_snrs_version}' is not supported!"
+	return 1
+    fi
+    return 0
+}
+
+
+function snrs_installer_get_url()
+{
+    local _snrs_version="$1"
+    local _snrs_tarball=$(snrs_installer_get_tarball ${_snrs_version})
+    if [ "x${_snrs_tarball}" = "x" ]; then
+	return 1
+    fi
+    echo "https://github.com/SuperNEMO-DBD/SNRS/archive/refs/tags/${_snrs_tarball}"
+    # if [ "${_snrs_version}" == "1.1" ]; then
+    # 	echo "https://github.com/SuperNEMO-DBD/SNRS/archive/refs/tags/${_snrs_tarball}"
+    # else
+    #     echo "https://github.com/SuperNEMO-DBD/SNRS/archive/refs/tags/${_snrs_version}.tar.gz"
+    # fi  
+    return 0
+}
+
+
+function snrs_installer_set_system_dependencies()
+{
+    if [[ "x${bxiw_os_distrib_id}" = "xUbuntu" || "x${bxiw_os_distrib_id}" = "xLinuxMint" ]]; then
+	bxiw_system_packages_build="cmake \
+   	  	    ninja-build \
+   	  	    make \
+        	    pkg-config \
+        	    dpkg-dev \
+       	    	    wget \
+   		    git \
+   		    g++ \
+		    gcc \
+		    "
+	if [ ${bxiw_with_package} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
+	fi
+	if [ ${bxiw_with_gui} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} yad"
+	fi
+	bxiw_pass
+    elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
+	bxiw_pass
+    elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+	bxiw_pass
+    fi
+    bxiw_system_packages_run="${bxiw_system_packages_build}"
+    return 0
+}
+
+
+function snrs_installer_print()
+{
+    bxiw_print
+    bxiw_log_info "snrs_bayeux_dir         = '${snrs_bayeux_dir}'"
+    bxiw_log_info "snrs_bayeux_version     = '${snrs_bayeux_version}'"
+    bxiw_log_info "snrs_with_docs          = ${snrs_with_docs}"
+    bxiw_log_info "snrs_with_testing       = ${snrs_with_testing}"
+    return 0
+}
+
+
+function snrs_installer_download()
+{
+    if [ ${bxiw_source_from_git} == true ]; then
+	local _snrs_git_repo="${bxiw_source_git_path}"
+	local _snrs_git_branch="${bxiw_source_git_branch}"
+	local _snrs_git_dir="${bxiw_package_name}-${_snrs_git_branch}.git"
+	bxiw_log_info "SNRS Git repository : '${_snrs_git_repo}'"
+	bxiw_log_info "SNRS Git branch     : '${_snrs_git_branch}'"
+	bxiw_log_info "SNRS Git directory  : '${_snrs_git_dir}'"
+	if [ -d ${bxiw_cache_dir}/${_snrs_git_dir} ]; then
+	    local _opwd=$(pwd)
+	    cd ${bxiw_cache_dir}/${_snrs_git_dir}
+	    bxiw_log_info "SNRS Git pull..."
+	    git checkout ${_snrs_git_branch}
+	    git pull
+	    cd ${_opwd}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Could not pull the existing Git repository '${_snrs_git_dir}'!"
+		return 1
+	    fi
+	else
+	    bxiw_git_clone_and_branch ${_snrs_git_repo} ${_snrs_git_branch} ${_snrs_git_dir}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Could not clone the Git repository '${_snrs_git_repo}'!"
+		return 1
+	    fi
+	fi
+	touch ${bxiw_tag_downloaded}
+    else
+	local _snrs_tarball=$(snrs_installer_get_tarball ${bxiw_package_version})
+	local _snrs_url=$(snrs_installer_get_url ${bxiw_package_version})
+	bxiw_log_info "SNRS tarball : '${_snrs_tarball}'"
+	bxiw_log_info "SNRS URL     : '${_snrs_url}'"
+	if [ ! -f ${bxiw_tag_downloaded} ]; then
+	    bxiw_download_file ${_snrs_url} ${_snrs_tarball}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Could not download the '${_snrs_tarball}' file!"
+		return 1
+	    fi
+	    touch ${bxiw_tag_downloaded}
+	else
+	    bxiw_log_info "SNRS tarball is already downloaded."
+	fi
+    fi
+    return  0
+}
+
+
+function snrs_installer_install()
+{
+    local _snrs_opwd=$(pwd)
+    cd ${bxiw_cache_dir}
+    local _snrs_source_dir="$(pwd)/snrs-${bxiw_package_version}"
+    bxiw_log_info "SNRS version is                : '${bxiw_package_version}'"
+    bxiw_log_info "SNRS source directory is       : '${_snrs_source_dir}'"
+    if [ ! -d ${_snrs_source_dir} ]; then
+	if [ ${bxiw_source_from_git} == true ]; then
+	    mkdir -p ${_snrs_source_dir}
+	    cp -a ${bxiw_cache_git_dir}/* ${_snrs_source_dir}/
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Source repository has not been generated."
+		cd ${_snrs_opwd}
+		return 1
+	    else
+		bxiw_log_info "Source repository '${_snrs_source_dir}' has been generated."
+	    fi
+	else
+	    local _snrs_tarball=$(snrs_installer_get_tarball ${bxiw_package_version})
+	    bxiw_log_info "Unpacking source directory..."
+	    local _snrs_tarball=$(snrs_installer_get_tarball ${bxiw_package_version})
+	    local _ar_snrs_source_dir=$(tar xvzf ${_snrs_tarball} | head -1 | tr -d '/')
+	    local _ar_fix_source_dir=false
+	    if [ "${_ar_snrs_source_dir}" != "${_snrs_source_dir}" ]; then
+		bxiw_log_info "Rename source directory..."
+		_ar_fix_source_dir=true
+	    fi
+            echo "bxiw_cache_dir = ${bxiw_cache_dir}"
+            echo "_snrs_tarball = ${_snrs_tarball}"
+	    tar xzf ${bxiw_cache_dir}/${_snrs_tarball}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Source directory has not been unpacked."
+		cd ${_snrs_opwd}
+		return 1
+	    else
+		if [ ${_ar_fix_source_dir} = true ]; then
+		    mv ${_ar_snrs_source_dir} ${_snrs_source_dir}
+		fi
+		bxiw_log_info "Source directory '${_snrs_source_dir}' has been unpacked."
+	    fi
+	fi
+    else
+	bxiw_log_info "Source directory was already unpacked."
+    fi
+
+    cd ${bxiw_build_dir}
+    bxiw_log_info "SNRS build directory is        : '${bxiw_build_dir}'"
+    bxiw_log_info "SNRS tag directory is          : '${bxiw_tag_dir}'"
+    bxiw_log_info "SNRS installation directory is : '${bxiw_install_dir}'"
+
+    # return 1
+
+    # Configuration:
+    local _snrs_do_config=false
+    if [ ! -f ${bxiw_tag_configured} ]; then
+	bxiw_log_info "SNRS configuration is needed."
+	_snrs_do_config=true
+    else
+	bxiw_log_info "SNRS configuration is already done."
+	if [ ${bxiw_do_reconfigure} == true ]; then
+	    bxiw_log_info "Forcing SNRS reconfiguration..."
+	    _snrs_do_configure=true
+	fi
+    fi
+
+    if [ ${_snrs_do_config} == true ]; then
+	all_modules="ON"
+
+	bxiw_log_info "SNRS configuration..."
+	local _bayeux_options=
+	if [ "x${snrs_bayeux_dir}" != "x" ]; then
+	    _bayeux_options="-DBayeux_DIR:PATH=${snrs_bayeux_dir}"
+	fi
+	local _snrs_options=
+	local _testing_options="-DSNRS_ENABLE_TESTING=OFF"
+	if [ ${snrs_with_testing} = true ]; then
+	    _testing_options="-DSNRS_ENABLE_TESTING=ON"
+	fi
+	local _docs_options=""
+	# _docs_options="-DSNRS_WITH_DOCS=OFF"
+
+	local _werror="OFF"
+	if [ ${snrs_with_werror} = true ]; then
+	    local _werror="ON"
+	fi
+	local _warning_options=""
+	# _warning_options=" -DSNRS_COMPILER_ERROR_ON_WARNING=${_werror}"
+	echo >&2 "[info] snrs_with_werror=${snrs_with_werror}"
+	echo >&2 "[info] _werror=${_werror}"
+	cmake \
+	    -DCMAKE_BUILD_TYPE:STRING="Release" \
+ 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
+	    ${_bayeux_options} \
+	    ${_snrs_options} \
+	    ${_testing_options} \
+	    ${_docs_options} \
+	    ${_warning_options} \
+  	    -G Ninja \
+	    ${_snrs_source_dir}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "SNRS configuration failed!"
+	    cd ${_snrs_opwd}
+	    return 1
+	else
+	    touch ${bxiw_tag_configured}
+    	    bxiw_log_info "SNRS is configured."
+	fi
+    else
+	bxiw_log_info "Do not configure SNRS."
+    fi
+
+    # Build:
+    local _snrs_do_build=false
+    if [ ! -f ${bxiw_tag_built} ]; then
+	bxiw_log_info "SNRS build is needed."
+	_snrs_do_build=true
+    else
+	bxiw_log_info "SNRS build is already done."
+	if [ ${bxiw_do_rebuild} == true ]; then
+	    bxiw_log_info "Forcing SNRS rebuild..."
+	    _snrs_do_build=true
+	fi
+    fi
+
+    if [ ${_snrs_do_build} == true ]; then
+	bxiw_log_info "Building SNRS..."
+	local _snrs_nbprocs=${bxiw_nbprocs}
+	if [ ${_snrs_nbprocs} -gt 2 ]; then
+	    let _snrs_nbprocs=${bxiw_nbprocs}-1
+	else
+	    _snrs_nbprocs=1
+	fi
+	bxiw_log_info "#procs = ${_snrs_nbprocs}"
+	ninja -j ${_snrs_nbprocs}
+	if [ $? -ne 0 ]; then
+    	    bxiw_log_error "SNRS build failed!"
+    	    cd ${_snrs_opwd}
+    	    return 1
+	else
+	    touch ${bxiw_tag_built}
+    	    bxiw_log_info "SNRS is built."
+	fi
+    else
+	bxiw_log_info "Do not build SNRS."
+    fi
+
+    # Installation:
+    local _snrs_do_install=false
+    if [ ! -f ${bxiw_tag_installed} ]; then
+	bxiw_log_info "SNRS installation is needed."
+	_snrs_do_install=true
+    else
+	bxiw_log_info "SNRS installation is already done."
+	if [ ${bxiw_do_reinstall} == true ]; then
+	    _snrs_do_install=true
+	    bxiw_log_info "Forcing SNRS installation..."
+	fi
+    fi
+    if [ ${bxiw_no_install} == true ]; then
+	_snrs_do_install=false
+    fi
+
+    if [ ${_snrs_do_install} == true ]; then
+	if [ ${snrs_system_find_boost} = true ]; then
+	    if [ -f ${_snrs_source_dir}/cmake/FindBoost.cmake.orig ]; then
+		bxiw_log_info "Hidding FindBoost.cmake script..."
+		mv ${_snrs_source_dir}/cmake/FindBoost.cmake.orig ${_snrs_source_dir}/cmake/FindBoost.cmake
+	    fi
+	fi
+
+	local _snrs_do_package=false
+	if [ ${bxiw_with_package} == true ]; then
+	    _snrs_do_package=true
+	fi
+	if [ ${_snrs_do_package} == true ]; then
+	    if [[ "x${bxiw_os_distrib_id}" = "xUbuntu" || "x${bxiw_os_distrib_id}" = "xLinuxMint" ]]; then
+		bxiw_log_info "Building a binary package for SNRS..."
+		snrs_installer_makedebpack
+	    else
+    		bxiw_log_error "Cannot pack SNRS for '${bxiw_os_distrib_id}'!"
+    		cd ${_snrs_opwd}
+		return 1
+	    fi
+	else
+	    bxiw_log_info "Installing SNRS..."
+	    ninja install
+	    if [ $? -ne 0 ]; then
+    		bxiw_log_error "SNRS installation failed!"
+    		cd ${_snrs_opwd}
+    		return 1
+	    else
+		touch ${bxiw_tag_installed}
+    		bxiw_log_info "SNRS is installed."
+	    fi
+	fi
+    else
+	bxiw_log_info "Do not install SNRS."
+    fi
+    cd ${_snrs_opwd}
+    return  0
+}
+
+
+function snrs_installer_makedebpack()
+{
+    local _snrs_build_dir="${bxiw_build_dir}"
+    cd ${_snrs_build_dir}
+    mkdir -p ${_snrs_build_dir}/doc-pak
+    touch ${_snrs_build_dir}/description-pak
+    cat>${_snrs_build_dir}/description-pak<<EOF
+SNRS Library
+
+This is a binary version for ${bxiw_os_distrib_id} ${bxiw_os_distrib_release}.
+EOF
+    local _arch="amd64"
+    local _snrs_do_package=true
+    local _snrs_pkg_filename="bx${bxiw_package_name}_${bxiw_package_version}-${bxiw_pkg_release}_${_arch}.deb"
+    if [ -f ${package_dir}/${_snrs_pkg_filename} ]; then
+	bxiw_log_info "Package '${_snrs_pkg_filename}' exists in '${bxiw_package_dir}'."
+	_snrs_do_package=false
+    fi
+    local _snrs_requires="\
+		"
+    _snrs_requires_list=$(echo ${_snrs_requires} | tr ' ' ',')
+    _snrs_conflicts_list="libbayeux-dev,libbayeux0.8"
+    bxiw_log_info "Requires : ${_snrs_requires_list}!"
+    if [ ${_snrs_do_package} == true ]; then
+	if [ "x${bxiw_os_arch}" != "xx86_64" ]; then
+	    bxiw_log_error "Unsupported architecture ${bxiw_os_arch}!"
+	    return 1
+	fi
+	sudo checkinstall \
+	     --type="debian" \
+	     --install="no" \
+	     --fstrans="no" \
+	     --pkgname="bx${bxiw_package_name}" \
+	     --pkgversion="${bxiw_package_version}" \
+	     --pkgrelease=${bxiw_pkg_release} \
+	     --pkglicense="MIT" \
+	     --pkgsource="$(snrs_installer_get_url ${bxiw_package_version})" \
+	     --maintainer="${bxiw_pkg_maintener_email}" \
+	     --provides="bx${bxiw_package_name}" \
+	     --requires="${_snrs_requires_list}" \
+	     --conflicts="${_snrs_conflicts_list}" \
+	     --backup="no" \
+	     --pakdir="${bxiw_package_dir}" \
+	     --default \
+	     ninja install
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Debian binary package build failed!"
+	    return 1
+	fi
+    fi
+    return 0
+}
+
+
+function snrs_installer_setup()
+{
+    bxiw_log_trace "snrs_installer_setup: entering..."
+    local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script_base="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"
+    if [ -f ${_bxsoftware_setup_script} ]; then
+	cp -f ${_bxsoftware_setup_script} ${_bxsoftware_setup_script}-save$(date -Isecond)
+    fi
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
+    bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    # local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    # local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    # local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"
+    # if [ -f ${_bxsoftware_setup_script} ]; then
+    # 	cp -f ${_bxsoftware_setup_script} ${_bxsoftware_setup_script}-save$(date -Isecond)
+    # fi
+    # local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
+    # bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    bxiw_log_info " - Using installing dir : '${bxiw_install_dir}'..."
+    bxiw_log_info " - Using version        : '${bxiw_package_version}'..."
+    cat ${bxiw_app_installer_prefix}/resources/package.bash.in | \
+	sed \
+	    -e "s@__PACKAGE_INSTALL_DIR__@${bxiw_install_dir}@g" \
+	    -e "s@__PACKAGE_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__PACKAGE_UVERSION__@${_bxsoftware_underscored_version}@g" \
+	    > ${_bxsoftware_setup_script}
+    return  0
+}
+
+bxiw_detect_os
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Unsupported OS!"
+fi
+
+bxiw_env
+bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
+snrs_installer_parse_cl ${bxiw_app_cl_remaining_argv}
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Command line parse error!"
+fi
+
+snrs_installer_prepare
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Preparation failed!"
+fi
+
+snrs_installer_set_system_dependencies
+
+snrs_installer_print
+
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "System dependencies installation failed!"
+fi
+
+snrs_installer_download
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Source archive download failed!"
+fi
+
+snrs_installer_install
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Installation failed!"
+fi
+
+if [ ${bxiw_with_package} == false ]; then
+    snrs_installer_setup
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "Setup failed!"
+    fi
+fi
+
+bxiw_exit 0
+
+# end
