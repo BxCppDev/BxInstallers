@@ -4,7 +4,7 @@
 
 # Default package traits:
 __bxiw_enable_source_from_git=false
-__bxiw_disable_package=false
+__bxiw_disable_package=true
 __bxiw_enable_packaging=false
 
 if [ "x${bxiw_app_name}" = "x" ]; then
@@ -105,11 +105,15 @@ bxiw_tag_source=
 bxiw_tag_configured=
 bxiw_tag_built=
 bxiw_tag_installed=
+bxiw_archive_download_url=
+# Examples:
+# bxiw_archive_download_url="https://ftp.gnu.org/gnu/gsl/"
 
 function bxiw_pass()
 {
     return 0
 }
+
 
 function bxiw_message()
 {
@@ -358,7 +362,7 @@ EOF
 
     fi
 
-    if [ ${__bxiw_disable_package} == false ]; then
+    if [ ${__bxiw_enable_packaging} == true ]; then
 	cat<<EOF
   --no-pkg-build       Do not build the package
   --pkg-build          Build the package (default=no, implies --system-install)
@@ -432,15 +436,15 @@ function bxiw_parse_cl()
 	    elif [ ${opt} = "--nprocs" ]; then
 		shift 1
 		bxiw_nbprocs=$1
-	    elif [ ${__bxiw_disable_package} == false -a ${opt} = "--no-pkg-build" ]; then
+	    elif [ ${__bxiw_enable_packaging} == true -a ${opt} = "--no-pkg-build" ]; then
 		bxiw_with_package=false
-	    elif [ ${__bxiw_disable_package} == false -a ${opt} = "--pkg-build" ]; then
+	    elif [ ${__bxiw_enable_packaging} == true -a ${opt} = "--pkg-build" ]; then
 		bxiw_with_package=true
-	    elif [ ${__bxiw_disable_package} == false -a ${opt} = "--pkg-maintener" ]; then
+	    elif [ $__bxiw_enable_packaging} == true -a ${opt} = "--pkg-maintener" ]; then
 		shift 1
 		bxiw_pkg_maintener_email="$1"
 		bxiw_with_package=true
-	    elif [ ${__bxiw_disable_package} == false -a ${opt} = "--pkg-release" ]; then
+	    elif [ ${__bxiw_enable_packaging} == true -a ${opt} = "--pkg-release" ]; then
 		shift 1
 		bxiw_pkg_release="$1"
 	    else
@@ -584,7 +588,7 @@ function _bxiw_prepare_pre()
     fi
 
     if [ "x${bxiw_builder}" = "x" ]; then
-	bxiw_builder="make"
+	bxiw_builder="make" # Alternative is 'ninja'
     fi
 
     if [ ${__bxiw_enable_source_from_git} == true -a ${bxiw_source_from_git} == true ]; then
@@ -737,26 +741,36 @@ function bxiw_download_file()
     shift 1
     local _file="$1"
     shift 1
-    bxiw_log_trace "URL : '${_url}'"
-    bxiw_log_trace "File to be dowloaded : '${_file}'"
+    bxiw_log_trace "bxiw_download_file:: URL : '${_url}'"
+    bxiw_log_trace "bxiw_download_file: File to be dowloaded : '${_file}'"
     if  [ "x${_file}" = "x" ]; then
 	_file="$(echo ${_url} | tr '/' '\n' | tail -1)"
     fi
+    if [ -f ${bxiw_cache_dir}/${_file} ]; then
+	bxiw_log_info "bxiw_download_file: File '${_file}' already exists in '${bxiw_cache_dir}'!"
+	rm -f ${bxiw_cache_dir}/${_file}
+    fi
+
     if [ ! -f ${bxiw_cache_dir}/${_file} ]; then
 	cd ${bxiw_cache_dir}
-	bxiw_log_info "Downloading tarball '${_file}' from '${_url}'..."
+	bxiw_log_info "bxiw_download_file: Downloading tarball '${_file}' from '${_url}'..."
 	if [ "${_url:0:5}" = "file:" ]; then
 	    cp -f "${_url}" "${bxiw_cache_dir}/${_file}"
 	else
 	    wget ${_url} -O "${bxiw_cache_dir}/${_file}"
 	    if [ $? -ne 0 ]; then
-		bxiw_log_error "Cannot download the '${_file}' file!"
+		bxiw_log_error "bxiw_download_file: Cannot download the '${_file}' file!"
 		cd ${_opwd}
 		return 1
+	    else
+		bxiw_log_info "bxiw_download_file: Downloaded file : '${_file}'"
 	    fi
 	fi
-    else
-	bxiw_log_info "File '${_file}' already exists in '${bxiw_cache_dir}'!"
+    fi
+    if [ ! -f ${bxiw_cache_dir}/${_file} ]; then
+	bxiw_log_error "bxiw_download_file: No file '${_file}'!"
+	cd ${_opwd}
+	return 1
     fi
     cd ${_opwd}
     return 0

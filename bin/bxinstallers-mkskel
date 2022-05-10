@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+ 
+appDebug=false
+oldPwd=$(pwd)
+
+function appExit()
+{
+    local _error_code=0
+    if [ -n "$1" ]; then
+	_error_code=$1
+    fi 
+    shift 1
+    local _error_message="$@"
+    if [ -n "${_error_message}" ]; then
+	echo >&2 "[error] ${_error_message}"
+    fi 
+    cd ${oldPwd}
+    exit ${_error_code}
+}
+
+which bxinstallers-config >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    appExit 1 "Cannot find 'bxinstallers-config'! Abort!"
+fi
+bxiwResourceDir=$(bxinstallers-config --resourcedir)
+packageName=
+ownerName=
+packageInstallerDir=
+packageArchiveUrl=
+packageArchivePattern=
+packageGitUrl=
+
+function appUsage()
+{
+    cat<<EOF
+
+Build a skeleton build/installation script for a package 'ala' Bxinstallers
+
+Usage : 
+
+  bxinstallers-mkskel [options...] package-name
+
+Options:
+
+  --help       :   Prints this help
+  --version    :   Prints version
+  --debug      :   Switch on debug mode
+  --github-owner NAME        :   Set the GitHub owner name (if applicable)
+  --download-url URL         :   Set the archive download URL (if applicable)
+  --git-url URL              :   Set the full Git URL (if applicable)
+  --archive-pattern PATTERN  :   Set the pattern of the source archive (if applicable)
+
+Example:
+ 
+  bxinstallers-mkskel --github-owner "BxCppDev" --archive-pattern "foo-@PKGVERSION@.tar.gz" --url "https://ftp.gnu.org/gnu/foo/"  "Foo"  /tmp/FooInstaller
+  
+EOF
+    return 0
+}
+
+function appParseOptions()
+{
+    while [ -n "$1" ]; do
+	local _token="$1"
+	test ${appDebug} = true && echo >&2 "[debug] token='${_token}'"
+	if [ "x${_token:0:1}" = "x-" ]; then
+	    local _option="${_token}"
+	    test ${appDebug} = true && echo >&2 "[debug] option='${_option}'"
+	    if [ "${_option}" = "--help" -o "${_option}" = "-h" ]; then
+		appUsage
+		appExit
+	    elif [ "${_option}" = "--version" ]; then
+		echo "${appVersion}"
+		appExit
+	    elif [ "${_option}" = "--debug" ]; then
+		appDebug=true
+	    elif [ "${_option}" = "--github-owner" ]; then
+		shift 1
+		ownerName="$1"
+	    elif [ "${_option}" = "--download-url" ]; then
+		shift 1
+		packageArchiveUrl="$1"
+	    elif [ "${_option}" = "--git-url" ]; then
+		shift 1
+		packageGitUrl="$1"
+	    elif [ "${_option}" = "--archive-pattern" ]; then
+		shift 1
+		packageArchivePattern="$1"
+	    else
+		appUsage
+		appExit 1 "Unsupported option '${_option}'!"
+	    fi
+	else
+	    local _argument="${_token}"
+	    test ${appDebug} = true && echo >&2 "[debug] argument='${_argument}'"
+	    if [ -z "${packageName}" ]; then
+		packageName="$1"
+	    elif [ -z "${packageInstallerDir}" ]; then
+		packageInstallerDir="$1"
+	    else
+		appUsage
+		appExit 1 "Ignored argument '${_argument}'!"
+	    fi
+	fi
+	shift 1
+    done
+    return 0
+}
+
+appParseOptions $@
+if [ $? -ne 0 ]; then
+    appExit 1
+fi
+
+test ${appDebug} = true && echo >&2 "[debug] Resource dir='${bxiwResourceDir}'"
+
+if [ -z ${packageName} ]; then
+    appExit 1 "Missing package name! Abort!"
+fi 
+echo >&2 "[debug] Package name='${packageName}'"
+packageNameUpper=$(echo ${packageName} | tr [:lower:] [:upper:])
+packageNameLower=$(echo ${packageName} | tr [:upper:] [:lower:])
+echo >&2 "[debug] Package name (upper)='${packageNameUpper}'"
+echo >&2 "[debug] Package name (lower)='${packageNameLower}'"
+echo >&2 "[debug] Owner name='${ownerName}'"
+echo >&2 "[debug] Archive URL='${packageArchiveUrl}'"
+echo >&2 "[debug] Git URL='${packageGitUrl}'"
+
+if [ -z ${packageInstallerDir} ]; then
+   packageInstallerDir="/tmp/${USER}/bxskel/${packageName}Installer"
+fi
+
+echo >&2 "[debug] Package installer directory='${packageInstallerDir}'"
+if [ -d ${packageInstallerDir} ]; then
+    appExit 1 "Target directory '${packageInstallerDir}' already exists! Abort!"
+else
+    mkdir -p ${packageInstallerDir}
+    if [ $? -ne 0 ]; then
+	appExit 1 "Cannot create target directory '${packageInstallerDir}'!"
+    fi
+    mkdir -p ${packageInstallerDir}/resources
+    if [ $? -ne 0 ]; then
+	appExit 1 "Cannot create target directory '${packageInstallerDir}/resources'!"
+    fi
+fi
+
+cp ${bxiwResourceDir}/skel/bxwi_package.locate.in \
+   ${packageInstallerDir}/.bxwi_${packageNameLower}.locate
+
+sed -e "s/@packageNameLower@/${packageNameLower}/g" \
+    -e "s/@packageNameUpper@/${packageNameUpper}/g" \
+    -e "s/@packageName@/${packageName}/g" \
+    ${bxiwResourceDir}/skel/package.bash.in \
+    > ${packageInstallerDir}/resources/package.bash.in
+
+sed -e "s/@packageNameLower@/${packageNameLower}/g" \
+    -e "s/@packageNameUpper@/${packageNameUpper}/g" \
+    -e "s/@packageName@/${packageName}/g" \
+    -e "s/@ownerName@/${ownerName}/g" \
+    -e "s|@packageArchiveUrl@|${packageArchiveUrl}|g" \
+    -e "s|@packageGitUrl@|${packageGitUrl}|g" \
+    -e "s|@packageArchivePattern@|${packageArchivePattern}|g" \
+    ${bxiwResourceDir}/skel/package_installer.in \
+    > ${packageInstallerDir}/${packageNameLower}_installer
+chmod a+x ${packageInstallerDir}/${packageNameLower}_installer
+
+tree -a ${packageInstallerDir}
+appExit
+
+# end

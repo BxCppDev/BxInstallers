@@ -1,0 +1,818 @@
+#!/usr/bin/env bash
+# -*- mode: shell; -*-
+
+if [ ! -f "$(pwd)/.bxwi_@packageNameLower@.locate" ]; then
+    echo >&2 "[error] Please run this script from the @packageName@ installer directory!"
+    exit 1
+fi
+which bxinstallers-config >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+     echo >&2 "Cannot find 'bxinstallers-config'! Abort!"
+    exit 1
+fi
+
+libbxiwFile=$(bxinstallers-config --lib)
+
+source ${libbxiwFile}
+__bxiw_enable_source_from_git=true
+bxiw_app_name="@packageNameLower@_installer"
+bxiw_app_saved_opwd=$(pwd)
+bxiw_app_installer_prefix="$(pwd)"
+bxiw_package_name="@packageNameLower@"
+bxiw_default_package_version="1.1"
+bxiw_supported_package_versions="1.0 1.1"
+bxiw_package_version=
+bxiw_source_git_path="@packageGitUrl@"
+bxiw_source_git_branch="develop"
+bxiw_archive_download_url="@packageArchiveUrl@"
+bxiw_archive_pattern="@packageArchivePattern@"
+
+# Dependencies:
+# @packageNameLower@_xxx_prefix=
+# @packageNameLower@_xxx_dir=
+# @packageNameLower@_xxx_version=
+# @packageNameLower@_xxx_min_version=
+
+# Feature switches:
+# @packageNameLower@_with_foo=false
+# @packageNameLower@_with_bar=false
+
+# C++ standard:
+@packageNameLower@_cxx_std=11
+
+# Features:
+@packageNameLower@_with_docs=false
+@packageNameLower@_with_testing=false
+@packageNameLower@_with_werror=true
+@packageNameLower@_with_iwyu=false
+@packageNameLower@_with_ninja=false
+
+function @packageNameLower@_installer_usage()
+{
+    cat<<EOF
+
+@packageNameLower@_installer - @packageName@ library installer
+
+Synopsis:
+
+    @packageNameLower@_installer [OPTION...]
+
+Options:
+
+  --help               Print this help then exit
+EOF
+    # Basic options:
+    _bxiw_usage_options
+    
+#     # Feature options;
+#     cat<<EOF
+#    --with-foo         @packageName@ is built with foo	
+#    --without-foo      @packageName@ is built without foo (default)	
+#    --with-bar         @packageName@ is built with bar	
+#    --without-bar      @packageName@ is built without bar (default)	
+# EOF
+    
+    # Misc options;
+    cat<<EOF
+  --with-docs          @packageName@ is built with documentation
+  --without-docs       @packageName@ is built without documentation (default)
+  --with-tests         @packageName@ is built with tests
+  --without-tests      @packageName@ is built without tests (default)
+  --with-werror        @packageName@ is built with compiler warnings as errors (default)
+  --without-werror     @packageName@ is built without  compiler warnings as errors
+  --with-iwyu          @packageName@ is built with IWYU support
+  --without-iwyu       @packageName@ is built without IWYU support (default)
+  --with-ninja         @packageName@ is built with Ninja
+EOF
+    
+    # C++ options:
+    cat<<EOF
+  --cxx-11             @packageName@ is built with C++11 support (default)
+  --cxx-14             @packageName@ is built with C++14 support
+  --cxx-17             @packageName@ is built with C++17 support
+  --cxx-20             @packageName@ is built with C++20 support
+EOF
+    echo ""
+cat<<EOF
+
+Example:
+
+   $ ./@packageNameLower@_installer --package-version 1.1 --with-tests --with-docs
+   $ ./@packageNameLower@_installer --source-from-git --with-tests --with-docs
+
+EOF
+
+    return 0
+}
+
+
+function @packageNameLower@_installer_parse_cl()
+{
+    while [ -n "$1" ]; do
+	token="$1"
+	if [ "x${token:0:1}" = "x-" ]; then
+	    opt="${token}"
+	    if [ ${opt} = "--help" ]; then
+		@packageNameLower@_installer_usage
+		bxiw_exit 0
+	    # elif [ ${opt} = "--xxx-prefix" ]; then
+	    # 	shift 1
+	    # 	@packageNameLower@_xxx_prefix="$1"
+	    # elif [ ${opt} = "--xxx-dir" ]; then
+	    # 	shift 1
+	    # 	@packageNameLower@_xxx_dir="$1"
+	    # elif [ ${opt} = "--xxx-version" ]; then
+	    # 	shift 1
+	    # 	@packageNameLower@_xxx_version="$1"
+	    # elif [ ${opt} = "--xxx-min-version" ]; then
+	    # 	shift 1
+	    # 	@packageNameLower@_xxx_min_version="$1"
+	    # elif [ ${opt} = "--with-foo" ]; then
+	    # 	@packageNameLower@_with_foo=true
+	    # elif [ ${opt} = "--without-foo" ]; then
+	    #   @packageNameLower@_with_foo=false
+	    # elif [ ${opt} = "--with-bar" ]; then
+	    # 	@packageNameLower@_with_bar=true
+	    # elif [ ${opt} = "--without-bar" ]; then
+	    #   @packageNameLower@_with_bar=false
+	    # elif [ ${opt} = "--with-docs" ]; then
+	    # 	@packageNameLower@_with_docs=true
+	    # elif [ ${opt} = "--without-docs" ]; then
+	    # 	@packageNameLower@_with_docs=false
+	    elif [ ${opt} = "--with-tests" ]; then
+		@packageNameLower@_with_testing=true
+	    elif [ ${opt} = "--without-tests" ]; then
+		@packageNameLower@_with_testing=false
+	    elif [ ${opt} = "--cxx-11" ]; then
+		@packageNameLower@_cxx_std="11"
+	    elif [ ${opt} = "--cxx-14" ]; then
+		@packageNameLower@_cxx_std="14"
+	    elif [ ${opt} = "--cxx-17" ]; then
+		@packageNameLower@_cxx_std="17"
+	    elif [ ${opt} = "--cxx-20" ]; then
+		@packageNameLower@_cxx_std="20"
+	    elif [ ${opt} = "--with-werror" ]; then
+		@packageNameLower@_with_werror=true
+	    elif [ ${opt} = "--without-werror" ]; then
+		@packageNameLower@_with_werror=false
+	    elif [ ${opt} = "--with-iwyu" ]; then
+		@packageNameLower@_with_iwyu=true
+	    elif [ ${opt} = "--without-iwyu" ]; then
+		@packageNameLower@_with_iwyu=false
+	    elif [ ${opt} = "--with-ninja" ]; then
+		@packageNameLower@_with_ninja=true
+	    else
+		bxiw_log_error "Unsupported option '${opt}'!"
+		return 1
+	    fi
+	else
+	    arg="${token}"
+	fi
+	shift 1
+    done
+    return 0
+}
+
+function @packageNameLower@_installer_prepare()
+{
+    if [ ${@packageNameLower@_with_ninja} == true ]; then
+	bxiw_builder="ninja"
+    fi
+    _bxiw_prepare_pre
+
+    if [ ${bxiw_with_gui} = true ]; then
+
+	local _do_rebuild_repr="FALSE"
+	if [ ${bxiw_do_rebuild} = true ]; then
+	    _do_rebuild_repr="TRUE"
+	fi
+
+	local _remove_build_dir_repr="FALSE"
+	if [ ${bxiw_remove_build_dir} = true ]; then
+	    _remove_build_dir_repr="TRUE"
+	fi
+
+	local _remove_tarballs_repr="FALSE"
+	if [ ${bxiw_remove_tarballs} = true ]; then
+	    _remove_tarballs_repr="TRUE"
+	fi
+
+	local _system_install_repr="FALSE"
+	if [ ${bxiw_system_install} = true ]; then
+	    _system_install_repr="TRUE"
+	fi
+
+	which yad > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    bxiw_message "[warning] yad is not installed! No GUI!"
+	else
+	    local _choices=$(yad --width=500 \
+				 --form \
+				 --title "${bxiw_package_name} installer options" \
+				 --field="Cache directory:CDIR"   "${bxiw_cache_dir}" \
+				 --field="Working directory:CDIR" "${bxiw_work_dir}" \
+				 --field="Installation directory:CDIR" "${bxiw_install_dir}" \
+				 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
+				 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
+				 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
+				 --field="System installation:CHK" "$_system_install_repr}" \
+		  )
+	    if [ "x${_choices}" = "x" ]; then
+		bxiw_log_info "Cancelled dialog!"
+		return 1
+	    fi
+	    bxiw_cache_dir=$(echo ${_choices} | cut -d'|' -f1)
+	    bxiw_work_dir=$(echo ${_choices} | cut -d'|' -f2)
+	    bxiw_install_dir=$(echo ${_choices} | cut -d'|' -f3)
+	    _do_rebuild_repr=$(echo ${_choices} | cut -d'|' -f4)
+	    if [ ${_do_rebuild_repr} == "TRUE" ]; then
+		bxiw_do_rebuild=true
+	    else
+		bxiw_do_rebuild=false
+	    fi
+	    _remove_build_dir_repr=$(echo ${_choices} | cut -d'|' -f5)
+	    if [ ${_remove_build_dir_repr} == "TRUE" ]; then
+		bxiw_remove_build_dir=true
+	    else
+		bxiw_remove_build_dir=false
+	    fi
+	    _remove_tarballs_repr=$(echo ${_choices} | cut -d'|' -f6)
+	    if [ ${_remove_tarballs_repr} == "TRUE" ]; then
+		bxiw_remove_tarballs=true
+	    else
+		bxiw_remove_tarballs=false
+	    fi
+	    _system_install_repr=$(echo ${_choices} | cut -d'|' -f7)
+	    if [ ${_system_install_repr} == "TRUE" ]; then
+		bxiw_system_install=true
+	    else
+		bxiw_system_install=false
+	    fi
+	fi
+    fi
+
+    # # XXX:
+    # if [ ${@packageNameLower@_with_xxx} = true ]; then
+    # 	if [ "x${@packageNameLower@_xxx_dir}" = "x" ]; then
+    # 	    which xxx-config > /dev/null 2>&1
+    # 	    if [ $? -ne 0 ]; then
+    # 		bxiw_log_error "Cannot find XXX 'xxx-config' script!"
+    # 		return 1
+    # 	    fi
+    # 	    @packageNameLower@_xxx_dir="$(xxx-config --cmakedir)"
+    # 	    bxiw_log_info "Using XXX from directory : '${@packageNameLower@_xxx_dir}'"
+    # 	fi
+    # 	if [ "x${@packageNameLower@_xxx_dir}" = "x" ]; then
+    # 	    bxiw_log_error "Missing XXX dir prefix!"
+    # 	    return 1
+    # 	fi
+    # fi
+
+    # Prepare:
+    _bxiw_prepare_post
+
+    return 0
+}
+
+
+function @packageNameLower@_installer_get_tarball()
+{
+    local _pkgVersion="$1"
+    shift 1
+    bxiw_log_info "installer_get_tarball: _pkgVersion = '${_pkgVersion}' "
+    if [ -n "${bxiw_archive_pattern}" ]; then
+	echo "${bxiw_archive_pattern}" | sed -e "s/@PKGVERSION@/${_pkgVersion}/g"
+    else
+	echo "@packageNameLower@-${_pkgVersion}.tar.gz"
+    fi
+    return 0
+}
+
+
+function @packageNameLower@_installer_get_url()
+{
+    local _pkgVersion="$1"
+    shift 1
+    bxiw_log_info "installer_get_url: _pkgVersion = '${_pkgVersion}' "
+    local _pkgArBaseUrl= 
+    bxiw_log_info "installer_get_url: bxiw_archive_download_url = '${bxiw_archive_download_url}'"
+    bxiw_log_info "installer_get_url: bxiw_source_git_path      = '${bxiw_source_git_path}'"
+    if [ -n "${bxiw_archive_download_url}" ]; then
+	# Plain URL for archive download:
+	_pkgArBaseUrl="${bxiw_archive_download_url}"
+    elif [ -n "${bxiw_source_git_path}" ]; then
+	# Git URL for archive download:
+	_pkgArBaseUrl="${bxiw_source_git_path}"
+    else
+	bxiw_log_info "installer_get_url: Fall back to GitHub project repository for archive download"
+	_pkgArBaseUrl="https://github.com/@ownerName@/@packageName@/archive/"	
+    fi
+    local _pkg_tarball=$(@packageNameLower@_installer_get_tarball ${_pkgVersion})
+    local _pkgUrlSep='/'
+    # bxiw_log_info "installer_get_url: _pkgUrlSep[last] = '${_pkgArBaseUrl: -1}'"
+    if [ "x${_pkgArBaseUrl: -1}" = "x/" ]; then
+	_pkgUrlSep=''
+    fi
+    # bxiw_log_info "installer_get_url: _pkgUrlSep = '${_pkgUrlSep}'"
+    if [ "${_pkgVersion}" \> "42.12.666" ]; then
+	# Dummy test:
+	echo "${_pkgArBaseUrl}${_pkgUrlSep}${_pkg_tarball}"
+    else
+	echo "${_pkgArBaseUrl}${_pkgUrlSep}${_pkg_tarball}"
+    fi
+    return 0
+}
+
+
+function @packageNameLower@_installer_set_system_dependencies()
+{
+    if [[ "x${bxiw_os_distrib_id}" = "xUbuntu" || "x${bxiw_os_distrib_id}" = "xLinuxMint" ]]; then
+	bxiw_system_packages_build="cmake \
+   	  	    make \
+        	    pkg-config \
+       	    	    wget \
+   		    git \
+   		    g++ \
+		    "
+	if [ ${@packageNameLower@_with_ninja} = true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} ninja-build"
+	fi
+	if [ ${__bxiw_enable_packaging} = true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} dpkg-dev"
+	fi
+	if [ ${bxiw_with_package} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
+	fi
+	if [ ${bxiw_with_gui} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} yad"
+	fi
+	
+	# if [ "x${bxiw_os_distrib_release}" = "x20.04" ]; then
+	#     bxiw_system_packages_build="${bxiw_system_packages_build} libxxx3-dev"
+	# elif [ "x${bxiw_os_distrib_release}" = "x22.04" ]; then
+	#     bxiw_system_packages_build="${bxiw_system_packages_build} libxxx4-dev"
+	# fi
+	
+	# if [ "x${bxiw_os_distrib_release}" = "x20.04" -o "x${bxiw_os_distrib_release}" = "x22.04" ]; then
+	#     bxiw_system_packages_build="${bxiw_system_packages_build} libfoo-dev"
+	#     bxiw_system_packages_build="${bxiw_system_packages_build} libbar-dev"
+	# fi
+
+	if [ ${@packageNameLower@_with_docs} == true ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} \
+		doxygen \
+		texlive-latex-base \
+		pandoc \
+		pandoc-data \
+		docutils-common docutils-doc python-docutils \
+		rst2pdf \
+		"
+	fi
+	
+	bxiw_pass
+    elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
+	bxiw_pass
+    elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+	bxiw_pass
+    fi
+    bxiw_system_packages_run="${bxiw_system_packages_build}"
+    return 0
+}
+
+
+function @packageNameLower@_installer_print()
+{
+    bxiw_print
+    # bxiw_log_info "@packageNameLower@_xxx_prefix        = '${@packageNameLower@_xxx_prefix}'"
+    # bxiw_log_info "@packageNameLower@_xxx_dir           = '${@packageNameLower@_xxx_dir}'"
+    # bxiw_log_info "@packageNameLower@_xxx_version       = '${@packageNameLower@_xxx_prefix}'"
+    # bxiw_log_info "@packageNameLower@_xxx_min_version   = '${@packageNameLower@_xxx_dir}'"
+    # bxiw_log_info "@packageNameLower@_with_foo          = ${@packageNameLower@_with_foo}"
+    # bxiw_log_info "@packageNameLower@_with_bar          = ${@packageNameLower@_with_bar}"
+    bxiw_log_info "@packageNameLower@_cxx_std            = '${@packageNameLower@_cxx_std}'"
+    bxiw_log_info "@packageNameLower@_with_docs          = ${@packageNameLower@_with_docs}"
+    bxiw_log_info "@packageNameLower@_with_testing       = ${@packageNameLower@_with_testing}"
+    bxiw_log_info "@packageNameLower@_with_werror        = ${@packageNameLower@_with_werror}"
+    return 0
+}
+
+
+function @packageNameLower@_installer_download()
+{
+    if [ ${bxiw_source_from_git} == true ]; then
+	local _pkg_git_repo="${bxiw_source_git_path}"
+	local _pkg_git_branch="${bxiw_source_git_branch}"
+	local _pkg_git_dir="${bxiw_package_name}-${_pkg_git_branch}.git"
+	bxiw_log_info "@packageName@ Git repository : '${_pkg_git_repo}'"
+	bxiw_log_info "@packageName@ Git branch     : '${_pkg_git_branch}'"
+	bxiw_log_info "@packageName@ Git directory  : '${_pkg_git_dir}'"
+	if [ -d ${bxiw_cache_dir}/${_pkg_git_dir} ]; then
+	    local _opwd=$(pwd)
+	    cd ${bxiw_cache_dir}/${_pkg_git_dir}
+	    bxiw_log_info "@packageName@ Git pull..."
+	    git checkout ${_pkg_git_branch}
+	    git pull
+	    cd ${_opwd}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Could not pull the existing Git repository '${_pkg_git_dir}'!"
+		return 1
+	    fi
+	else
+	    bxiw_git_clone_and_branch ${_pkg_git_repo} ${_pkg_git_branch} ${_pkg_git_dir}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Could not clone the Git repository '${_pkg_git_repo}'!"
+		return 1
+	    fi
+	fi
+	touch ${bxiw_tag_downloaded}
+    else
+	local _pkg_tarball=$(@packageNameLower@_installer_get_tarball ${bxiw_package_version})
+	local _pkg_url=$(@packageNameLower@_installer_get_url ${bxiw_package_version})
+	bxiw_log_info "@packageName@ tarball : '${_pkg_tarball}'"
+	bxiw_log_info "@packageName@ URL     : '${_pkg_url}'"
+	local _pkg_local_tarball="@packageNameLower@-${bxiw_package_version}.tar.gz"
+	if [ ! -f ${bxiw_tag_downloaded} ]; then
+	    bxiw_download_file ${_pkg_url} ${_pkg_local_tarball}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Could not download the archive from URL '${_pkg_url}'!"
+		return 1
+	    fi
+	    touch ${bxiw_tag_downloaded}
+	else
+	    bxiw_log_info "@packageName@ tarball is already downloaded."
+	fi
+    fi
+    return  0
+}
+
+
+function @packageNameLower@_installer_install()
+{
+    local _pkg_opwd=$(pwd)
+    cd ${bxiw_cache_dir}
+    # local _pkg_source_dir="$(pwd)/@packageName@-${bxiw_package_version}"
+    local _pkg_source_dir="@packageName@-${bxiw_package_version}"
+    bxiw_log_info "@packageName@ version is                : '${bxiw_package_version}'"
+    bxiw_log_info "@packageName@ source directory is       : '${_pkg_source_dir}'"
+    if [ ! -d ${_pkg_source_dir} ]; then
+	if [ ${bxiw_source_from_git} == true ]; then
+	    mkdir -p ${_pkg_source_dir}
+	    cp -a ${bxiw_cache_git_dir}/* ${_pkg_source_dir}/
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Source repository has not been generated."
+		cd ${_pkg_opwd}
+		return 1
+	    else
+		bxiw_log_info "Source repository '${_pkg_source_dir}' has been generated."
+	    fi
+	else
+	    local _pkg_tarball=$(@packageNameLower@_installer_get_tarball ${bxiw_package_version})
+	    bxiw_log_info "Unpacking source directory..."
+	    local _pkg_local_tarball="@packageNameLower@-${bxiw_package_version}.tar.gz"
+	    local _ar_pkg_source_dir=$(tar xvzf ${_pkg_local_tarball} | head -1 | tr -d '/')
+	    local _ar_fix_source_dir=false
+	    bxiw_log_info "Archive source dir = '${_ar_pkg_source_dir}'"
+	    bxiw_log_info "package source dir = '${_pkg_source_dir}'"
+	    if [ "${_ar_pkg_source_dir}" != "${_pkg_source_dir}" ]; then
+		bxiw_log_info "Rename source directory..."
+		_ar_fix_source_dir=true
+	    fi
+            echo "bxiw_cache_dir = ${bxiw_cache_dir}"
+            echo "_pkg_tarball = ${_pkg_tarball}"
+            echo "_pkg_local_tarball = ${_pkg_local_tarball}"
+	    tar xzf ${bxiw_cache_dir}/${_pkg_local_tarball}
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "Source directory has not been unpacked."
+		cd ${_pkg_opwd}
+		return 1
+	    else
+		if [ ${_ar_fix_source_dir} = true ]; then
+		    mv ${_ar_pkg_source_dir} ${_pkg_source_dir}
+		fi
+		bxiw_log_info "Source directory '${_pkg_source_dir}' has been unpacked."
+	    fi
+	fi
+    else
+	bxiw_log_info "Source directory was already unpacked."
+    fi
+
+    cd ${bxiw_build_dir}
+    bxiw_log_info "@packageName@ build directory is        : '${bxiw_build_dir}'"
+    bxiw_log_info "@packageName@ tag directory is          : '${bxiw_tag_dir}'"
+    bxiw_log_info "@packageName@ installation directory is : '${bxiw_install_dir}'"
+
+    # return 1
+
+    # Configuration:
+    local _pkg_do_config=false
+    if [ ! -f ${bxiw_tag_configured} ]; then
+	bxiw_log_info "@packageName@ configuration is needed."
+	_pkg_do_config=true
+    else
+	bxiw_log_info "@packageName@ configuration is already done."
+	if [ ${bxiw_do_reconfigure} == true ]; then
+	    bxiw_log_info "Forcing @packageName@ reconfiguration..."
+	    _pkg_do_configure=true
+	fi
+    fi
+
+    if [ ${_pkg_do_config} == true ]; then
+	all_modules="ON"
+
+	bxiw_log_info "@packageName@ configuration..."
+
+	local _xxx_options=
+	# if [ "x${@packageNameLower@_xxx_dir}" != "x" ]; then
+	#     _xxx_options="-DXxx_DIR:PATH=${@packageNameLower@_xxx_dir}"
+	#     bxiw_log_info "XXX options = ${_xxx_options}"
+	# else
+	#     bxiw_log_info "No XXX root"
+	# fi
+
+	local _foo_options=
+	# if [ ${@packageNameLower@_with_foo} = true ]; then
+	#     _foo_options="-D@packageNameUpper@_WITH_FOO=ON"
+	# else
+	#     _foo_options="-D@packageNameUpper@_WITH_FOO=OFF"
+	# fi
+
+	local _testing_options="-D@packageNameUpper@_ENABLE_TESTING=OFF"
+	if [ ${@packageNameLower@_with_testing} = true ]; then
+	    _testing_options="-D@packageNameUpper@_ENABLE_TESTING=ON"
+	fi
+
+	local _docs_options=""
+	# _docs_options="-D@packageNameUpper@_WITH_DOCS=OFF"
+	# if [ ${@packageNameLower@_with_docs} = true ]; then
+	#     _docs_options="-D@packageNameUpper@_WITH_DOCS=ON "
+	# fi
+
+	local _iwyu_options=""
+	# local _iwyu_options="-D@packageNameUpper@_WITH_IWYU_CHECK=ON"
+	# if [ ${@packageNameLower@_with_iwyu} = true ]; then
+	#     _docs_options="-D@packageNameUpper@_WITH_IWYU_CHECK=ON "
+	# fi
+
+	local _ninja_options=""
+	if [ ${@packageNameLower@_with_ninja} = true ]; then
+	    _ninja_options="-G Ninja"
+	fi
+
+	local _cxx_options=""
+	_cxx_options="-DCMAKE_CXX_STANDARD=${@packageNameLower@_cxx_std}"
+	
+	local _werror_options=""
+	# bxiw_log_info "@packageNameLower@_with_werror=${@packageNameLower@_with_werror}"
+        # _werror_options="-D@packageNameUpper@_COMPILER_ERROR_ON_WARNING=OFF"
+	# if [ ${@packageNameLower@_with_werror} = true ]; then
+	#     _werror_options="-D@packageNameUpper@_COMPILER_ERROR_ON_WARNING=ON"
+	# fi
+
+	if [ -f "${bxiw_build_dir}/CMakeCache.txt" ]; then
+    	    bxiw_log_info "Removing previous @packageName@ configuration cache file..."
+	    rm -f "${bxiw_build_dir}/CMakeCache.txt"
+	fi
+	
+	# Configure with CMake
+	cmake \
+	    -DCMAKE_BUILD_TYPE:STRING="Release" \
+ 	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
+	    ${_xxx_options} \
+	    ${_foo_options} \
+	    ${_testing_options} \
+	    ${_docs_options} \
+	    ${_iwyu_options} \
+	    ${_werror_options} \
+  	    ${_ninja_options} \
+  	    ${_cxx_options} \
+	    ${bxiw_cache_dir}/${_pkg_source_dir}
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "@packageName@ configuration failed!"
+	    cd ${_pkg_opwd}
+	    return 1
+	else
+	    touch ${bxiw_tag_configured}
+    	    bxiw_log_info "@packageName@ is configured."
+	fi
+    else
+	bxiw_log_info "Do not configure @packageName@."
+    fi
+
+    # Build:
+    local _pkg_do_build=false
+    if [ ! -f ${bxiw_tag_built} ]; then
+	bxiw_log_info "@packageName@ build is needed."
+	_pkg_do_build=true
+    else
+	bxiw_log_info "@packageName@ build is already done."
+	if [ ${bxiw_do_rebuild} == true ]; then
+	    bxiw_log_info "Forcing @packageName@ rebuild..."
+	    _pkg_do_build=true
+	fi
+    fi
+
+    if [ ${_pkg_do_build} == true ]; then
+	bxiw_log_info "Building @packageName@..."
+	local _pkg_nbprocs=${bxiw_nbprocs}
+	if [ ${_pkg_nbprocs} -gt 2 ]; then
+	    let _pkg_nbprocs=${bxiw_nbprocs}-1
+	else
+	    _pkg_nbprocs=1
+	fi
+	bxiw_log_info "#procs = ${_pkg_nbprocs}"
+	${bxiw_builder_executable} -j ${_pkg_nbprocs}
+	if [ $? -ne 0 ]; then
+    	    bxiw_log_error "@packageName@ build failed!"
+    	    cd ${_pkg_opwd}
+    	    return 1
+	else
+	    touch ${bxiw_tag_built}
+    	    bxiw_log_info "@packageName@ is built."
+	fi
+    else
+	bxiw_log_info "Do not build @packageName@."
+    fi
+
+    # Installation:
+    local _pkg_do_install=false
+    if [ ! -f ${bxiw_tag_installed} ]; then
+	bxiw_log_info "@packageName@ installation is needed."
+	_pkg_do_install=true
+    else
+	bxiw_log_info "@packageName@ installation is already done."
+	if [ ${bxiw_do_reinstall} == true ]; then
+	    _pkg_do_install=true
+	    bxiw_log_info "Forcing @packageName@ installation..."
+	fi
+    fi
+    if [ ${bxiw_no_install} == true ]; then
+	_pkg_do_install=false
+    fi
+
+    if [ ${_pkg_do_install} == true ]; then
+
+	local _pkg_do_package=false
+	if [ ${bxiw_with_package} == true ]; then
+	    _pkg_do_package=true
+	fi
+	if [ ${_pkg_do_package} == true ]; then
+	    if [[ "x${bxiw_os_distrib_id}" = "xUbuntu" || "x${bxiw_os_distrib_id}" = "xLinuxMint" ]]; then
+		bxiw_log_info "Building a binary package for @packageName@..."
+		@packageNameLower@_installer_makedebpack
+	    else
+    		bxiw_log_error "Cannot pack @packageName@ for '${bxiw_os_distrib_id}'!"
+    		cd ${_pkg_opwd}
+		return 1
+	    fi
+	else
+	    bxiw_log_info "Installing @packageName@..."
+	    ${bxiw_builder_executable} install
+	    if [ $? -ne 0 ]; then
+    		bxiw_log_error "@packageName@ installation failed!"
+    		cd ${_pkg_opwd}
+    		return 1
+	    else
+		touch ${bxiw_tag_installed}
+    		bxiw_log_info "@packageName@ is installed."
+	    fi
+	fi
+    else
+	bxiw_log_info "Do not install @packageName@."
+    fi
+    cd ${_pkg_opwd}
+    return  0
+}
+
+
+function @packageNameLower@_installer_makedebpack()
+{
+    local _pkg_build_dir="${bxiw_build_dir}"
+    cd ${_pkg_build_dir}
+    mkdir -p ${_pkg_build_dir}/doc-pak
+    touch ${_pkg_build_dir}/description-pak
+    cat>${_pkg_build_dir}/description-pak<<EOF
+@packageName@ Library
+
+This is a binary version for ${bxiw_os_distrib_id} ${bxiw_os_distrib_release}.
+EOF
+    local _arch="amd64"
+    local _pkg_do_package=true
+    local _pkg_pkg_filename="bx${bxiw_package_name}_${bxiw_package_version}-${bxiw_pkg_release}_${_arch}.deb"
+    if [ -f ${package_dir}/${_pkg_pkg_filename} ]; then
+	bxiw_log_info "Package '${_pkg_pkg_filename}' exists in '${bxiw_package_dir}'."
+	_pkg_do_package=false
+    fi
+    local _pkg_requires="\
+		"
+    _pkg_requires_list=$(echo ${_pkg_requires} | tr ' ' ',')
+    _pkg_conflicts_list=
+    # _pkg_conflicts_list="lib@packageNameLower@-dev,lib@packageNameLower@6.6.6"
+    bxiw_log_info "Requires : ${_pkg_requires_list}!"
+    if [ ${_pkg_do_package} == true ]; then
+	if [ "x${bxiw_os_arch}" != "xx86_64" ]; then
+	    bxiw_log_error "Unsupported architecture ${bxiw_os_arch}!"
+	    return 1
+	fi
+	sudo checkinstall \
+	     --type="debian" \
+	     --install="no" \
+	     --fstrans="no" \
+	     --pkgname="bx${bxiw_package_name}" \
+	     --pkgversion="${bxiw_package_version}" \
+	     --pkgrelease=${bxiw_pkg_release} \
+	     --pkglicense="MIT" \
+	     --pkgsource="$(@packageNameLower@_installer_get_url ${bxiw_package_version})" \
+	     --maintainer="${bxiw_pkg_maintener_email}" \
+	     --provides="bx${bxiw_package_name}" \
+	     --requires="${_pkg_requires_list}" \
+	     --conflicts="${_pkg_conflicts_list}" \
+	     --backup="no" \
+	     --pakdir="${bxiw_package_dir}" \
+	     --default \
+	     ninja install
+	if [ $? -ne 0 ]; then
+	    bxiw_log_error "Debian binary package build failed!"
+	    return 1
+	fi
+    fi
+    return 0
+}
+
+
+function @packageNameLower@_installer_setup()
+{
+    bxiw_log_trace "@packageNameLower@_installer_setup: entering..."
+    local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    local _bxsoftware_setup_script_base="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"
+    if [ -f ${_bxsoftware_setup_script} ]; then
+	cp -f ${_bxsoftware_setup_script} ${_bxsoftware_setup_script}-save$(date -Isecond)
+    fi
+    local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
+    bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    # local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
+    # local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
+    # local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"
+    # if [ -f ${_bxsoftware_setup_script} ]; then
+    # 	cp -f ${_bxsoftware_setup_script} ${_bxsoftware_setup_script}-save$(date -Isecond)
+    # fi
+    # local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
+    # bxiw_log_info "Installing setup script '${_bxsoftware_setup_script}'..."
+    bxiw_log_info " - Using installing dir : '${bxiw_install_dir}'..."
+    bxiw_log_info " - Using version        : '${bxiw_package_version}'..."
+    cat ${bxiw_app_installer_prefix}/resources/package.bash.in | \
+	sed \
+	    -e "s@__PACKAGE_INSTALL_DIR__@${bxiw_install_dir}@g" \
+	    -e "s@__PACKAGE_VERSION__@${bxiw_package_version}@g" \
+	    -e "s@__PACKAGE_UVERSION__@${_bxsoftware_underscored_version}@g" \
+	    > ${_bxsoftware_setup_script}
+    return  0
+}
+
+bxiw_detect_os
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Unsupported OS!"
+fi
+
+bxiw_env
+bxiw_parse_cl ${bxiw_app_cl_remaining_argv}
+@packageNameLower@_installer_parse_cl ${bxiw_app_cl_remaining_argv}
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Command line parse error!"
+fi
+
+@packageNameLower@_installer_prepare
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Preparation failed!"
+fi
+
+@packageNameLower@_installer_set_system_dependencies
+
+@packageNameLower@_installer_print
+
+bxiw_install_system_dependencies
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "System dependencies installation failed!"
+fi
+
+@packageNameLower@_installer_download
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Source archive download failed!"
+fi
+
+@packageNameLower@_installer_install
+if [ $? -ne 0 ]; then
+    bxiw_exit 1 "Installation failed!"
+fi
+
+if [ ${bxiw_with_package} == false ]; then
+    @packageNameLower@_installer_setup
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "Setup failed!"
+    fi
+fi
+
+bxiw_exit 0
+
+# end

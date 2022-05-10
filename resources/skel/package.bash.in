@@ -1,0 +1,20 @@
+# -*- mode: shell-script; -*-
+
+function @packageNameLower@___PACKAGE_UVERSION___setup()
+{
+    local _version="__PACKAGE_VERSION__"
+    local _install_dir="__PACKAGE_INSTALL_DIR__"
+    if [ -n "${BX_@packageNameUpper@_INSTALL_DIR}" ]; then
+	echo >&2 "[warning] @packageNameLower@___PACKAGE_UVERSION___setup: @packageName@ version ${BX_@packageNameUpper@_VERSION} is already setup !"   
+	return 1
+    fi
+    export BX_@packageNameUpper@_INSTALL_DIR="${_install_dir}"
+    export BX_@packageNameUpper@_VERSION="${_version}"
+    export PATH="${BX_@packageNameUpper@_INSTALL_DIR}/bin:${PATH}"
+    echo >&2 "[info] @packageNameLower@___PACKAGE_UVERSION___setup: @packageName@ version ${_version} is now setup !"
+    return 0
+}
+export -f @packageNameLower@___PACKAGE_UVERSION___setup
+
+# end
+

@@ -11,13 +11,13 @@ semi-automated  installation of  some software  libraries of  interest
 used in the context of the development and use of the Bayeux library.
 
 It is useful for testing and tuning the installation procedure of some
-third party software I need, mostly on Ubuntu Linux (18.04 and 20.04),
+third party software I need, mostly on Ubuntu Linux (18.04, 20.04, 22.04 coming soon),
 but it may work on CentOS (not really tested).
 
 BxInstallers does not aim to  compete with industrial strength package
 management systems like Spack or Homebrew/Linuxbrew, nor apt or yum. I
 just consider this  tool as well adapted to *my*  needs in the context
-of *my* projects, *my* computer and data/computing centers I use in my
+of *my* projects, *my* computer and the data/computing centers I use in my
 daily work.
 
 The system is designed to allow the parallel installation and usage of
@@ -32,7 +32,67 @@ François Mauger, Université de Caen Normandie
 
 
 .. contents::
-   
+
+BxInstallers tools
+=====================
+
+As  a  helper package  to  build  and  install third  party  software,
+BxInstallers comes with some useful scripts that can be reused in some
+other context.  It  is thus possible to install theses  tools and make
+them available from other tools.
+
+.. code:: bash
+
+   $ mkdir _build.d
+   $ cd _build.d
+   $ cmake -DCMAKE_INSTALL_PREFIX="/tmp/${USER}/bxinstallers" ..
+   $ make install
+..
+
+Build a skeleton installer
+---------------------------
+
+Assuming a package  ``Foo`` is published as a source archive (typically as ``foo-@version@.tar.gz``)
+and build via CMake, it is possible to build a skeleton of a build/install script for this package:
+
+.. code:: bash
+
+   $ bxinstallers-mkskel --owner "SuperNEMO-DBD" --archive-pattern "Foo-v@PKGVERSION@.tar.gz" "Foo" "/tmp/FooInstaller"
+..
+
+This  creates  the  ``/tmp/FooInstaller`` directory  with  a  skeleton
+``foo_installer``   Bash  script   and  a   few  additional   resource
+files.  Then the  ``foo_installer`` should  be adapted  to be  able to
+download, configure, build and install the Foo package in some standard
+location on your system (based on the env. var. ``BX_INSTALL_BASE_DIR``).
+
+Typically, items to be modified are:
+
+- the original repository where the source archive can be downloaded.
+  Example: ``https://ftp.gnu.org/gnu/gsl/``
+- for a GitHub repository, it is possible to specify the *owner* or *group* identifier in such a way
+  the URL of the repo can be automatocally built:
+   "https://github.com/@ownerName@/@packageName@/archive/"	
+- the   pattern   of   the   remote  archive   filename.   Example   :
+  ``"foo-@PKGVERSION@.tar.gz"``   where   the   ``"@PKGVERSION@"``   will   be
+  automatically  replaced  by  the  requested version  string  of  the
+  package
+
+Once adapted to the build constraints of the package, the ``foo_installer``  script
+can be used to configure, build and finally install the package.
+  
+.. code:: bash
+	  
+   $ cd /tmp/FooInstaller
+   $ ./snrs_installer --help
+   $ ./snrs_installer --rebuild --package-version 1.1 --with-ninja
+..
+
+A setup Bash script ``foo@.1.1.bash`` is also generated.
+It must be saved in some specific location for
+configuration files and sourced from a startup script.
+
+
 List of supported software libraries
 ====================================
 
