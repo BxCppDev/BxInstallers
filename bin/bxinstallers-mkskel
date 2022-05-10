@@ -29,6 +29,8 @@ packageInstallerDir=
 packageArchiveUrl=
 packageArchivePattern=
 packageGitUrl=
+packageDefaultVersion="1.0"
+packageSupportedVersions="1.0"
 
 function appUsage()
 {
@@ -38,21 +40,27 @@ Build a skeleton build/installation script for a package 'ala' Bxinstallers
 
 Usage : 
 
-  bxinstallers-mkskel [options...] package-name
+  bxinstallers-mkskel [OPTIONS...] PACKAGE_NAME TARGET_DIRECTORY
 
 Options:
 
   --help       :   Prints this help
   --version    :   Prints version
   --debug      :   Switch on debug mode
-  --github-owner NAME        :   Set the GitHub owner name (if applicable)
-  --download-url URL         :   Set the archive download URL (if applicable)
-  --git-url URL              :   Set the full Git URL (if applicable)
-  --archive-pattern PATTERN  :   Set the pattern of the source archive (if applicable)
+  --github-owner NAME         :  Set the GitHub owner name (if applicable)
+  --download-url URL          :  Set the archive download URL (if applicable)
+  --git-url URL               :  Set the full Git URL (if applicable)
+  --archive-pattern PATTERN   :  Set the pattern of the source archive (if applicable)
+  --default-version VERSION   :  Set the default supported version for the package
+  --supported-version VERSION :  Add a supported version for the package
 
 Example:
  
-  bxinstallers-mkskel --github-owner "BxCppDev" --archive-pattern "foo-@PKGVERSION@.tar.gz" --url "https://ftp.gnu.org/gnu/foo/"  "Foo"  /tmp/FooInstaller
+  bxinstallers-mkskel --github-owner "BxCppDev" \
+     --archive-pattern "foo-@PKGVERSION@.tar.gz"  \
+     --url "https://ftp.gnu.org/gnu/foo/"   \
+     "Foo" \
+     /tmp/FooInstaller
   
 EOF
     return 0
@@ -86,6 +94,17 @@ function appParseOptions()
 	    elif [ "${_option}" = "--archive-pattern" ]; then
 		shift 1
 		packageArchivePattern="$1"
+	    elif [ "${_option}" = "--default-version" ]; then
+		shift 1
+		packageDefaultVersion="$1"
+		packageSupportedVersions="${packageDefaultVersion}"
+	    elif [ "${_option}" = "--supported-version" ]; then
+		shift 1
+		if [ -z "${packageSupportedVersions}" ]; then
+		    packageSupportedVersions="$1"
+		else
+		    packageSupportedVersions="${packageSupportedVersions} $1"
+		fi
 	    else
 		appUsage
 		appExit 1 "Unsupported option '${_option}'!"
@@ -110,6 +129,10 @@ function appParseOptions()
 appParseOptions $@
 if [ $? -ne 0 ]; then
     appExit 1
+fi
+
+if [ -z "${packageSupportedVersions}" ]; then
+    packageSupportedVersions="${packageDefaultVersion}"
 fi
 
 test ${appDebug} = true && echo >&2 "[debug] Resource dir='${bxiwResourceDir}'"
@@ -160,6 +183,8 @@ sed -e "s/@packageNameLower@/${packageNameLower}/g" \
     -e "s|@packageArchiveUrl@|${packageArchiveUrl}|g" \
     -e "s|@packageGitUrl@|${packageGitUrl}|g" \
     -e "s|@packageArchivePattern@|${packageArchivePattern}|g" \
+    -e "s/@packageDefaultVersion@/${packageDefaultVersion}/g" \
+    -e "s/@packageSupportedVersions@/${packageSupportedVersions}/g" \
     ${bxiwResourceDir}/skel/package_installer.in \
     > ${packageInstallerDir}/${packageNameLower}_installer
 chmod a+x ${packageInstallerDir}/${packageNameLower}_installer
