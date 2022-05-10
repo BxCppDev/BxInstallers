@@ -503,6 +503,9 @@ function _bxiw_prepare_post()
     if [ -n "${bxiw_setup_module_dir}" ]; then
 	bxiw_setup_module_dir=$(bxiw_make_absolute_dir_path ${bxiw_setup_module_dir})
     fi
+    if [ -n "${bxiw_setup_external_dir}" ]; then
+	bxiw_setup_external_dir=$(bxiw_make_absolute_dir_path ${bxiw_setup_external_dir})
+    fi
 
     # Default build dir:
     if [ "x${bxiw_build_dir}" = "x" ]; then
