@@ -459,6 +459,19 @@ function bxiw_parse_cl()
     return 0
 }
 
+function bxiw_make_absolute_dir_path()
+{
+    local __oldPwd=$(pwd)
+    local __aPath="$1"
+    if [ ! -d ${__aPath} ]; then
+	mkdir -p ${__aPath}
+    fi
+    cd ${__aPath}
+    local __absPath=$(pwd)
+    cd ${__oldPwd}
+    echo "${__absPath}"
+    return
+}
 
 function _bxiw_prepare_post()
 {
@@ -468,14 +481,48 @@ function _bxiw_prepare_post()
 	bxiw_builder_executable="ninja"
     fi
 
+    bxiw_log_info "_bxiw_prepare_post: Making absolute directories..."
+    if [ -n "${bxiw_cache_dir}" ]; then
+	bxiw_cache_dir=$(bxiw_make_absolute_dir_path ${bxiw_cache_dir})
+    fi
+    if [ -n "${bxiw_work_dir}" ]; then
+	bxiw_work_dir=$(bxiw_make_absolute_dir_path ${bxiw_work_dir})
+    fi
+    if [ -n "${bxiw_build_dir}" ]; then
+	bxiw_build_dir=$(bxiw_make_absolute_dir_path ${bxiw_build_dir})
+    fi
+    if [ -n "${bxiw_tag_dir}" ]; then
+	bxiw_tag_dir=$(bxiw_make_absolute_dir_path ${bxiw_tag_dir})
+    fi
+    if [ -n "${bxiw_install_base_dir}" ]; then
+	bxiw_install_base_dir=$(bxiw_make_absolute_dir_path ${bxiw_install_base_dir})
+    fi
+    if [ -n "${bxiw_install_dir}" ]; then
+	bxiw_install_dir=$(bxiw_make_absolute_dir_path ${bxiw_install_dir})
+    fi
+    if [ -n "${bxiw_setup_module_dir}" ]; then
+	bxiw_setup_module_dir=$(bxiw_make_absolute_dir_path ${bxiw_setup_module_dir})
+    fi
+
+    # Default build dir:
     if [ "x${bxiw_build_dir}" = "x" ]; then
 	bxiw_build_dir="${bxiw_work_dir}/${bxiw_package_name}-${bxiw_package_version}/build.d"
     fi
 
+    # Default tag dir:
     if [ "x${bxiw_tag_dir}" = "x" ]; then
 	bxiw_tag_dir="${bxiw_work_dir}/${bxiw_package_name}-${bxiw_package_version}/tag.d"
     fi
 
+    bxiw_log_info "_bxiw_prepare_post: Cache directory='${bxiw_cache_dir}'"
+    bxiw_log_info "_bxiw_prepare_post: Work directory='${bxiw_work_dir}'"
+    bxiw_log_info "_bxiw_prepare_post: Build directory='${bxiw_build_dir}'"
+    bxiw_log_info "_bxiw_prepare_post: Tag directory='${bxiw_tag_dir}'"
+    bxiw_log_info "_bxiw_prepare_post: Install base directory='${bxiw_install_base_dir}'"
+    bxiw_log_info "_bxiw_prepare_post: Install directory='${bxiw_install_dir}'"
+    bxiw_log_info "_bxiw_prepare_post: Setup module directory='${bxiw_setup_module_dir}'"
+
+    # Tag files:
     bxiw_tag_downloaded="${bxiw_tag_dir}/downloaded.tag"
     bxiw_tag_source="${bxiw_tag_dir}/source.tag"
     bxiw_tag_configured="${bxiw_tag_dir}/configured.tag"
@@ -483,44 +530,44 @@ function _bxiw_prepare_post()
     bxiw_tag_installed="${bxiw_tag_dir}/installed.tag"
 
     if [ ${bxiw_delete_tags} == true ]; then
-	bxiw_log_info "Deleting existing tag files..."
+	bxiw_log_info "_bxiw_prepare_post: Deleting existing tag files..."
 	rm -f ${bxiw_tag_dir}/*.tag
     fi
 
     if [ ! -d ${bxiw_cache_dir} ]; then
 	mkdir -p ${bxiw_cache_dir}
 	if [ $? -ne 0 ]; then
-	    bxiw_log_error "Cannot create the '${bxiw_cache_dir}' directory!"
+	    bxiw_log_error "_bxiw_prepare_post: Cannot create the '${bxiw_cache_dir}' directory!"
 	    return 1
 	else
-	    bxiw_log_info "Cache directory '${bxiw_cache_dir}' is created!"
+	    bxiw_log_info "_bxiw_prepare_post: Cache directory '${bxiw_cache_dir}' is created!"
 	fi
     else
-	bxiw_log_info "Cache directory '${bxiw_cache_dir}' already exists!"
+	bxiw_log_info "_bxiw_prepare_post: Cache directory '${bxiw_cache_dir}' already exists!"
     fi
 
     if [ ${bxiw_do_rebuild} == true -a -d ${bxiw_build_dir} ]; then
-	bxiw_log_info "Removing existing '${bxiw_build_dir}' build directory..."
+	bxiw_log_info "_bxiw_prepare_post: Removing existing '${bxiw_build_dir}' build directory..."
 	rm -fr ${bxiw_build_dir}
     fi
 
     if [ ! -d ${bxiw_build_dir} ]; then
 	mkdir -p ${bxiw_build_dir}
 	if [ $? -ne 0 ]; then
-	    bxiw_log_error "Cannot create the '${bxiw_build_dir}' directory!"
+	    bxiw_log_error "_bxiw_prepare_post: Cannot create the '${bxiw_build_dir}' directory!"
 	    return 1
 	else
-	    bxiw_log_info "Build directory '${bxiw_build_dir}' is created!"
+	    bxiw_log_info "_bxiw_prepare_post: Build directory '${bxiw_build_dir}' is created!"
 	fi
     fi
 
     if [ ! -d ${bxiw_tag_dir} ]; then
 	mkdir -p ${bxiw_tag_dir}
 	if [ $? -ne 0 ]; then
-	    bxiw_log_error "Cannot create the '${bxiw_tag_dir}' directory!"
+	    bxiw_log_error "_bxiw_prepare_post: Cannot create the '${bxiw_tag_dir}' directory!"
 	    return 1
 	else
-	    bxiw_log_info "Build directory '${bxiw_tag_dir}' is created!"
+	    bxiw_log_info "_bxiw_prepare_post: Build directory '${bxiw_tag_dir}' is created!"
 	fi
     fi
 
@@ -529,10 +576,10 @@ function _bxiw_prepare_post()
 	if [ ! -d ${bxiw_package_dir} ]; then
 	    mkdir -p ${bxiw_package_dir}
 	    if [ $? -ne 0 ]; then
-		bxiw_log_error "Cannot create the '${bxiw_package_dir}' directory!"
+		bxiw_log_error "_bxiw_prepare_post: Cannot create the '${bxiw_package_dir}' directory!"
 		return 1
 	    else
-		bxiw_log_info "Package directory '${bxiw_package_dir}' is created!"
+		bxiw_log_info "_bxiw_prepare_post: Package directory '${bxiw_package_dir}' is created!"
 	    fi
 	fi
     fi
@@ -543,10 +590,10 @@ function _bxiw_prepare_post()
 	if [ ! -d ${bxiw_install_base_dir} ]; then
 	    mkdir -p ${bxiw_install_base_dir}
 	    if [ $? -ne 0 ]; then
-		bxiw_log_error "Cannot create the '${bxiw_install_base_dir}' directory!"
+		bxiw_log_error "_bxiw_prepare_post: Cannot create the '${bxiw_install_base_dir}' directory!"
 		return 1
 	    else
-		bxiw_log_info "Installation base directory '${bxiw_install_base_dir}' was created!"
+		bxiw_log_info "_bxiw_prepare_post: Installation base directory '${bxiw_install_base_dir}' was created!"
 	    fi
 	fi
 	local _default_install_directory="${bxiw_install_base_dir}/${bxiw_package_name}-${bxiw_package_version}"
@@ -558,20 +605,20 @@ function _bxiw_prepare_post()
     if [ ! -d ${bxiw_setup_module_dir} ]; then
 	mkdir -p ${bxiw_setup_module_dir}
 	if [ $? -ne 0 ]; then
-    	    bxiw_log_error "Creation of directory '${bxiw_setup_module_dir}' failed!"
+    	    bxiw_log_error "_bxiw_prepare_post: Creation of directory '${bxiw_setup_module_dir}' failed!"
 	    return 1
 	else
-	    bxiw_log_info "Setup directory '${bxiw_setup_module_dir}' is created!"
+	    bxiw_log_info "_bxiw_prepare_post: Setup directory '${bxiw_setup_module_dir}' is created!"
 	fi
     fi
 
     if [ ! -d ${bxiw_setup_external_dir} ]; then
 	mkdir -p ${bxiw_setup_external_dir}
 	if [ $? -ne 0 ]; then
-    	    bxiw_log_error "Creation of directory '${bxiw_setup_external_dir}' failed!"
+    	    bxiw_log_error "_bxiw_prepare_post: Creation of directory '${bxiw_setup_external_dir}' failed!"
 	    return 1
 	else
-	    bxiw_log_info "Setup directory '${bxiw_setup_external_dir}' is created!"
+	    bxiw_log_info "_bxiw_prepare_post: Setup directory '${bxiw_setup_external_dir}' is created!"
 	fi
     fi
 
@@ -739,36 +786,60 @@ function bxiw_download_file()
     local _opwd=$(pwd)
     local _url="$1"
     shift 1
-    local _file="$1"
+    local _local_file="$1"
     shift 1
-    bxiw_log_trace "bxiw_download_file:: URL : '${_url}'"
-    bxiw_log_trace "bxiw_download_file: File to be dowloaded : '${_file}'"
-    if  [ "x${_file}" = "x" ]; then
-	_file="$(echo ${_url} | tr '/' '\n' | tail -1)"
+    local _remote_file=""
+    bxiw_log_info "bxiw_download_file: URL : '${_url}'"
+    bxiw_log_info "bxiw_download_file: File to be dowloaded : '${_local_file}'"
+    bxiw_log_info "bxiw_download_file: Cache dir : '${bxiw_cache_dir}'"
+    if  [ "x${_local_file}" = "x" ]; then
+	_local_file="$(echo ${_url} | tr '/' '\n' | tail -1)"
+	bxiw_log_info "bxiw_download_file: Default local filename : '${_local_file}'"
     fi
-    if [ -f ${bxiw_cache_dir}/${_file} ]; then
-	bxiw_log_info "bxiw_download_file: File '${_file}' already exists in '${bxiw_cache_dir}'!"
-	rm -f ${bxiw_cache_dir}/${_file}
+    if  [ "x${_remote_file}" = "x" ]; then
+	_remote_file="$(echo ${_url} | tr '/' '\n' | tail -1)"
+	bxiw_log_info "bxiw_download_file: Remote filename : '${_remote_file}'"
     fi
-
-    if [ ! -f ${bxiw_cache_dir}/${_file} ]; then
+    if [ -f ${bxiw_cache_dir}/${_local_file} ]; then
+	bxiw_log_info "bxiw_download_file: File '${_local_file}' already exists in '${bxiw_cache_dir}'!"
+	rm -f ${bxiw_cache_dir}/${_local_file}
+    fi
+    if [ ! -f ${bxiw_cache_dir}/${_local_file} ]; then
 	cd ${bxiw_cache_dir}
-	bxiw_log_info "bxiw_download_file: Downloading tarball '${_file}' from '${_url}'..."
+	local _thisDir=$(pwd)
+	bxiw_log_info "bxiw_download_file: Current directory = '${_thisDir}'..."
+	bxiw_log_info "bxiw_download_file: Downloading file '${_local_file}' from remote '${_url}'..."
 	if [ "${_url:0:5}" = "file:" ]; then
-	    cp -f "${_url}" "${bxiw_cache_dir}/${_file}"
+	    cp -f "${_url}" "${bxiw_cache_dir}/${_local_file}"
 	else
-	    wget ${_url} -O "${bxiw_cache_dir}/${_file}"
+	    wget ${_url}
 	    if [ $? -ne 0 ]; then
-		bxiw_log_error "bxiw_download_file: Cannot download the '${_file}' file!"
+		bxiw_log_error "bxiw_download_file: Cannot download the '${_remote_file}' file!"
 		cd ${_opwd}
 		return 1
 	    else
-		bxiw_log_info "bxiw_download_file: Downloaded file : '${_file}'"
+		bxiw_log_info "bxiw_download_file: Downloaded file = '${_remote_file}'"
+		if [ "x${_local_file}" != "x${_remote_file}" ]; then
+		    if [ -f ./${_local_file} ]; then
+			bxiw_log_info "bxiw_download_file: Removing previous local file = '${_local_file}'"
+			rm -f ./${_local_file}
+		    fi
+		    mv -f ./${_remote_file} ./${_local_file}
+		fi
 	    fi
+	    # wget ${_url} -O "${bxiw_cache_dir}/${_local_file}"
+	    # if [ $? -ne 0 ]; then
+	    # 	bxiw_log_error "bxiw_download_file: Cannot download the '${_local_file}' file!"
+	    # 	cd ${_opwd}
+	    # 	return 1
+	    # else
+	    # 	bxiw_log_info "bxiw_download_file: Downloaded file : '${_local_file}'"
+	    # fi
 	fi
     fi
-    if [ ! -f ${bxiw_cache_dir}/${_file} ]; then
-	bxiw_log_error "bxiw_download_file: No file '${_file}'!"
+    tree ${bxiw_cache_dir}
+    if [ ! -f ${bxiw_cache_dir}/${_local_file} ]; then
+	bxiw_log_error "bxiw_download_file: No file '${_local_file}'!"
 	cd ${_opwd}
 	return 1
     fi

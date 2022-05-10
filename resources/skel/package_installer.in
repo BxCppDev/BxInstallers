@@ -7,7 +7,7 @@ if [ ! -f "$(pwd)/.bxwi_@packageNameLower@.locate" ]; then
 fi
 which bxinstallers-config >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-     echo >&2 "Cannot find 'bxinstallers-config'! Abort!"
+    echo >&2 "Cannot find 'bxinstallers-config'! Abort!"
     exit 1
 fi
 
@@ -215,7 +215,7 @@ function @packageNameLower@_installer_prepare()
 				 --field="Force rebuild:CHK" "${_do_rebuild_repr}" \
 				 --field="Remove build directory:CHK" "${_remove_build_dir_repr}" \
 				 --field="Remove tarballs:CHK" "${_remove_tarballs_repr}" \
-				 --field="System installation:CHK" "$_system_install_repr}" \
+				 --field="System installation:CHK" "${_system_install_repr}" \
 		  )
 	    if [ "x${_choices}" = "x" ]; then
 		bxiw_log_info "Cancelled dialog!"
@@ -291,12 +291,13 @@ function @packageNameLower@_installer_get_tarball()
 
 function @packageNameLower@_installer_get_url()
 {
+    local _funcName="@packageNameLower@_installer_get_url"
     local _pkgVersion="$1"
     shift 1
-    bxiw_log_info "installer_get_url: _pkgVersion = '${_pkgVersion}' "
+    bxiw_log_info "${_funcName}: _pkgVersion = '${_pkgVersion}' "
     local _pkgArBaseUrl= 
-    bxiw_log_info "installer_get_url: bxiw_archive_download_url = '${bxiw_archive_download_url}'"
-    bxiw_log_info "installer_get_url: bxiw_source_git_path      = '${bxiw_source_git_path}'"
+    bxiw_log_info "${_funcName}: bxiw_archive_download_url = '${bxiw_archive_download_url}'"
+    bxiw_log_info "${_funcName}: bxiw_source_git_path      = '${bxiw_source_git_path}'"
     if [ -n "${bxiw_archive_download_url}" ]; then
 	# Plain URL for archive download:
 	_pkgArBaseUrl="${bxiw_archive_download_url}"
@@ -304,16 +305,17 @@ function @packageNameLower@_installer_get_url()
 	# Git URL for archive download:
 	_pkgArBaseUrl="${bxiw_source_git_path}"
     else
-	bxiw_log_info "installer_get_url: Fall back to GitHub project repository for archive download"
-	_pkgArBaseUrl="https://github.com/@ownerName@/@packageName@/archive/"	
+	_pkgArBaseUrl="https://github.com/@ownerName@/@packageName@/archive/refs/tags"	
+	bxiw_log_info "${_funcName}: Fall back to GitHub project repository for archive download"
+	bxiw_log_info "${_funcName}: GitHub archive download URL : '${_pkgArBaseUrl}'"
     fi
     local _pkg_tarball=$(@packageNameLower@_installer_get_tarball ${_pkgVersion})
     local _pkgUrlSep='/'
-    # bxiw_log_info "installer_get_url: _pkgUrlSep[last] = '${_pkgArBaseUrl: -1}'"
+    # bxiw_log_info "${_funcName}: _pkgUrlSep[last] = '${_pkgArBaseUrl: -1}'"
     if [ "x${_pkgArBaseUrl: -1}" = "x/" ]; then
 	_pkgUrlSep=''
     fi
-    # bxiw_log_info "installer_get_url: _pkgUrlSep = '${_pkgUrlSep}'"
+    # bxiw_log_info "${_funcName}: _pkgUrlSep = '${_pkgUrlSep}'"
     if [ "${_pkgVersion}" \> "42.12.666" ]; then
 	# Dummy test:
 	echo "${_pkgArBaseUrl}${_pkgUrlSep}${_pkg_tarball}"
@@ -428,8 +430,8 @@ function @packageNameLower@_installer_download()
     else
 	local _pkg_tarball=$(@packageNameLower@_installer_get_tarball ${bxiw_package_version})
 	local _pkg_url=$(@packageNameLower@_installer_get_url ${bxiw_package_version})
-	bxiw_log_info "@packageName@ tarball : '${_pkg_tarball}'"
-	bxiw_log_info "@packageName@ URL     : '${_pkg_url}'"
+	bxiw_log_info "@packageName@ tarball = '${_pkg_tarball}'"
+	bxiw_log_info "@packageName@ URL     = '${_pkg_url}'"
 	local _pkg_local_tarball="@packageNameLower@-${bxiw_package_version}.tar.gz"
 	if [ ! -f ${bxiw_tag_downloaded} ]; then
 	    bxiw_download_file ${_pkg_url} ${_pkg_local_tarball}

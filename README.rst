@@ -6,19 +6,20 @@ BxInstallers
 :date: 2022-04-05
 
 
-BxInstallers provides  some build/install/setup shell scripts  for the
-semi-automated  installation of  some software  libraries of  interest
-used in the context of the development and use of the Bayeux library.
+BxInstallers provides  some build/install/setup  shell scripts  for an
+automated installation of some software  libraries of interest used in
+the context of the development and use of the Bayeux library.
 
-It is useful for testing and tuning the installation procedure of some
-third party software I need, mostly on Ubuntu Linux (18.04, 20.04, 22.04 coming soon),
-but it may work on CentOS (not really tested).
+It is mainly useful for  testing and tuning the installation procedure
+of some  third party software I  need, mostly on Ubuntu  Linux (18.04,
+20.04,  22.04 coming  soon), but  it may  work on  CentOS (not  really
+tested).
 
 BxInstallers does not aim to  compete with industrial strength package
 management systems like Spack or Homebrew/Linuxbrew, nor apt or yum. I
 just consider this  tool as well adapted to *my*  needs in the context
-of *my* projects, *my* computer and the data/computing centers I use in my
-daily work.
+of *my* projects,  *my* computer and the data/computing  centers I use
+in my daily work.
 
 The system is designed to allow the parallel installation and usage of
 different  versions  of  a  given software  package,  using  different
@@ -36,6 +37,9 @@ François Mauger, Université de Caen Normandie
 BxInstallers tools
 =====================
 
+Installation
+------------------
+
 As  a  helper package  to  build  and  install third  party  software,
 BxInstallers comes with some useful scripts that can be reused in some
 other context.  It  is thus possible to install theses  tools and make
@@ -45,15 +49,27 @@ them available from other tools.
 
    $ mkdir _build.d
    $ cd _build.d
-   $ cmake -DCMAKE_INSTALL_PREFIX="/tmp/${USER}/bxinstallers" ..
+   $ cmake -DCMAKE_INSTALL_PREFIX="/opt/sw/bxinstallers" ..
    $ make install
+..
+
+
+Setup the BxInstaller scripts
+--------------------------------
+
+Put the following line in your Bash startup script:
+
+.. code:: bash
+
+   export PATH="/opt/sw/bxinstallers/bin:${PATH}"
 ..
 
 Build a skeleton installer
 ---------------------------
 
-Assuming a package  ``Foo`` is published as a source archive (typically as ``foo-@version@.tar.gz``)
-and build via CMake, it is possible to build a skeleton of a build/install script for this package:
+Assuming a package ``Foo`` is published as a source archive (typically
+as ``foo-@version@.tar.gz``)  and build via  CMake, it is  possible to
+build a skeleton of a build/install script for this package:
 
 .. code:: bash
 
