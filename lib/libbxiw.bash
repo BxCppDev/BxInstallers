@@ -23,6 +23,9 @@ bxiw_with_gui=false
 if [ "x${bxiw_default_package_version}" = "x" ]; then
     bxiw_default_package_version=
 fi
+if [ "x${bxiw_supported_package_versions}" = "x" ]; then
+    bxiw_supported_package_versions=
+fi
 if [ "x${bxiw_package_name}" = "x" ]; then
     bxiw_package_name=
 fi
@@ -655,6 +658,19 @@ function _bxiw_prepare_pre()
 	fi
     fi
 
+    bxiw_log_info "Checking support of the requested package version '${bxiw_package_version}' ..."
+    # local _listSupportedVersions="$(echo ${bxiw_supported_package_versions} | tr [[:space:]] ' ' | tr -s ' ' | tr ' ' '\n')"
+    local _versionIsSupported=false
+    for _pkgSupportedVersion in ${bxiw_supported_package_versions} ; do
+	if [ "x${_pkgSupportedVersion}" = "x${bxiw_package_version}" ]; then
+	    _versionIsSupported=true
+	    break
+	fi
+    done
+    if [ ${_versionIsSupported} = false ]; then
+	bxiw_exit 1 "Requested package version '${bxiw_package_version}' is not supported!"
+    fi
+    
     if [ "x${bxiw_cache_dir}" = "x" ]; then
 	bxiw_cache_dir="${bxiw_default_cache_directory}"
     fi
