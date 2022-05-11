@@ -829,7 +829,12 @@ function bxiw_download_file()
 	bxiw_log_info "bxiw_download_file: Current directory = '${_thisDir}'..."
 	bxiw_log_info "bxiw_download_file: Downloading file '${_local_file}' from remote '${_url}'..."
 	if [ "${_url:0:5}" = "file:" ]; then
-	    cp -f "${_url}" "${bxiw_cache_dir}/${_local_file}"
+	    cp -f "${_url:5}" "${bxiw_cache_dir}/${_local_file}"
+	    if [ $? -ne 0 ]; then
+		bxiw_log_error "bxiw_download_file: Cannot copy '${_remote_file}' file from filesystem to target directory!"
+		cd ${_opwd}
+		return 1		
+	    fi
 	else
 	    wget ${_url}
 	    if [ $? -ne 0 ]; then
