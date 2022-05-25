@@ -6,9 +6,10 @@ BxInstallers
 :date: 2022-04-05
 
 
-BxInstallers provides  some build/install/setup  shell scripts  for an
-automated installation of some software  libraries of interest used in
-the context of the development and use of the Bayeux library.
+BxInstallers (https://github.com/BxCppDev/BxInstallers)  provides some
+build/install/setup  shell scripts  for an  automated installation  of
+some  software  libraries of  interest  used  in  the context  of  the
+development and use of the Bayeux library.
 
 It is mainly useful for  testing and tuning the installation procedure
 of some  third party software I  need, mostly on Ubuntu  Linux (18.04,
@@ -36,6 +37,19 @@ François Mauger, Université de Caen Normandie
 
 BxInstallers tools
 =====================
+
+Get the BxInstallers
+---------------------
+
+Clone the BxInstallers' Git repository:
+
+.. code:: bash
+
+   $ cd ${HOME} # or wherever you want to copy BxInstallers' scripts
+   $ git clone https://github.com/BxCppDev/BxInstallers 
+   $ cd BxInstallers/
+   $ less README.rst
+..
 
 Installation
 ------------------
@@ -165,7 +179,8 @@ These  directories  may need  a  huge  amount  of free  storage  space
 (several GB) because some third party software packages are really big
 (ROOT,  Geant4  and  associated  datasets...) and  also  the  building
 process uses quite a large amount  of storage.  Please make sure you
-can find such a large space on your disks.
+can find such a large space on your disks. It is probably a bad idea to install
+the software stack in your home directory.
  
 BxInstallers supports  a few  environment variables to  locate working
 directories used to build and install libraries:
