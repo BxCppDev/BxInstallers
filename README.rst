@@ -88,7 +88,7 @@ Typically, items to be modified are:
   Example: ``https://ftp.gnu.org/gnu/gsl/``
 - for a GitHub repository, it is possible to specify the *owner* or *group* identifier in such a way
   the URL of the repo can be automatocally built:
-   "https://github.com/@ownerName@/@packageName@/archive/"	
+  "https://github.com/@ownerName@/@packageName@/archive/"	
 - the   pattern   of   the   remote  archive   filename.   Example   :
   ``"foo-@PKGVERSION@.tar.gz"``   where   the   ``"@PKGVERSION@"``   will   be
   automatically  replaced  by  the  requested version  string  of  the
@@ -209,6 +209,18 @@ run on Ubuntu before the build stage (need some *sudo* access).
       $ mkdir -p ${BX_INSTALL_BASE_DIR}
       $ mkdir -p ${BX_CONFIG_DIR}
    ..
+
+   We recommend to put the following lines in your ``~/.bashrc`` startup script:
+
+   .. code:: shell
+
+      $ export BX_CACHE_DIR="/opt/sw/BxSoftware/BxCache"
+      $ export BX_WORK_DIR="/opt/sw/BxSoftware/BxWork"
+      $ export BX_INSTALL_BASE_DIR="/opt/sw/BxSoftware/BxInstall"
+      $ export BX_CONFIG_DIR="/opt/sw/BxSoftware/BxConfig"
+   ..
+
+   That will make available the working paths used to build and run the Bayeux software stack.
 
 #. Install some software packages:
 
@@ -389,7 +401,7 @@ Bayeux  installation
    .. code:: shell
 	  
       $ cd ../BxBayeuxInstaller/
-      $ ./bayeux_installer --package-version "3.5.0" --with-qt --with-geant4   
+      $ ./bayeux_installer --package-version "3.5.2" --with-qt --with-geant4   
       $ ls -l ${BX_CONFIG_DIR}/modules/bayeux@3.5.0.bash
    ..
 
@@ -397,11 +409,11 @@ Bayeux  installation
 
    .. code:: shell
 
-      $ source ${BX_CONFIG_DIR}/modules/bayeux@3.5.0.bash
-      $ bayeux_3_5_0_setup 
-      [info] bayeux_3_5_0_setup: Bayeux version 3.5.0 is now setup !
+      $ source ${BX_CONFIG_DIR}/modules/bayeux@3.5.2.bash
+      $ bayeux_3_5_2_setup 
+      [info] bayeux_3_5_0_setup: Bayeux version 3.5.2 is now setup !
       $ bxquery --prefix
-      /opt/swtest/BxSoftware/BxInstall/bayeux-3.5.0 
+      /opt/swtest/BxSoftware/BxInstall/bayeux-3.5.2
    ..	  
 
  
@@ -430,19 +442,19 @@ Final setup
 	 source ${BX_CONFIG_DIR}/modules/g4datasets@9.6.4.bash
 	 source ${BX_CONFIG_DIR}/modules/geant4@9.6.4.bash
  	 source ${BX_CONFIG_DIR}/modules/bxdecay0@1.1.0.bash
-	 source ${BX_CONFIG_DIR}/modules/bayeux@3.5.0.bash
+	 source ${BX_CONFIG_DIR}/modules/bayeux@3.5.2.bash
 
-	 function bayeux_3_5_0_run_setup()
+	 function bayeux_3_5_2_run_setup()
 	 {
 	   clhep_2_1_4_2_setup
 	   root_6_16_00_setup 
 	   g4datasets_9_6_4_setup       
 	   geant4_9_6_4_setup
 	   bxdecay0_1_1_0_setup  
-	   bayeux_3_5_0_setup 
-	   echo >&2 "[notice] Bayeux 3.5.0 is setup."
+	   bayeux_3_5_2_setup 
+	   echo >&2 "[notice] Bayeux 3.5.2 is setup."
 	 }
-	 alias bayeux_run_setup='bayeux_3_5_0_run_setup'
+	 alias bayeux_run_setup='bayeux_3_5_2_run_setup'
       ..
 
      
@@ -466,12 +478,12 @@ Final setup
 	 [info] g4datasets_9_6_4_setup: Geant4 datasets version 9.6.4 is now setup !
 	 [info] geant4_9_6_4_setup: GEANT4 version 9.6.4 is now setup !
 	 [info] bxdecay0_1_1_0_setup: BxDecay0 version 1.1.0 is now setup !
-	 [info] bayeux_3_5_0_setup: Bayeux version 3.5.0 is now setup !
-	 [notice] Bayeux 3.5.0 is setup.
+	 [info] bayeux_3_5_2_setup: Bayeux version 3.5.2 is now setup !
+	 [notice] Bayeux 3.5.2 is setup.
 	 $ bxquery --version
-	 3.5.0
+	 3.5.2
 	 $ bxquery --prefix
-	 /opt/swtest/BxSoftware/BxInstall/bayeux-3.5.0
+	 /opt/swtest/BxSoftware/BxInstall/bayeux-3.5.2
       ..
 
       This will setup/activate Bayeux with all its dependencies.
