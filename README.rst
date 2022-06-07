@@ -38,10 +38,10 @@ François Mauger, Université de Caen Normandie
 BxInstallers tools
 =====================
 
-Get the BxInstallers
+Get BxInstallers
 ---------------------
 
-Clone the BxInstallers' Git repository:
+Clone the BxInstallers' Git repository on your system :
 
 .. code:: bash
 
