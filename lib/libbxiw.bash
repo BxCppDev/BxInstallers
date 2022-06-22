@@ -861,7 +861,7 @@ function bxiw_download_file()
 	    # fi
 	fi
     fi
-    tree ${bxiw_cache_dir}
+    # tree ${bxiw_cache_dir}
     if [ ! -f ${bxiw_cache_dir}/${_local_file} ]; then
 	bxiw_log_error "bxiw_download_file: No file '${_local_file}'!"
 	cd ${_opwd}

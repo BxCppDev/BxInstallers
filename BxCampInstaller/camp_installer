@@ -10,6 +10,7 @@ bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="camp"
 bxiw_default_package_version="0.8.4"
+bxiw_supported_package_versions="0.8.4"
 bxiw_package_version=
 
 boost_root=

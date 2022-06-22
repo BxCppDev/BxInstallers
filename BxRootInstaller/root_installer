@@ -486,7 +486,7 @@ function root_installer_install()
             # -DPYTHON_INCLUDE_DIR="/usr/include/python2.7" \
             # -DPYTHON_LIBRARY="/usr/lib/x86_64-linux-gnu/libpython2.7.so" 
 	fi
-	if [ "${bxiw_package_version}" <= "6.16.00" ]; then
+	if [ ! "${bxiw_package_version}" > "6.16.00" ]; then
 	    if [ "x${root_cxx_options}" = "x" ]; then
 		root_cxx_options="-Dcxx11=ON"
 	    fi
