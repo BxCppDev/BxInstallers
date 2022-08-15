@@ -408,23 +408,32 @@ function geant4_installer_install()
     fi
 
     if [ "${bxiw_package_version}" = "9.6.4" ]; then
+	
 	bxiw_message "info" "Fix file 'G4LElastic.cc'"
 	mv ${_geant4_source_dir}/source/processes/hadronic/models/low_energy/src/G4LElastic.cc \
 	   ${_geant4_source_dir}/source/processes/hadronic/models/low_energy/src/G4LElastic.cc-buggy
 	cp ${bxiw_app_installer_prefix}/resources/9.6.4/G4LElastic.cc \
 	   ${_geant4_source_dir}/source/processes/hadronic/models/low_energy/src/G4LElastic.cc
 
-	bxiw_message "info" "Fix file 'G4GMocrenIO.cc.cc'"
+	bxiw_message "info" "Fix file 'G4GMocrenIO.cc'"
 	mv ${_geant4_source_dir}/source/visualization/gMocren/src/G4GMocrenIO.cc \
 	   ${_geant4_source_dir}/source/visualization/gMocren/src/G4GMocrenIO.cc-buggy
 	cp ${bxiw_app_installer_prefix}/resources/9.6.4/G4GMocrenIO.cc \
 	   ${_geant4_source_dir}/source/visualization/gMocren/src/G4GMocrenIO.cc
+	
+	bxiw_message "info" "Fix file 'G4tgrEvaluator.cc'"
+	if [ ! -f ${_geant4_source_dir}/source/persistency/ascii/src/G4tgrEvaluator.cc-buggy ]; then
+	    mv -f ${_geant4_source_dir}/source/persistency/ascii/src/G4tgrEvaluator.cc \
+	       ${_geant4_source_dir}/source/persistency/ascii/src/G4tgrEvaluator.cc-buggy
+	    cp -f ${bxiw_app_installer_prefix}/resources/9.6.4/G4tgrEvaluator.cc \
+	       ${_geant4_source_dir}/source/persistency/ascii/src/G4tgrEvaluator.cc
+	fi
     fi
 
     cd ${bxiw_build_dir}
     bxiw_message "info" "GEANT4 build directory is        : '${bxiw_build_dir}'"
     bxiw_message "info" "GEANT4 tag directory is          : '${bxiw_tag_dir}'"
-    bxiw_message "info" "GEANT4 installation directory is : '${bxiw_install_dir}'"
+    bxiw_message "info" "GEANT4 installation directory is : '${bxiw_install_dir}'"      
     
     # Configuration:
     local _geant4_do_config=false
@@ -526,9 +535,14 @@ function geant4_installer_install()
 	    -DGEANT4_USE_OPENGL_X11=ON \
 	    ${_geant4_xercesc_opt} \
 	    ${_geant4_mt_opts} \
+	    -fpermissive \
 	    -Wno-dev \
 	    -G Ninja \
 	    ${_geant4_source_dir}
+	
+	    # -Wno-deprecated-copy 
+	    # -Wno-deprecated-declarations 
+	    # -Wno-overloaded-virtual 
 	if [ $? -ne 0 ]; then
 	    bxiw_message "error" "GEANT4 configuration failed!"
 	    cd ${_geant4_opwd}
