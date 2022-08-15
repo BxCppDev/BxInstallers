@@ -9,15 +9,16 @@ bxiw_app_name="root_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="root"
-bxiw_default_package_version="6.26.02"
-bxiw_supported_package_versions="6.26.02 6.20.04 6.16.00 6.12.06"
+bxiw_default_package_version="6.26.06"
+bxiw_supported_package_versions="6.26.06 6.26.02 6.20.04 6.16.00 6.12.06"
 bxiw_package_version=
 bxiw_system_install=false
 
 root_system_tbb=false
 root_with_python=false
 root_cxx_options=""
-
+root_with_xrootd=true
+root_with_builtin_xrootd=true
 
 
 bxiw_message "info" "Autodetected #procs = ${bxiw_nbprocs}"
@@ -40,16 +41,21 @@ Options:
 EOF
     _bxiw_usage_options
     cat<<EOF
-  --system-tbb         Use system TBB
-  --with-python        Build Python binding
-  --cxx11              Use C++11 (not for recent versions of ROOT)
-  --cxx14              Use C++14
-  --cxx17              Use C++17
-  --cxx17              Use C++20
+  --system-tbb             Use system TBB
+  --with-python            Build Python binding
+  --without-python         Do not build Python binding
+  --with-xrootd            Build XRootd binding
+  --without-xrootd         Do not build XRootd binding
+  --with-buildin-xrootd    Use buildin XRootd
+  --without-buildin-xrootd Do not use buildin XRootd
+  --cxx11                  Use C++11 (not for recent versions of ROOT)
+  --cxx14                  Use C++14
+  --cxx17                  Use C++17
+  --cxx17                  Use C++20
 
 Examples:
 
-   root_installer --package-version 6.26.02 --cxx17
+   root_installer --package-version 6.26.06 --cxx14 --without-buildin-xrootd
 
 EOF
     echo ""
@@ -72,6 +78,17 @@ function root_installer_parse_cl()
                 root_with_python=true
             elif [ ${opt} = "--without-python" ]; then
                 root_with_python=false
+            elif [ ${opt} = "--with-xrootd" ]; then
+                root_with_xrootd=true
+                root_with_buildin_xrootd=true
+            elif [ ${opt} = "--without-xrootd" ]; then
+                root_with_xrootd=false
+            elif [ ${opt} = "--with-buildin-xrootd" ]; then
+                root_with_xrootd=true
+                root_with_buildin_xrootd=true
+            elif [ ${opt} = "--without-buildin-xrootd" ]; then
+                root_with_xrootd=true
+                root_with_buildin_xrootd=false
             elif [ ${opt} = "--cxx11" ]; then
 		root_cxx_options="-DCMAKE_CXX_STANDARD=11"
             elif [ ${opt} = "--cxx14" ]; then
@@ -195,8 +212,11 @@ function root_installer_get_tarball()
     local _root_patch=""
     if [ "x${_root_version}" = "x6.16.00" ]; then
         echo "root_v${_root_version}.source.tar.gz"
-    elif [ "x${_root_version}" = "x6.26.02" ]; then
+    elif [ "x${_root_version}" = "x6.26.06" ]; then
         echo "root_v${_root_version}.source.tar.gz"
+	# elif [ "x${_root_version}" = "x6.26.02" ]; then
+	#     2022-08-05 FM : Checksum on XROOTD tarball is broken now !!!
+	#     echo "root_v${_root_version}.source.tar.gz"
     elif [ "x${_root_version}" = "x6.12.06" ]; then
         echo "root_v${_root_version}.source.tar.gz"
     elif [ "x${_root_version}" = "x6.20.04" ]; then
@@ -263,6 +283,7 @@ function root_installer_set_system_dependencies()
         if [ ${bxiw_with_gui} == true ]; then
             bxiw_system_packages_build="${bxiw_system_packages_build} yad"
         fi
+
         bxiw_system_packages_run="\
                     libfreetype6-dev \
                     libgsl-dev gsl-bin \
@@ -301,14 +322,28 @@ function root_installer_set_system_dependencies()
 	    bxiw_system_packages_run="${bxiw_system_packages_run} libgl2ps-dev" 
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libgl2ps-dev" 
 	fi
+	
 	if [ ${root_with_python} == true ]; then
-            bxiw_system_packages_run="${bxiw_system_packages_run} python python-dev libpython2.7 libpython2.7-dev python-numpy-dev"	    
-            bxiw_system_packages_build="${bxiw_system_packages_build} python python-dev libpython2.7 libpython2.7-dev python-numpy-dev"	    
+            if [ "x${bxiw_os_distrib_release}" = "x22.04" ]; then
+		bxiw_system_packages_run="${bxiw_system_packages_run}     python2-dev libpython2.7 libpython2.7-dev python3-numpy"
+		bxiw_system_packages_build="${bxiw_system_packages_build} python2-dev libpython2.7 libpython2.7-dev python3-numpy"
+	    else
+		bxiw_system_packages_run="${bxiw_system_packages_run}     python python-dev libpython2.7 libpython2.7-dev python-numpy-dev"
+		bxiw_system_packages_build="${bxiw_system_packages_build} python python-dev libpython2.7 libpython2.7-dev python-numpy-dev"
+	    fi
 	fi
+	
         if [ ${root_system_tbb} == true ]; then
             bxiw_system_packages_build="${bxiw_system_packages_build} libtbb-dev libtbb2-dbg"   
             bxiw_system_packages_run="${bxiw_system_packages_run}     libtbb-dev libtbb2-dbg"   
         fi
+	
+	if [ ${root_with_xrootd} == true ]; then
+	    if [ ${root_with_builtin_xrootd} == false ]; then
+		bxiw_system_packages_run="${bxiw_system_packages_run} libxrootd-dev libxrootd-client-dev libxrootd-private-dev libxrootd-server-dev" 
+		
+	    fi
+	fi
 
         if [ "x${bxiw_os_distrib_release}" = "x16.04" ]; then
             # bxiw_system_packages_build="${bxiw_system_packages_build} libpng12-0 libpng12-dev"
@@ -346,6 +381,7 @@ function root_installer_set_system_dependencies()
         fi
     elif [ "x${bxiw_os_distrib_id}" = "xCentOS" -o "x${bxiw_os_distrib_id}" = "xScientific" ]; then
         bxiw_system_packages_build="cmake \
+		    dpkg-dev\
                     ninja-build \
                     make \
                     wget \
@@ -390,10 +426,19 @@ function root_installer_set_system_dependencies()
                     libxml2-devel \
                     gsl-static \
                     "
+
 	if [ ${root_with_python} == true ]; then
             bxiw_system_packages_run="${bxiw_system_packages_run} python python-devel python-numpy-devel"	    
             bxiw_system_packages_build="${bxiw_system_packages_build} python python-devel python-numpy-devel"	    
 	fi
+	
+	# if [ ${root_with_xrootd} == true ]; then
+	#     if [ ${root_with_builtin_xrootd} == false ]; then
+	# 	bxiw_system_packages_run="${bxiw_system_packages_run} libxrootd-devel libxrootd-client-devel libxrootd-private-devel libxrootd-server-devel" 
+		
+	#     fi
+	# fi
+	
         bxiw_pass
     fi
     return 0
@@ -452,6 +497,14 @@ function root_installer_install()
     bxiw_message "info" "ROOT build directory is        : '${bxiw_build_dir}'"
     bxiw_message "info" "ROOT tag directory is          : '${bxiw_tag_dir}'"
     bxiw_message "info" "ROOT installation directory is : '${bxiw_install_dir}'"
+
+    # Patch (fixes on commit b1d6c06fa but not before > 6.26.06)
+    if [ ! -f ${_root_source_dir}/math/vecops/inc/ROOT/RVec.hxx.orig ]; then
+	mv -f ${_root_source_dir}/math/vecops/inc/ROOT/RVec.hxx \
+	   ${_root_source_dir}/math/vecops/inc/ROOT/RVec.hxx.orig
+	cp -f ${bxiw_app_installer_prefix}/resources/local_patches/RVec.hxx \
+	   ${_root_source_dir}/math/vecops/inc/ROOT/RVec.hxx
+    fi
     
     # Configuration:
     local _root_do_config=false
@@ -473,9 +526,14 @@ function root_installer_install()
         else
             tbb_opts="-Dbuiltin_tbb=ON"
         fi
+        bxiw_message "info" "ROOT Python configuration..."
 	python_opts=
 	if [ ${root_with_python} = true ]; then
-	    python_opts="-Dpython=ON" 
+	    if [ "${bxiw_package_version}" \< "6.26.06" ]; then
+		python_opts="-Dpython=ON"
+	    else
+		python_opts="-Dpyroot=ON"
+	    fi
 	    python_opts="${python_opts} -DPYTHON_EXECUTABLE=$(which python2)" 
 	    _python_version=$(python2 --version 2>&1 | cut -d' ' -f2)
 	    _python_short_version=$(echo ${_python_version} | cut -d. -f1,2)
@@ -483,33 +541,46 @@ function root_installer_install()
 	    python_opts="${python_opts} -DPYTHON_LIBRARY=$(python2-config --prefix)/lib/libpython${_python_short_version}.so" 
 
             # -DPYTHON_EXECUTABLE="$(which python2)" \
-            # -DPYTHON_INCLUDE_DIR="/usr/include/python2.7" \
-            # -DPYTHON_LIBRARY="/usr/lib/x86_64-linux-gnu/libpython2.7.so" 
+		# -DPYTHON_INCLUDE_DIR="/usr/include/python2.7" \
+		# -DPYTHON_LIBRARY="/usr/lib/x86_64-linux-gnu/libpython2.7.so"
+	else
+	    if [ "${bxiw_package_version}" \< "6.26.06" ]; then
+		python_opts="-Dpython=OFF" 
+	    else
+		python_opts="-Dpyroot=OFF" 
+	    fi
 	fi
-	if [ "${bxiw_package_version}" <= "6.16.00" ]; then
+
+	bxiw_message "info" "=======> python_opts=${python_opts}"
+
+	if [ "${bxiw_package_version}" \< "6.16.01" ]; then
 	    if [ "x${root_cxx_options}" = "x" ]; then
 		root_cxx_options="-Dcxx11=ON"
 	    fi
 	fi
+
+        xrootd_options="-Dxrootd=OFF"
+	if [ ${root_with_xrootd} = true ]; then
+            xrootd_options="-Dxrootd=ON"
+	fi
+	if [ ${root_with_builtin_xrootd} = true ]; then
+	    xrootd_options="${xrootd_options} -Dbuiltin_xrootd=ON"
+	else
+	    xrootd_options="${xrootd_options} -Dbuiltin_xrootd=OFF"
+	fi
+
 	bxiw_message "info" "ROOT CXX options=${root_cxx_options}"
         cmake  \
             -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
             -DCMAKE_BUILD_TYPE:STRING="Release" \
             -Dalien=OFF \
             -Dastiff=OFF \
-            -Dbonjour=OFF \
-            -Dcastor=OFF \
-            -Dchirp=OFF \
             -Ddavix=OFF \
             -Ddcache=OFF \
             -Dfitsio=OFF \
             -Dfortran=OFF \
             -Dgfal=OFF \
-            -Dglite=OFF \
             -Dgviz=OFF \
-            -Dhdfs=OFF \
-            -Dkrb5=OFF \
-            -Dldap=OFF \
             -Dmonalisa=OFF \
             -Dmysql=OFF \
             -Dodbc=OFF \
@@ -518,9 +589,6 @@ function root_installer_install()
             -Dpythia6=OFF \
             -Dpythia8=OFF \
             -Dqt=OFF \
-            -Drfio=OFF \
-            -Dsapdb=OFF \
-            -Dsrp=OFF \
             -Dunuran=OFF \
             -Dfail-on-missing=ON \
             -Dgnuinstall=ON \
@@ -540,9 +608,9 @@ function root_installer_install()
             ${tbb_opts} \
             -Dsqlite=ON \
             -Dssl=ON \
+            -Dtmva=OFF \
             -Dmathmore=ON \
-            -Dxrootd=ON \
-            -Dbuiltin_xrootd=ON \
+            ${xrootd_options} \
             -Dvdt=OFF \
              ${python_opts} \
              -G Ninja \
