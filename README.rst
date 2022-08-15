@@ -3,7 +3,7 @@ BxInstallers
 ===================================
 
 :author: F.Mauger <mauger@lpccaen.in2p3.fr>
-:date: 2022-04-05
+:date: 2022-08-15
 
 
 BxInstallers (https://github.com/BxCppDev/BxInstallers)  provides some
@@ -13,7 +13,7 @@ development and use of the Bayeux library.
 
 It is mainly useful for  testing and tuning the installation procedure
 of some  third party software I  need, mostly on Ubuntu  Linux (18.04,
-20.04,  22.04 coming  soon), but  it may  work on  CentOS (not  really
+20.04,  22.04), but  it may  work on  CentOS (not  really
 tested).
 
 BxInstallers does not aim to  compete with industrial strength package
@@ -248,7 +248,7 @@ run on Ubuntu before the build stage (need some *sudo* access).
       $ cd ../BxClhepInstaller/
       $ ./clhep_installer --package-version "2.1.3.1"
       $ cd ../BxRootInstaller/
-      $ ./root_installer --package-version 6.16.00 
+      $ ./root_installer --package-version 6.26.06 --with-python --with-xrootd --without-buildin-xrootd  
    ..
 
 
@@ -318,11 +318,13 @@ CLHEP installation
 ROOT installation
 ---------------------
 
+Ubuntu 22.04:
+
 .. code:: shell
 
    $ cd ../BxRootInstaller/
-   $ ./root_installer --package-version "6.16.00"
-   $ ls -l ${BX_CONFIG_DIR}/modules/root@6.16.00.bash
+   $ ./root_installer --package-version "6.26.06" --cxx14 --with-python --with-xrootd --without-buildin-xrootd --nprocs 4
+   $ ls -l ${BX_CONFIG_DIR}/modules/root@6.26.06.bash
 ..
 
 
