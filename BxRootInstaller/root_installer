@@ -806,8 +806,6 @@ fi
 # bxiw_message "info" "fixed: #procs = ${bxiw_nbprocs}"
 # bxiw_exit 0
 
-
-
 root_installer_prepare
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Preparation failed!"
