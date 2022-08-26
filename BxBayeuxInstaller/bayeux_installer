@@ -337,15 +337,23 @@ function bayeux_installer_prepare()
 		bxiw_log_error "CAMP directory '${bayeux_camp_prefix}' does not exist!"
 		return 1
 	    fi
+	else               
+	   bayeux_camp_dir="/usr/lib/x86_64-linux-gnu/cmake/camp"
 	fi
-	if [ "x${bayeux_camp_prefix}" != "x" ]; then
-	    if [ ! -d ${bayeux_camp_prefix} ]; then
-		bxiw_log_error "CAMP installation directory '${bayeux_camp_prefix}' does not exist!"
-		return 1
+	if [ "x${bayeux_camp_dir}" = "x" ]; then
+	    if [ "x${bayeux_camp_prefix}" != "x" ]; then
+		if [ ! -d ${bayeux_camp_prefix} ]; then
+		    bxiw_log_error "CAMP installation directory '${bayeux_camp_prefix}' does not exist!"
+		    return 1
+		fi
 	    fi
+	    bayeux_camp_dir="${bayeux_camp_prefix}/lib/camp/cmake"
 	fi
-	bayeux_camp_dir="${bayeux_camp_prefix}/lib/camp/cmake"
+    else
+	bxiw_log_info "CAMP dir='${bayeux_camp_dir}'"
     fi
+    bxiw_log_info "CAMP prefix='${bayeux_camp_prefix}'"
+    bxiw_log_info "CAMP dir='${bayeux_camp_dir}'"
 
     if [ ! -d ${bayeux_camp_dir} ]; then
 	bxiw_log_error "CAMP CMake directory '${bayeux_camp_dir}' does not exist!"
@@ -605,7 +613,7 @@ function bayeux_installer_set_system_dependencies()
 	if [ ${bayeux_no_system_boost} == false -a "x${bayeux_boost_root}" = "x" ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libboost-all-dev"
 	fi
-	if [ "x${bxiw_os_distrib_release}" = "x20.04" ]; then
+	if [ "x${bxiw_os_distrib_release}" = "x20.04" -o "x${bxiw_os_distrib_release}" = "x22.04" ]; then
 	    if [ ${bayeux_no_system_camp} == false -a "x${bayeux_camp_prefix}" = "x" ]; then
 		bxiw_system_packages_build="${bxiw_system_packages_build} libcamp-dev"
 	    fi
@@ -619,9 +627,13 @@ function bayeux_installer_set_system_dependencies()
       		    libqt5svg5-dev \
 		    libqt5widgets5 \
 		    qtbase5-dev  \
-		    qtbase5-dev-tools \
+		    qtbase5-dev-tools
+		    "
+	    if [ "x${bxiw_os_distrib_release}" \< "x22.04" ]; then
+		bxiw_system_packages_build="${bxiw_system_packages_build} \
        		    qt5-default \
 		    "
+	    fi
 	fi
 	if [ ${bayeux_with_docs} == true ]; then
 	    bxiw_system_packages_build="${bxiw_system_packages_build} \
@@ -629,7 +641,7 @@ function bayeux_installer_set_system_dependencies()
 		texlive-latex-base \
 		pandoc \
 		pandoc-data \
-		docutils-common docutils-doc python-docutils \
+		docutils-common docutils-doc \
 		rst2pdf \
 		"
 	fi
@@ -790,8 +802,42 @@ function bayeux_installer_install()
     bxiw_log_info "Bayeux tag directory is          : '${bxiw_tag_dir}'"
     bxiw_log_info "Bayeux installation directory is : '${bxiw_install_dir}'"
 
-    # return 1
 
+    if [ "x${bxiw_package_version}" \< "x3.5.4" ]; then
+	
+	# Patch for ROOT 6.XX CMake script:
+	if [ ! -f ${_bayeux_source_dir}/cmake/BayeuxDependencies.cmake.orig ]; then
+	    mv -f ${_bayeux_source_dir}/cmake/BayeuxDependencies.cmake \
+	       ${_bayeux_source_dir}/cmake/BayeuxDependencies.cmake.orig
+	    cp -f ${bxiw_app_installer_prefix}/resources/local_patches/BayeuxDependencies.cmake \
+	       ${_bayeux_source_dir}/cmake/BayeuxDependencies.cmake
+	fi
+
+	# Patch for missing Boost header (Boost <= 1.74? with g++-11 @ Ubuntu22.04):
+	if [ ! -f ${_bayeux_source_dir}/source/bxdatatools/include/datatools/properties.ipp.orig ]; then
+	    mv -f ${_bayeux_source_dir}/source/bxdatatools/include/datatools/properties.ipp \
+	       ${_bayeux_source_dir}/source/bxdatatools/include/datatools/properties.ipp.orig
+	    cp -f ${bxiw_app_installer_prefix}/resources/local_patches/properties.ipp \
+	       ${_bayeux_source_dir}/source/bxdatatools/include/datatools/properties.ipp
+	fi
+
+	# Patch for missing Boost header (Boost <= 1.74? with g++-11 @ Ubuntu22.04):
+	if [ ! -f ${_bayeux_source_dir}/source/bxdatatools/include/datatools/things.ipp.orig ]; then
+	    mv -f ${_bayeux_source_dir}/source/bxdatatools/include/datatools/things.ipp \
+	       ${_bayeux_source_dir}/source/bxdatatools/include/datatools/things.ipp.orig
+	    cp -f ${bxiw_app_installer_prefix}/resources/local_patches/things.ipp \
+	       ${_bayeux_source_dir}/source/bxdatatools/include/datatools/things.ipp
+	fi
+
+	# Patch for Bayeux 3.5.3 bug:
+	if [ ! -f ${_bayeux_source_dir}/source/bxgeomtools/src/rotated_boxed_model.cc.orig ]; then
+	    mv -f ${_bayeux_source_dir}/source/bxgeomtools/src/rotated_boxed_model.cc \
+	       ${_bayeux_source_dir}/source/bxgeomtools/src/rotated_boxed_model.cc.orig
+	    cp -f ${bxiw_app_installer_prefix}/resources/local_patches/rotated_boxed_model.cc \
+	       ${_bayeux_source_dir}/source/bxgeomtools/src/rotated_boxed_model.cc
+	fi
+    fi
+    
     # Configuration:
     local _bayeux_do_config=false
     if [ ! -f ${bxiw_tag_configured} ]; then
@@ -860,7 +906,7 @@ function bayeux_installer_install()
 	local _qt_option4=
 	if [ ${bayeux_with_qt} = true ]; then
 	    _qt_option0="-DBAYEUX_WITH_QT_GUI=ON"
-	    _qt_option1="-DQt5Core_DIR=${bayeux_qt5core_dir}"
+	    #_qt_option1="-DQt5Core_DIR=${bayeux_qt5core_dir}"
 	    _qt_option2="-DQt5Gui_DIR=${bayeux_qt5gui_dir}"
 	    _qt_option3="-DQt5Widgets_DIR=${bayeux_qt5widgets_dir}"
 	    _qt_option4="-DQt5Svg_DIR=${bayeux_qt5svg_dir}"
@@ -890,11 +936,15 @@ function bayeux_installer_install()
 	if [ ${bayeux_with_werror} = false ]; then
 	    local _werror="OFF"
 	fi
+
+        local _cxx_std_option="-DCMAKE_CXX_STANDARD=${bayeux_cxx_std}"
+	
 	echo >&2 "[info] bayeux_with_werror=${bayeux_with_werror}"
 	echo >&2 "[info] _werror=${_werror}"
 	cmake \
 	    -DCMAKE_BUILD_TYPE:STRING="Release" \
  	    -DCMAKE_INSTALL_PREFIX:PATH="${bxiw_install_dir}" \
+	    ${_cxx_std_option} \
 	    ${_boost_options} \
 	    ${_camp_options} \
 	    ${_clhep_options} \

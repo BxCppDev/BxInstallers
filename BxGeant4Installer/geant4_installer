@@ -535,11 +535,11 @@ function geant4_installer_install()
 	    -DGEANT4_USE_OPENGL_X11=ON \
 	    ${_geant4_xercesc_opt} \
 	    ${_geant4_mt_opts} \
-	    -fpermissive \
 	    -Wno-dev \
 	    -G Ninja \
 	    ${_geant4_source_dir}
 	
+	    # -fpermissive 
 	    # -Wno-deprecated-copy 
 	    # -Wno-deprecated-declarations 
 	    # -Wno-overloaded-virtual 

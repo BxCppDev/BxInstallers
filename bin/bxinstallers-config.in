@@ -46,6 +46,10 @@ EOF
 
 function appParseOptions()
 {
+    if [ "x$1" = "x" ]; then
+	appUsage
+	appExit 2 "Missing option!"
+    fi
     while [ -n "$1" ]; do
 	local _token="$1"
 	test ${appDebug} = true && echo >&2 "[debug] token='${_token}'"
