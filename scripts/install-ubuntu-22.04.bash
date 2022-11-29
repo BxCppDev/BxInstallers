@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-do_bayeux=false
+# Author: F.Mauger
+# Date: 2022-11-29
+# Description:
+# A script which should build, install and setup Bayeux and its dependencies
+# on Ubuntu 22.04.
+
+do_bayeux=true
 bx_base_dir=
 
 while [ -n "$1" ]; do
@@ -8,8 +14,8 @@ while [ -n "$1" ]; do
     if [ "${arg}" = "--base-dir" ]; then
 	shift 1
 	bx_base_dir="$1"
-    elif [ "${arg}" = "--bayeux" ]; then
-	do_bayeux=true
+    elif [ "${arg}" = "--no-bayeux" ]; then
+	do_bayeux=false
     fi
     shift 1
 done
