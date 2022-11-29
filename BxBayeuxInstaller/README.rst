@@ -68,11 +68,11 @@ For Bayeux >= 3.5.3, you should first setup :
 
 .. code:: bash
 
-   $ bxdecay0_setup
+   $ bxdecay0_1_1_0_setup
    $ clhep_2_1_4_2_setup
    $ g4datasets_9_6_4_setup
    $ geant4_9_6_4_setup
-   $ root_6_16_00_setup					
+   $ root_6_26_06_setup					
 ..
 
 
