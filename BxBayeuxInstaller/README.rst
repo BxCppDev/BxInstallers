@@ -5,15 +5,16 @@ Bayeux installation
 :author: F.Mauger <mauger@lpccaen.in2p3.fr>
 :date: 2022-11-29
 
-Bayeux installer for Ubuntu provided by the Bayeux development group.
-
-Default Bayeux version: 3.4.4
-Supported versions: 3.4.0 3.4.1 3.4.2 3.4.3 3.4.4 3.5.0
+* Bayeux installer for Ubuntu provided by the Bayeux development group.
+* Default Bayeux version: 3.5.3 (with scripted patches)
+* Supported versions: 3.4.0 3.4.1 3.4.2 3.4.3 3.4.4 3.5.0 3.5.1 3.5.2 3.5.3
+* Coming soon: 3.5.4
 
 Requirements
 ============
 
-None.
+* A recent Unix/BSD/Linux based system,
+* See software dependencies below.
 
 Usage
 ======
