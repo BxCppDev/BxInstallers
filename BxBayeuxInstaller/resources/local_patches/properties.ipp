@@ -12,8 +12,11 @@
 #include <boost/serialization/base_object.hpp>
 // 2022-08-16 FM:
 // Boost 1.74 : fix missing header in 'boost/serialization/list.hpp'
-// This is fixed in recent official Boost versions.
+// This is fixed in recent official Boost versions (>=1.75).
+#include <boost/version.hpp>
+#if BOOST_VERSION == 107400
 #include <boost/serialization/library_version_type.hpp>
+#endif
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/nvp.hpp>

@@ -168,8 +168,9 @@ namespace geomtools {
     DT_THROW_IF (! models_, std::logic_error, "Missing dictionary of models!");
     // Boxed model:
     {
-      models_col_type::const_iterator found = models_->find(boxed_model_name);
+      models_col_type::const_iterator found = models_->find (boxed_model_name);
       i_model * the_model = nullptr;
+      // 2022-08-16 FM: fix crappy test on ptr
       DT_THROW_IF (found == models_->end(), std::logic_error,
                    "No model named '" << boxed_model_name << "' has been found!");
       the_model = found->second;
