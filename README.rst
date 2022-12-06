@@ -3,7 +3,7 @@ BxInstallers
 ===================================
 
 :author: F.Mauger <mauger@lpccaen.in2p3.fr>
-:date: 2022-08-15
+:date: 2022-12-06
 
 
 BxInstallers (https://github.com/BxCppDev/BxInstallers)  provides some
