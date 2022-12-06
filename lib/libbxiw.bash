@@ -212,7 +212,7 @@ function bxiw_detect_os()
 function bxiw_underscored_version()
 {
     local _ver="$1"
-    local _uver=$(echo ${_ver} | tr '.' '_' | tr -d 'v' | tr -d 'p')
+    local _uver=$(echo ${_ver} | tr '.' '_' | tr '-' '_' | sed -e 's/-v/_/g' -e 's/-p/_/g')
     echo ${_uver}
     return 0
 }

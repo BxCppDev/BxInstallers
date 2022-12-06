@@ -29,6 +29,9 @@ Usage (from the BxInstallers source directory only):
   $ ./scripts/install-ubuntu-22.04.bash --bayeux-version 3.5.3 --base-dir /opt/sw/BxSoftware 
      build, install and setup Bayeux in a dedicated directory
 
+  $ ./scripts/install-ubuntu-22.04.bash --bayeux-version 3.5.4-alpha --base-dir /opt/sw/BxSoftware 
+     build, install and setup Bayeux pre-release in a dedicated directory
+
   $ ./scripts/install-ubuntu-22.04.bash --no-bayeux --base-dir /opt/sw/BxSoftware 
      build, install and setup Bayeux's dependencies only in a dedicated directory
 
@@ -182,7 +185,7 @@ if [ ${do_bayeux} = true ]; then
     fi
     if [ -f ${BX_CONFIG_DIR}/modules/bayeux@${bayeux_version}.bash ]; then
 	source ${BX_CONFIG_DIR}/modules/bayeux@${bayeux_version}.bash
-	bayeuxVersionUnderscored=$(echo ${bayeux_version} | tr '.' '_')
+	bayeuxVersionUnderscored=$(echo ${bayeux_version} | tr '.' '_' | tr '-' '_')
 	bayeux_${bayeuxVersionUnderscored}_setup
     fi
 fi
