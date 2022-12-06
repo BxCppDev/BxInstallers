@@ -12,7 +12,7 @@ bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="bayeux"
 bxiw_default_package_version="3.5.3"
-bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4 3.5.0 3.5.1 3.5.2 3.5.3"
+bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4 3.5.0 3.5.1 3.5.2 3.5.3 3.5.4-alpha"
 bxiw_package_version=
 bxiw_source_git_path="https://github.com/BxCppDev/Bayeux"
 bxiw_source_git_branch="develop"
@@ -98,6 +98,7 @@ cat<<EOF
 
 Example:
 
+   $ ./bayeux_installer --package-version 3.5.4-alpha --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
    $ ./bayeux_installer --package-version 3.5.3 --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
    $ ./bayeux_installer --source-from-git --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
 
@@ -567,6 +568,8 @@ function bayeux_installer_get_url()
     elif [ "${_bayeux_version}" == "3.5.2" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.3" ]; then
+	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
+    elif [ "${_bayeux_version}" == "3.5.4-alpha" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.4" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
@@ -1190,6 +1193,8 @@ bayeux_installer_prepare
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Preparation failed!"
 fi
+
+# bxiw_exit 1
 
 bayeux_installer_set_system_dependencies
 
