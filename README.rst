@@ -59,16 +59,19 @@ BxInstallers comes with some useful scripts that can be reused in some
 other context.  It  is thus possible to install theses  tools and make
 them available from other tools.
 
+From the BxInstallers' base source directory:
+
 .. code:: bash
 
    $ mkdir _build.d
    $ cd _build.d
    $ cmake -DCMAKE_INSTALL_PREFIX="/opt/sw/bxinstallers" ..
    $ make install
+   $ cd ..
 ..
 
 
-Setup the BxInstaller scripts
+Setup the BxInstallers' scripts
 --------------------------------
 
 Put the following line in your Bash startup script:
@@ -87,7 +90,7 @@ build a skeleton of a build/install script for this package:
 
 .. code:: bash
 
-   $ bxinstallers-mkskel --owner "SuperNEMO-DBD" --archive-pattern "Foo-v@PKGVERSION@.tar.gz" "Foo" "/tmp/FooInstaller"
+   $ bxinstallers-mkskel --github-owner "SuperNEMO-DBD" --archive-pattern "Foo-v@PKGVERSION@.tar.gz" "Foo" "/tmp/FooInstaller"
 ..
 
 This  creates  the  ``/tmp/FooInstaller`` directory  with  a  skeleton
@@ -203,14 +206,11 @@ shell script is also generated for further activation by the user.
 
 If some extra system packages  are required, some ``apt`` commands are
 run on Ubuntu before the build stage (need some *sudo* access).
-
-
-
   
 **Example:**
 
-#. Prepare your environment (here we  do not consider access modes for
-   simplicity):
+#. Prepare your environment : create specific working and installation
+   directories and environment variables
 
    .. code:: shell
 
@@ -225,7 +225,8 @@ run on Ubuntu before the build stage (need some *sudo* access).
       $ mkdir -p ${BX_CONFIG_DIR}
    ..
 
-   We recommend to put the following lines in your ``~/.bashrc`` startup script:
+   We  recommend to  put  the following  lines  in your  ``~/.bashrc``
+   startup script:
 
    .. code:: shell
 
@@ -235,7 +236,8 @@ run on Ubuntu before the build stage (need some *sudo* access).
       $ export BX_CONFIG_DIR="/opt/sw/BxSoftware/BxConfig"
    ..
 
-   That will make available the working paths used to build and run the Bayeux software stack.
+   That will  make available the working  paths used to build  and run
+   the Bayeux software stack.
 
 #. Install some software packages:
 
@@ -257,19 +259,27 @@ run on Ubuntu before the build stage (need some *sudo* access).
    PageBreak
 ..
 	 
-Ubuntu 20.04
+Ubuntu 22.04
 ==============
 
 This section illustrates  a typical configure-build-installation-setup
 procedure for the Bayeux library and  all its dependencies on a Ubuntu
-20.04 LTS system. We assume that *Bash* is the default shell.
+22.04 LTS system. We assume that *Bash* is the default shell.
 
-We also assume that you are in the sudoers or equivalent to allow some
-system package installation when needed.
+We also  assume that  you are  in the sudoers  group or  equivalent to
+allow some system package installation when needed.
 
 We  recommend  not  to  use  your *home*  directory  for  such  a  big
 installation but rather  to create and use some  other directory (here
-``/opt/swtest``) that does not need to be backuped.
+``/opt/sw``) that does not need to be backuped.
+
+Make a hosting directory for building and installing the software:
+
+.. code:: shell
+
+   $ sudo mkdir /opt/sw
+   $ sudo chmod 1777 /opt/sw
+..
 
 Preparation
 ---------------
@@ -279,18 +289,18 @@ variables:
 
 .. code:: shell
 
-   $ sudo mkdir -p /opt/swtest
-   $ sudo chmod 1777 /opt/swtest
-   $ mkdir -p /opt/swtest/BxSoftware
-   $ export BX_CACHE_DIR="/opt/swtest/BxSoftware/BxCache"
-   $ export BX_WORK_DIR="/opt/swtest/BxSoftware/BxWork"
-   $ export BX_INSTALL_BASE_DIR="/opt/swtest/BxSoftware/BxInstall"
-   $ export BX_CONFIG_DIR="/opt/swtest/BxSoftware/BxConfig"
+   $ sudo mkdir -p /opt/sw
+   $ sudo chmod 1777 /opt/sw
+   $ mkdir -p /opt/sw/BxSoftware
+   $ export BX_CACHE_DIR="/opt/sw/BxSoftware/BxCache"
+   $ export BX_WORK_DIR="/opt/sw/BxSoftware/BxWork"
+   $ export BX_INSTALL_BASE_DIR="/opt/sw/BxSoftware/BxInstall"
+   $ export BX_CONFIG_DIR="/opt/sw/BxSoftware/BxConfig"
    $ mkdir -p ${BX_CACHE_DIR}
    $ mkdir -p ${BX_WORK_DIR}
    $ mkdir -p ${BX_INSTALL_BASE_DIR}
    $ mkdir -p ${BX_CONFIG_DIR}
-   $ tree /opt/swtest/BxSoftware
+   $ tree /opt/sw/BxSoftware
 ..
 
 ..
@@ -310,7 +320,7 @@ CLHEP installation
 
 .. code:: shell
 
-   $ cd ../BxClhepInstaller/
+   $ cd ./BxClhepInstaller/
    $ ./clhep_installer --package-version "2.1.4.2"
    $ ls -l ${BX_CONFIG_DIR}/modules/clhep@2.1.4.2.bash
 ..
