@@ -275,6 +275,10 @@ function root_installer_set_system_dependencies()
                     libftgl-dev \
                     libglew-dev \
                     libpcre3-dev \
+		    nlohmann-json3-dev \
+		    libxxhash-dev \
+		    libzstd-dev \
+		    libgl2ps-dev \
                    "
 
         if [ ${bxiw_with_package} == true ]; then

@@ -103,9 +103,11 @@ test -d ${BX_CONFIG_DIR}       || mkdir -p ${BX_CONFIG_DIR}
 if [ ! -f ${BX_WORK_DIR}/clhep-2.1.4.2/tag.d/installed.tag ]; then
     echo >&2 "[info] installing CLHEP..."
     cd BxClhepInstaller
-    ./clhep_installer \
+    bash ./clhep_installer \
 	--package-version "2.1.4.2"
     cd ..
+else
+    echo >&2 "[info] CLHEP seems already installed."
 fi
 if [ -f ${BX_CONFIG_DIR}/modules/clhep@2.1.4.2.bash ]; then
     echo >&2 "[info] setup CLHEP..."
@@ -117,12 +119,14 @@ fi
 if [ ! -f ${BX_WORK_DIR}/root-6.26.06/tag.d/installed.tag ]; then
     echo >&2 "[info] installing ROOT..."
     cd BxRootInstaller
-    ./root_installer \
+    bash ./root_installer \
 	--package-version "6.26.06" \
 	--cxx14 \
 	--with-python \
 	--with-xrootd --without-buildin-xrootd
     cd ..
+else
+    echo >&2 "[info] ROOT seems already installed."
 fi
 if [ -f ${BX_CONFIG_DIR}/modules/root@6.26.06.bash ]; then
     echo >&2 "[info] setup ROOT..."
@@ -134,9 +138,11 @@ fi
 if [ ! -f ${BX_WORK_DIR}/g4datasets-9.6.4/tag.d/installed.tag ]; then
     echo >&2 "[info] installing G4 datasets..."
     cd BxGeant4DatasetsInstaller/
-    ./g4datasets_installer \
+    bash ./g4datasets_installer \
 	--package-version "9.6.4" 
     cd ..
+else
+    echo >&2 "[info] Geant4 datasets seem already installed."
 fi
 if [ -f ${BX_CONFIG_DIR}/modules/g4datasets@9.6.4.bash ]; then
     echo >&2 "[info] setup G4 datasets..."
@@ -148,9 +154,11 @@ fi
 if [ ! -f ${BX_WORK_DIR}/geant4-9.6.4/tag.d/installed.tag ]; then
     echo >&2 "[info] installing Geant4..."
     cd BxGeant4Installer/
-    ./geant4_installer \
+    bash ./geant4_installer \
 	--package-version "9.6.4" 
     cd ..
+else
+    echo >&2 "[info] Geant4 seems already installed."
 fi
 if [ -f ${BX_CONFIG_DIR}/modules/geant4@9.6.4.bash ]; then
     echo >&2 "[info] setup Geant4..."
@@ -161,9 +169,11 @@ fi
 # BxDecay0:
 if [ ! -f ${BX_WORK_DIR}/bxdecay0-1.1.0/tag.d/installed.tag ]; then
     cd BxDecay0Installer/
-    ./bxdecay0_installer \
+    bash ./bxdecay0_installer \
 	--package-version "1.1.0" 
     cd ..
+else
+    echo >&2 "[info] BxDecay0 seems already installed."
 fi
 if [ -f ${BX_CONFIG_DIR}/modules/bxdecay0@1.1.0.bash ]; then
     source ${BX_CONFIG_DIR}/modules/bxdecay0@1.1.0.bash
@@ -174,7 +184,7 @@ fi
 if [ ${do_bayeux} = true ]; then
     if [ ! -f ${BX_WORK_DIR}/bayeux-${bayeux_version}/tag.d/installed.tag ]; then
 	cd BxBayeuxInstaller/
-	./bayeux_installer \
+	bash ./bayeux_installer \
 	    --package-version "${bayeux_version}" \
 	    --cxx-14 \
 	    --with-qt \
@@ -182,6 +192,8 @@ if [ ${do_bayeux} = true ]; then
 	    --with-docs \
 	    --with-geant4
 	cd ..
+    else
+	echo >&2 "[info] Bayeux seems already installed."
     fi
     if [ -f ${BX_CONFIG_DIR}/modules/bayeux@${bayeux_version}.bash ]; then
 	source ${BX_CONFIG_DIR}/modules/bayeux@${bayeux_version}.bash

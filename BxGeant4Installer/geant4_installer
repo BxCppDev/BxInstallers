@@ -337,6 +337,11 @@ function geant4_installer_set_system_dependencies()
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libglu1-mesa-dev"
 	    bxiw_system_packages_build="${bxiw_system_packages_build} libglvnd-dev"
 	    bxiw_system_packages_run="${bxiw_system_packages_run} libxerces-c3.2 libglu1-mesa libglvnd0"
+	elif [ "x${bxiw_os_distrib_release}" = "x22.04" ]; then
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libxerces-c-dev" 
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libglu1-mesa-dev"
+	    bxiw_system_packages_build="${bxiw_system_packages_build} libglvnd-dev"
+	    bxiw_system_packages_run="${bxiw_system_packages_run} libxerces-c3.2 libglu1-mesa libglvnd0"
 	fi
     # elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
     # elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
