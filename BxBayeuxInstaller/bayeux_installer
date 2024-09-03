@@ -11,8 +11,8 @@ bxiw_app_name="bayeux_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="bayeux"
-bxiw_default_package_version="3.5.3"
-bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4 3.5.0 3.5.1 3.5.2 3.5.3 3.5.4-alpha"
+bxiw_default_package_version="3.5.4"
+bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4 3.5.0 3.5.1 3.5.2 3.5.3 3.5.4"
 bxiw_package_version=
 bxiw_source_git_path="https://github.com/BxCppDev/Bayeux"
 bxiw_source_git_branch="develop"
@@ -43,7 +43,7 @@ bayeux_qt5gui_dir=
 bayeux_qt5widgets_dir=
 bayeux_qt5svg_dir=
 bayeux_with_geant4=false
-bayeux_cxx_std=11
+bayeux_cxx_std=14
 bayeux_with_docs=false
 bayeux_with_devtools=true
 bayeux_with_testing=false
@@ -98,7 +98,7 @@ cat<<EOF
 
 Example:
 
-   $ ./bayeux_installer --package-version 3.5.4-alpha --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
+   $ ./bayeux_installer --package-version 3.5.4 --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
    $ ./bayeux_installer --package-version 3.5.3 --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
    $ ./bayeux_installer --source-from-git --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
 
@@ -580,8 +580,6 @@ function bayeux_installer_get_url()
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.3" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
-    elif [ "${_bayeux_version}" == "3.5.4-alpha" ]; then
-	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.4" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.5" ]; then
@@ -892,9 +890,11 @@ function bayeux_installer_install()
 	    bxiw_log_info "No Boost root"
 	fi
 	if [ ${bayeux_system_find_boost} = true ]; then
-	    if [ ! -f ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig ]; then
-		bxiw_log_info "Hidding FindBoost.cmake script..."
-	 	mv ${_bayeux_source_dir}/cmake/FindBoost.cmake ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig
+	    if [ -f ${_bayeux_source_dir}/cmake/FindBoost.cmake ]; then
+		if [ ! -f ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig ]; then
+		    bxiw_log_info "Hidding FindBoost.cmake script..."
+	 	    mv ${_bayeux_source_dir}/cmake/FindBoost.cmake ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig
+		fi
 	    fi
 	fi
 	local _camp_options=
