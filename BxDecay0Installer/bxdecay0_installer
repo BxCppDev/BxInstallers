@@ -147,7 +147,7 @@ function bxdecay0_installer_prepare()
 	if [ $? -eq 0 ]; then
 	    gsl_root="$(gsl-config --prefix)"
 	else
-	    gsl_root="/usr"
+	    gsl_root="/usr" # May work
 	fi
     fi
     bxiw_log_info "Use GSL installation dir : '${gsl_root}'"
@@ -180,8 +180,6 @@ function bxdecay0_installer_get_url()
 {
     local _bxdecay0_version="$1"
     local _bxdecay0_tarball=$(bxdecay0_installer_get_tarball ${_bxdecay0_version})
-    ### echo "https://github.com/tegesoft/bxdecay0/archive/${_bxdecay0_version}.tar.gz"
-    ### echo "https://github.com/fw4spl-org/bxdecay0/archive/${_bxdecay0_version}.tar.gz"
     echo "https://github.com/BxCppDev/bxdecay0/archive/${_bxdecay0_version}.tar.gz"
     ### https://github.com/IRCAD-IHU/bxdecay0
     return 0
