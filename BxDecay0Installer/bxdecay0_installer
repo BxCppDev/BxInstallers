@@ -9,8 +9,8 @@ bxiw_app_name="bxdecay0_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="bxdecay0"
-bxiw_default_package_version="1.1.0"
-bxiw_supported_package_versions="1.0.9 1.0.10 1.0.11 1.0.12 1.1.0" 
+bxiw_default_package_version="1.1.2"
+bxiw_supported_package_versions="1.0.9 1.0.10 1.0.11 1.0.12 1.1.0 1.1.2" 
 bxiw_package_version=
 
 gsl_root=
@@ -219,6 +219,8 @@ function bxdecay0_installer_set_system_dependencies()
     elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
 	bxiw_pass
     elif [ "x${bxiw_os_distrib_id}" = "xScientific" ]; then
+	bxiw_pass
+    else
 	bxiw_pass
     fi
     return 0
