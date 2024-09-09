@@ -6,7 +6,6 @@
 __bxiw_enable_source_from_git=false
 __bxiw_disable_package=true
 __bxiw_enable_packaging=false
-
 if [ "x${bxiw_app_name}" = "x" ]; then
     bxiw_app_name=
 fi
@@ -195,12 +194,17 @@ function bxiw_exit()
 function bxiw_detect_os()
 {
     if [ "x${bxiw_os_name}" = "xLinux" ]; then
-	if [ -f /etc/lsb-release ]; then
+	if [ -f /etc/os-release ]; then
+	    bxiw_os_distrib_id=$(grep ^NAME= /etc/os-release | cut -d= -f2 | tr -d '"')
+	    bxiw_os_distrib_release=$(grep ^VERSION_ID= /etc/os-release | cut -d= -f2 | tr -d '"')	    
+	elif [ -f /etc/lsb-release ]; then
 	    bxiw_os_distrib_id=$(grep ^DISTRIB_ID= /etc/lsb-release | cut -d= -f2)
 	    bxiw_os_distrib_release=$(grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d= -f2)
-	elif [ -f /etc/redhat-release ]; then
-	    bxiw_os_distrib_id=$(cat /etc/redhat-release | cut -d' ' -f1)
-	    bxiw_os_distrib_release=$(cat /etc/redhat-release | cut -d' ' -f4 | cut -d. -f1,2)
+	else
+	    return 1
+	# elif [ -f /etc/redhat-release ]; then
+	#     bxiw_os_distrib_id=$(cat /etc/redhat-release | cut -d' ' -f1)
+	#     bxiw_os_distrib_release=$(cat /etc/redhat-release | cut -d' ' -f4 | cut -d. -f1,2)
 	fi
     else
 	return 1

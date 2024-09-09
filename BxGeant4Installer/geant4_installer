@@ -24,6 +24,7 @@ g4_datasets_timeout=86400
 g4_xercesc_root_dir=
 g4_with_mt=false
 g4_tls_model="global-dynamic"
+g4_cxx_std=
 
 
 function geant4_installer_usage()
@@ -49,7 +50,11 @@ Options:
   --without-mt                 Build Geant4 without multithreading support     
   --tls-model MODEL            Build Geant4 with a specific TLS model (default: "global-dynamic")
   	      		       Supported values: 'initial-exec' 'local-exec' 'global-dynamic' 'local-dynamic'
-   
+   --cxx-11
+   --cxx-14
+   --cxx-17
+   --cxx-20
+
 Example:
 
   $ ./geant4_installer --package-version 11.0 --with-mt --tls-model "global-dynamic"
@@ -102,6 +107,14 @@ function geant4_installer_parse_cl()
 	    elif [ ${opt} == "--tls-model" ]; then
 		shift 1
 		g4_tls_model="$1"
+	    elif [ ${opt} = "--cxx-11" ]; then
+		g4_cxx_std="11"
+	    elif [ ${opt} = "--cxx-14" ]; then
+		g4_cxx_std="14"
+	    elif [ ${opt} = "--cxx-17" ]; then
+		g4_cxx_std="17"
+	    elif [ ${opt} = "--cxx-20" ]; then
+		g4_cxx_std="20"
 	    else
 		bxiw_message "error" "Unsupported option '${opt}'!"
 		return 1
@@ -486,16 +499,25 @@ function geant4_installer_install()
 	if [ "x${g4_xercesc_root_dir}" != "x" ]; then
 	    _geant4_xercesc_opt="-DXERCESC_ROOT_DIR=${g4_xercesc_root_dir}"
 	fi
-	local _geant4_cxxstd_opt=
-	# echo >&2 "[DEVEL] bxiw_package_version=${bxiw_package_version}"
-	if [ "${bxiw_package_version}" == "10.7" ]; then
-	    _geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=11"
-	elif [ "${bxiw_package_version}" == "11.0" ]; then
-	    # echo >&2 "[DEVEL] TEST"
-	    _geant4_cxxstd_opt="-DCMAKE_CXX_STANDARD=17"
+	# Experimental:
+	local _geant4_cxxstd_opt=""
+	if [ "x${g4_cxx_std}" != "x" ]; then
+	    if [ "${bxiw_package_version}" == "9.6.4" ]; then
+		_geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=c++${g4_cxx_std}"
+	    else
+		_geant4_cxxstd_opt="-DCMAKE_CXX_STANDARD=${g4_cxx_std} -DGEANT4_BUILD_CXXSTD=${g4_cxx_std}"
+	    fi
 	else
-	    # echo >&2 "[DEVEL] TEST2"
-	    _geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=c++11"
+	    # echo >&2 "[DEVEL] bxiw_package_version=${bxiw_package_version}"
+	    if [ "${bxiw_package_version}" == "10.7" ]; then
+		_geant4_cxxstd_opt="-DCMAKE_CXX_STANDARD=11 -DGEANT4_BUILD_CXXSTD=11"
+	    elif [ "${bxiw_package_version}" == "11.0" ]; then
+		# echo >&2 "[DEVEL] TEST"
+		_geant4_cxxstd_opt="-DCMAKE_CXX_STANDARD=17 -DGEANT4_BUILD_CXXSTD=11"
+	    else
+		# echo >&2 "[DEVEL] TEST2"
+		_geant4_cxxstd_opt="-DGEANT4_BUILD_CXXSTD=c++11"
+	    fi
 	fi
 	
 	# Only for Geant4 >= 10:

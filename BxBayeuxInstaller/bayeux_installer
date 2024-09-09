@@ -12,7 +12,7 @@ bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="bayeux"
 bxiw_default_package_version="3.5.4"
-bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4 3.5.0 3.5.1 3.5.2 3.5.3 3.5.4"
+bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4 3.5.0 3.5.1 3.5.2 3.5.3 3.5.4 3.5.5"
 bxiw_package_version=
 bxiw_source_git_path="https://github.com/BxCppDev/Bayeux"
 bxiw_source_git_branch="develop"
@@ -98,6 +98,7 @@ cat<<EOF
 
 Example:
 
+   $ ./bayeux_installer --package-version 3.5.5 --cxx-17 --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
    $ ./bayeux_installer --package-version 3.5.4 --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
    $ ./bayeux_installer --package-version 3.5.3 --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
    $ ./bayeux_installer --source-from-git --with-qt --with-bxdecay0 --with-geant4 --with-tests --with-docs
@@ -417,7 +418,7 @@ function bayeux_check_dependencies()
     fi
 
     # BxDecay0:
-    if [ ${bayeux_with_bxdecay0} = true ]; then
+    if [ ${bayeux_with_bxdecay0} = true -a ${bayeux_minimal_build} = false ]; then
 	if [ "x${bayeux_bxdecay0_dir}" = "x" ]; then
 	    which bxdecay0-config > /dev/null 2>&1
 	    if [ $? -ne 0 ]; then
@@ -498,6 +499,7 @@ function bayeux_check_dependencies()
     if [ ${bayeux_with_qt} = true ]; then
 	# Qt5:
 	if [ ${bayeux_no_system_qt} == true ]; then
+	    bxiw_log_info "Not using system Qt5..."
 	    if [ "x${bayeux_qt5_prefix}" = "x" ]; then
 		bxiw_log_error "Missing Qt5 installation directory (please use switch: --qt5-prefix path)!"
 		return 1
@@ -507,18 +509,35 @@ function bayeux_check_dependencies()
 		return 1
 	    fi
 	    bxiw_log_info "Using Qt5 from directory: '${bayeux_qt5_prefix}'"
-	    bayeux_qt5_dir="${bayeux_qt5_prefix}/lib/cmake"
+	    if [ -d "${bayeux_qt5_prefix}/lib/cmake/Qt5Core" ]; then
+		bayeux_qt5_dir="${bayeux_qt5_prefix}/lib/cmake"
+	    elif [ -d "${bayeux_qt5_prefix}/lib64/cmake/Qt5Core" ]; then
+		bayeux_qt5_dir="${bayeux_qt5_prefix}/lib64/cmake"
+	    elif [ -d "${bayeux_qt5_prefix}/x86_64-linux-gnu/cmake/Qt5Core" ]; then
+		bayeux_qt5_dir="${bayeux_qt5_prefix}/x86_64-linux-gnu/cmake"
+	    fi
 	else
+	    bxiw_log_info "Using system Qt5..."	    
 	    if [ "x${bxiw_os_name}" = "xLinux" ]; then
 		if [[ "x${bxiw_os_distrib_id}" = "xUbuntu" || "x${bxiw_os_distrib_id}" = "xLinuxMint" ]]; then
 		    bayeux_qt5_prefix="/usr"
 		    bayeux_qt5_dir="${bayeux_qt5_prefix}/lib/x86_64-linux-gnu/cmake"
-        elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
+		elif [ "x${bxiw_os_distrib_id}" = "xCentOS" ]; then
 		    bayeux_qt5_prefix="/usr"
 		    bayeux_qt5_dir="${bayeux_qt5_prefix}/lib64/cmake"
+		else
+		    bxiw_log_info "Attempt to autodetect Qt5 on OS '${bxiw_os_name}'..."
+		    pkg-config --exists Qt5
+		    if [ $? -ne 0 ]; then
+			bxiw_log_error "Could not find Qt5 on OS '${bxiw_os_name}' using pkg-config!"
+			return 1
+		    fi
+		    bayeux_qt5_prefix="$(pkg-config --variable=prefix Qt5)"
+		    bayeux_qt5_libdir="$(pkg-config --variable=libdir Qt5)"
+		    bayeux_qt5_dir="${bayeux_qt5_libdir}/cmake"
 		fi
 	    else
-		bxiw_log_error "No rules to find Qt5 on OS '${bxiw_os_name}'!!"
+		bxiw_log_error "No rules to find Qt5 on OS '${bxiw_os_name}'!"
 		return 1
 	    fi
 	fi
@@ -583,7 +602,7 @@ function bayeux_installer_get_url()
     elif [ "${_bayeux_version}" == "3.5.4" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.5" ]; then
-	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
+	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}-rc1.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.6" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.7" ]; then
@@ -867,14 +886,14 @@ function bayeux_installer_install()
     
     # Configuration:
     local _bayeux_do_config=false
-    if [ ! -f ${bxiw_tag_configured} ]; then
+    if [ ! -f ${bxiw_tag_configured} -o ! -d ${bxiw_build_dir} ]; then
 	bxiw_log_info "Bayeux configuration is needed."
 	_bayeux_do_config=true
     else
 	bxiw_log_info "Bayeux configuration is already done."
 	if [ ${bxiw_do_reconfigure} == true ]; then
 	    bxiw_log_info "Forcing Bayeux reconfiguration..."
-	    _bayeux_do_configure=true
+	    _bayeux_do_config=true
 	fi
     fi
 
@@ -884,12 +903,15 @@ function bayeux_installer_install()
 	bxiw_log_info "Bayeux configuration..."
 	local _boost_options=
 	if [ "x${bayeux_boost_root}" != "x" ]; then
+	    # _boost_options="-DBOOST_ROOT:PATH=${bayeux_boost_root} -DBoost_ADDITIONAL_VERSIONS=${bayeux_boost_version}"
 	    _boost_options="-DBOOST_ROOT:PATH=${bayeux_boost_root} -DBoost_ADDITIONAL_VERSIONS=${bayeux_boost_version}"
+	    _boost_options="${_boost_options} -DBoost_NO_WARN_NEW_VERSIONS=ON"
 	    bxiw_log_info "Boost options = ${_boost_options}"
 	else
 	    bxiw_log_info "No Boost root"
 	fi
 	if [ ${bayeux_system_find_boost} = true ]; then
+	    bxiw_log_info "Using system Cmake FindBoost.cmake script..."
 	    if [ -f ${_bayeux_source_dir}/cmake/FindBoost.cmake ]; then
 		if [ ! -f ${_bayeux_source_dir}/cmake/FindBoost.cmake.orig ]; then
 		    bxiw_log_info "Hidding FindBoost.cmake script..."
@@ -948,7 +970,7 @@ function bayeux_installer_install()
 	    _qt_options="-DBAYEUX_WITH_QT_GUI=ON"
 	fi
 	local _bxdecay0_options=
-	if [ ${bayeux_with_bxdecay0} = true ]; then
+	if [ ${bayeux_with_bxdecay0} = true -o ${bayeux_minimal_build} = true ]; then
 	    _bxdecay0_options="-DBAYEUX_WITH_BXDECAY0=ON -DBxDecay0_DIR=${bayeux_bxdecay0_dir}"
 	else
 	    _bxdecay0_options="-DBAYEUX_WITH_BXDECAY0=OFF"
@@ -966,7 +988,7 @@ function bayeux_installer_install()
 	    local _werror="OFF"
 	fi
 
-        local _cxx_std_option="-DCMAKE_CXX_STANDARD=${bayeux_cxx_std}"	
+        local _cxx_std_option="-DCMAKE_CXX_STANDARD=${bayeux_cxx_std} -DBAYEUX_CXX_STANDARD=${bayeux_cxx_std}"	
 	# echo >&2 "[info] bayeux_with_werror=${bayeux_with_werror}"
 	# echo >&2 "[info] _werror=${_werror}"
 	cmake \

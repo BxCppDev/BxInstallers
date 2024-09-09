@@ -19,7 +19,7 @@ root_with_python=false
 root_cxx_options=""
 root_with_xrootd=true
 root_with_builtin_xrootd=true
-
+root_with_builtin_nlohmannjson=false
 
 bxiw_message "info" "Autodetected #procs = ${bxiw_nbprocs}"
 # bxiw_nbprocs=2
@@ -46,8 +46,11 @@ EOF
   --without-python         Do not build Python binding
   --with-xrootd            Build XRootd binding
   --without-xrootd         Do not build XRootd binding
-  --with-buildin-xrootd    Use buildin XRootd
-  --without-buildin-xrootd Do not use buildin XRootd
+  --with-builtin-xrootd    Use builtin XRootd
+  --without-builtin-xrootd Do not use builtin XRootd
+  --with-builtin-xrootd    Use builtin XRootd
+  --with-builtin-nlohmannjson Use builtin nlohmann/json
+  --without-builtin-nlohmannjson Do not use builtin nlohmann/json
   --cxx11                  Use C++11 (not for recent versions of ROOT)
   --cxx14                  Use C++14
   --cxx17                  Use C++17
@@ -55,7 +58,7 @@ EOF
 
 Examples:
 
-   root_installer --package-version 6.26.06 --cxx14 --without-buildin-xrootd
+   root_installer --package-version 6.26.06 --cxx14 --without-builtin-xrootd
 
 EOF
     echo ""
@@ -69,6 +72,7 @@ function root_installer_parse_cl()
         token="$1"
         if [ "x${token:0:1}" = "x-" ]; then
             opt="${token}"
+            # bxiw_message "info" "==> opt='${opt}'!"
             if [ ${opt} = "--help" ]; then
                 root_installer_usage
                 bxiw_exit 0
@@ -80,15 +84,20 @@ function root_installer_parse_cl()
                 root_with_python=false
             elif [ ${opt} = "--with-xrootd" ]; then
                 root_with_xrootd=true
-                root_with_buildin_xrootd=true
+                root_with_builtin_xrootd=true
             elif [ ${opt} = "--without-xrootd" ]; then
                 root_with_xrootd=false
-            elif [ ${opt} = "--with-buildin-xrootd" ]; then
+            elif [ ${opt} = "--with-builtin-xrootd" ]; then
                 root_with_xrootd=true
-                root_with_buildin_xrootd=true
-            elif [ ${opt} = "--without-buildin-xrootd" ]; then
+                root_with_builtin_xrootd=true
+            elif [ ${opt} = "--without-builtin-xrootd" ]; then
                 root_with_xrootd=true
-                root_with_buildin_xrootd=false
+                root_with_builtin_xrootd=false
+            elif [ ${opt} = "--with-builtin-nlohmannjson" ]; then
+                root_with_builtin_nlohmannjson=true
+		# bxiw_message "info" "==> found '--with-builtin-nlohmannjson' => root_with_builtin_nlohmannjson='${root_with_builtin_nlohmannjson}'!"
+            elif [ ${opt} = "--without-builtin-nlohmannjson" ]; then
+                root_with_builtin_nlohmannjson=false
             elif [ ${opt} = "--cxx11" ]; then
 		root_cxx_options="-DCMAKE_CXX_STANDARD=11"
             elif [ ${opt} = "--cxx14" ]; then
@@ -538,12 +547,17 @@ function root_installer_install()
 	    else
 		python_opts="-Dpyroot=ON"
 	    fi
-	    python_opts="${python_opts} -DPYTHON_EXECUTABLE=$(which python2)" 
-	    _python_version=$(python2 --version 2>&1 | cut -d' ' -f2)
-	    _python_short_version=$(echo ${_python_version} | cut -d. -f1,2)
-	    python_opts="${python_opts} -DPYTHON_INCLUDE_DIR=$(python2-config --prefix)/include/python${_python_short_version}" 
-	    python_opts="${python_opts} -DPYTHON_LIBRARY=$(python2-config --prefix)/lib/libpython${_python_short_version}.so" 
-
+	    local _pythonExecutable=$(which python3)
+	    if [ -x ${_pythonExecutable} ]; then
+		python_opts="${python_opts} -DPYTHON_EXECUTABLE=${_pythonExecutable}" 
+	    else 
+		python_opts="${python_opts} -DPYTHON_EXECUTABLE=$(which python2)" 
+		_python_version=$(python2 --version 2>&1 | cut -d' ' -f2)
+		_python_short_version=$(echo ${_python_version} | cut -d. -f1,2)
+		python_opts="${python_opts} -DPYTHON_INCLUDE_DIR=$(python2-config --prefix)/include/python${_python_short_version}" 
+		python_opts="${python_opts} -DPYTHON_LIBRARY=$(python2-config --prefix)/lib/libpython${_python_short_version}.so" 
+	    fi
+	    
             # -DPYTHON_EXECUTABLE="$(which python2)" \
 		# -DPYTHON_INCLUDE_DIR="/usr/include/python2.7" \
 		# -DPYTHON_LIBRARY="/usr/lib/x86_64-linux-gnu/libpython2.7.so"
@@ -572,6 +586,11 @@ function root_installer_install()
 	else
 	    xrootd_options="${xrootd_options} -Dbuiltin_xrootd=OFF"
 	fi
+        nlohmannjson_options="-Dbuiltin_nlohmannjson=OFF"
+	if [ ${root_with_builtin_nlohmannjson} = true ]; then
+	    nlohmannjson_options="-Dbuiltin_nlohmannjson=ON"
+	fi
+	bxiw_message "info" "=======> nlohmannjson_options=${nlohmannjson_options}"
 
 	bxiw_message "info" "ROOT CXX options=${root_cxx_options}"
         cmake  \
@@ -615,10 +634,11 @@ function root_installer_install()
             -Dtmva=OFF \
             -Dmathmore=ON \
             ${xrootd_options} \
+            ${nlohmannjson_options} \
             -Dvdt=OFF \
-             ${python_opts} \
-             -G Ninja \
-	     ${root_cxx_options} \
+            ${python_opts} \
+            -G Ninja \
+	    ${root_cxx_options} \
             ${_root_source_dir}
         if [ $? -ne 0 ]; then
             bxiw_message "error" "ROOT configuration failed!"
@@ -806,6 +826,13 @@ root_installer_parse_cl ${bxiw_app_cl_remaining_argv}
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Command line parse error!"
 fi
+bxiw_message "info" "=====> root_system_tbb=${root_system_tbb}"
+bxiw_message "info" "=====> root_with_python=${root_with_python}"
+bxiw_message "info" "=====> root_cxx_options=${root_cxx_options}"
+bxiw_message "info" "=====> root_with_xrootd=${root_with_xrootd}"
+bxiw_message "info" "=====> root_with_builtin_xrootd=${root_with_builtin_xrootd}"
+bxiw_message "info" "=====> root_with_builtin_nlohmannjson=${root_with_builtin_nlohmannjson}"
+
 # bxiw_nbprocs=2
 # bxiw_message "info" "fixed: #procs = ${bxiw_nbprocs}"
 # bxiw_exit 0
