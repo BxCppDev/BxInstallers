@@ -851,7 +851,7 @@ function bayeux_installer_install()
 	       ${_bayeux_source_dir}/cmake/BayeuxDependencies.cmake
 	fi
 
-	# Patch for Qt5 flags obsolete intialization (Ubuntu22.04):
+	# Patch for Qt5 flags obsolete initialization (Ubuntu22.04):
 	if [ ! -f ${_bayeux_source_dir}/source/bxdatatools/src/configuration/ui/variant_registry_tree_model.cc ]; then
 	    mv -f ${_bayeux_source_dir}/source/bxdatatools/src/configuration/ui/variant_registry_tree_model.cc \
 	       ${_bayeux_source_dir}/source/bxdatatools/src/configuration/ui/variant_registry_tree_model.cc.orig
