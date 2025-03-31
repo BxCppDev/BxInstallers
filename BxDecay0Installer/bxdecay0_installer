@@ -15,6 +15,7 @@ bxiw_package_version=
 
 gsl_root=
 use_ninja=true
+no_system_dependencies=false
 
 function bxdecay0_installer_usage()
 {
@@ -54,6 +55,8 @@ function bxdecay0_installer_parse_cl()
 		gsl_root="$1"
 	    elif [ ${opt} = "--no-ninja" ]; then
 		use_ninja=false
+	    elif [ ${opt} = "--no-system-dependencies" ]; then
+		no_system_dependencies=true
 	    else
 		bxiw_log_error "Unsupported option '${opt}'!"
 		return 1
@@ -504,14 +507,17 @@ if [ $? -ne 0 ]; then
     bxiw_exit 1 "Preparation failed!"
 fi
 
-bxdecay0_installer_set_system_dependencies
+if [ ${no_system_dependencies} = false ]; then 
+
+    bxdecay0_installer_set_system_dependencies
+
+    bxiw_install_system_dependencies
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "System dependencies installation failed!"
+    fi
+fi
 
 bxdecay0_installer_print
-
-bxiw_install_system_dependencies
-if [ $? -ne 0 ]; then
-    bxiw_exit 1 "System dependencies installation failed!"
-fi
 
 bxdecay0_installer_download
 if [ $? -ne 0 ]; then

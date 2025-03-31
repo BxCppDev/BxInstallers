@@ -212,7 +212,7 @@ function clhep_installer_set_system_dependencies()
 function clhep_installer_print()
 {
     bxiw_print
-    bxiw_log_info "no_system_dependencies  = ${no_system_dependencies}"
+    bxiw_log_info "no_system_dependencies = ${no_system_dependencies}"
     return 0
 }
 
@@ -491,7 +491,7 @@ if [ $? -ne 0 ]; then
     bxiw_exit 1 "Preparation failed!"
 fi
 
-if [ ${no_system_dependencies} = false ]; then 
+if [ ${no_system_dependencies} == false ]; then 
 
     clhep_installer_set_system_dependencies
     
