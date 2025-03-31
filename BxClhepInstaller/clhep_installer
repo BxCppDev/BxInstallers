@@ -527,7 +527,7 @@ if [ ${bxiw_with_package} == false ]; then
     fi
 fi
 
-clhep_installer_clean()
+clhep_installer_clean
 
 bxiw_exit 0
 
