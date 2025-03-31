@@ -16,5 +16,13 @@ function @packageNameLower@___PACKAGE_UVERSION___setup()
 }
 export -f @packageNameLower@___PACKAGE_UVERSION___setup
 
+function @packageNameLower@_pro_setup()
+{
+    @packageNameLower@___PACKAGE_UVERSION___setup
+    return $?
+}
+
+export -f @packageNameLower@_pro_setup
+
 # end
 
