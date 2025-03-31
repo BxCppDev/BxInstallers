@@ -16,3 +16,8 @@ function clhep___CLHEP_UVERSION___setup()
 }
 export -f clhep___CLHEP_UVERSION___setup
 
+
+function clhep_pro_setup()
+{
+   clhep___CLHEP_UVERSION___setup 
+}

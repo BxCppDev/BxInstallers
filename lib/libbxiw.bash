@@ -48,12 +48,12 @@ if [ "x${BX_CONFIG_DIR}" != "x" ]; then
 else
     bxiw_setup_dir="${bxiw_default_setup_dir}"
 fi
-if [ ${UID} -eq 0 ]; then
-    bxiw_default_cache_directory="/var/bxsoftware/cache.d"
-    bxiw_default_working_directory="/var/bxsoftware/work.d"
-    bxiw_default_install_base_dir="/opt/bxsoftware/install"
-    bxiw_default_package_dir="/var/bxsoftware/config"
-    bxiw_setup_dir="/etc/bxsoftware"
+# if [ ${UID} -eq 0 ]; then
+#     bxiw_default_cache_directory="/var/bxsoftware/cache.d"
+#     bxiw_default_working_directory="/var/bxsoftware/work.d"
+#     bxiw_default_install_base_dir="/opt/bxsoftware/install"
+#     bxiw_default_package_dir="/var/bxsoftware/config"
+#     bxiw_setup_dir="/etc/bxsoftware"
 fi
 if [ "x${bxiw_setup_module_dir}" = "x" ]; then
     bxiw_setup_module_dir=
@@ -237,6 +237,11 @@ function bxiw_env()
     if [ "x${BX_INSTALL_BASE_DIR}" != "x" ]; then
 	bxiw_install_base_dir="${BX_INSTALL_BASE_DIR}"
 	bxiw_log_info "Installation base directory is set from the BX_INSTALL_BASE_DIR environment variable: '${bxiw_install_base_dir}'"
+    fi
+
+    if [ "x${BX_CONFIG_DIR}" != "x" ]; then
+	bxiw_setup_dir="${BX_CONFIG_DIR}"
+	bxiw_log_info "Setup directory is set from the BX_CONFIG_DIR environment variable: '${bxiw_setup_dir}'"
     fi
 
     if [ "x${BX_PACKAGE_DIR}" != "x" ]; then

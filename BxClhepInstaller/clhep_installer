@@ -451,6 +451,7 @@ EOF
 function clhep_installer_setup()
 {
     bxiw_log_trace "clhep_installer_setup: entering..."
+    bxiw_log_info "bxiw_setup_module_dir='${bxiw_setup_module_dir}'"
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
     local _bxsoftware_setup_script_base="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
     local _bxsoftware_setup_script="${_bxsoftware_setup_script_base}"

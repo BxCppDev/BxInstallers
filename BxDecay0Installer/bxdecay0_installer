@@ -231,6 +231,7 @@ function bxdecay0_installer_set_system_dependencies()
 function bxdecay0_installer_print()
 {
     bxiw_print
+    bxiw_log_info "no_system_dependencies = ${no_system_dependencies}"
     return 0
 }
 
