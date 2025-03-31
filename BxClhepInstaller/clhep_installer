@@ -188,9 +188,9 @@ function clhep_installer_set_system_dependencies()
 		    texlive-latex-base \
 		    "
 	if [ ${bxiw_with_package} == true ]; then
-	    if [ "x${bxiw_os_distrib_release}" = "x22.04" ]; then
-		bxiw_system_packages_build="${bxiw_system_packages_build} dpkg-dev" 
-	    fi
+	    # if [ "x${bxiw_os_distrib_release}" = "x22.04" ]; then
+	    # 	bxiw_system_packages_build="${bxiw_system_packages_build} dpkg-dev" 
+	    # fi
 	    bxiw_system_packages_build="${bxiw_system_packages_build} checkinstall"
 	fi
 	if [ ${bxiw_with_gui} == true ]; then
