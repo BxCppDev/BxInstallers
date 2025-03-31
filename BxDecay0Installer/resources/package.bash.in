@@ -16,5 +16,10 @@ function bxdecay0___BXDECAY0_UVERSION___setup()
 }
 export -f bxdecay0___BXDECAY0_UVERSION___setup
 
+function bxdecay0_pro_setup()
+{
+   bxdecay0___BXDECAY0_UVERSION___setup 
+}
+
 # end
 
