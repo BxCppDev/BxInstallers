@@ -48,12 +48,12 @@ if [ "x${BX_CONFIG_DIR}" != "x" ]; then
 else
     bxiw_setup_dir="${bxiw_default_setup_dir}"
 fi
-# if [ ${UID} -eq 0 ]; then
-#     bxiw_default_cache_directory="/var/bxsoftware/cache.d"
-#     bxiw_default_working_directory="/var/bxsoftware/work.d"
-#     bxiw_default_install_base_dir="/opt/bxsoftware/install"
-#     bxiw_default_package_dir="/var/bxsoftware/config"
-#     bxiw_setup_dir="/etc/bxsoftware"
+if [ ${UID} -eq 0 ]; then
+    bxiw_default_cache_directory="/var/bxsoftware/cache.d"
+    bxiw_default_working_directory="/var/bxsoftware/work.d"
+    bxiw_default_install_base_dir="/opt/bxsoftware/install"
+    bxiw_default_package_dir="/var/bxsoftware/config"
+    bxiw_setup_dir="/etc/bxsoftware"
 fi
 if [ "x${bxiw_setup_module_dir}" = "x" ]; then
     bxiw_setup_module_dir=
