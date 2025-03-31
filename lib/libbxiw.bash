@@ -108,8 +108,12 @@ bxiw_tag_configured=
 bxiw_tag_built=
 bxiw_tag_installed=
 bxiw_archive_download_url=
+bxiw_clean=false
 # Examples:
 # bxiw_archive_download_url="https://ftp.gnu.org/gnu/gsl/"
+
+bxiw_downloaded_files=""
+
 
 function bxiw_pass()
 {
@@ -438,6 +442,8 @@ function bxiw_parse_cl()
 		bxiw_remove_build_dir=false
 	    elif [ ${opt} = "--remove-tarballs" ]; then
 		bxiw_remove_tarballs=true
+	    elif [ ${opt} = "--clean" ]; then
+		bxiw_clean=true
 	    elif [ ${opt} = "--gui" ]; then
 		bxiw_with_gui=true
 	    elif [ ${opt} = "--system-install" ]; then
@@ -468,6 +474,11 @@ function bxiw_parse_cl()
 	shift 1
     done
     bxiw_app_cl_remaining_argv=${_remaining}
+    if [ ${bxiw_clean} == true ]; then
+	bxiw_remove_build_dir=true
+	bxiw_remove_tarballs=true
+	bxiw_delete_tags=true
+    fi
     return 0
 }
 
@@ -876,7 +887,29 @@ function bxiw_download_file()
 	cd ${_opwd}
 	return 1
     fi
+    if [ "x${bxiw_downloaded_files}" = "x" ]; then
+	bxiw_downloaded_files="${_local_file}"
+    else
+	bxiw_downloaded_files="${bxiw_downloaded_files}|${_local_file}"
+    fi
     cd ${_opwd}
+    return 0
+}
+
+function bxiw_clean_at_end()
+{
+    if [ -d ${bxiw_tag_dir} ]; then
+	rm -fr ${bxiw_tag_dir}
+    fi
+    if [ -d ${bxiw_build_dir} ]; then
+	rm -fr ${bxiw_build_dir}
+    fi
+    # if [ "x${bxiw_downloaded_files}" != "x" ]; then
+    # 	local _dfiles=$(cut -d'|' ${bxiw_downloaded_files})
+    # 	for _dfFile  in ${_dffiles} ; do
+    # 	    bxiw_log_info "bxiw_clean_at_end: Remove downloaded file '${_dfFile}'"
+    # 	done 	    		  	      
+    # fi
     return 0
 }
 

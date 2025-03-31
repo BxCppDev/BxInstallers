@@ -474,6 +474,12 @@ function clhep_installer_setup()
     return  0
 }
 
+function clhep_installer_clean()
+{
+    bxiw_clean_at_end
+    return 0
+}
+
 bxiw_detect_os
 if [ $? -ne 0 ]; then
     bxiw_exit 1 "Unsupported OS!"
@@ -520,6 +526,8 @@ if [ ${bxiw_with_package} == false ]; then
 	bxiw_exit 1 "Setup failed!"
     fi
 fi
+
+clhep_installer_clean()
 
 bxiw_exit 0
 
