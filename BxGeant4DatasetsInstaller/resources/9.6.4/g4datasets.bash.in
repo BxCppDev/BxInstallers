@@ -24,4 +24,11 @@ function g4datasets___G4DATASETS_UVERSION___setup()
 }
 export -f g4datasets___G4DATASETS_UVERSION___setup
 
+function g4datasets_pro_setup()
+{
+    g4datasets___G4DATASETS_UVERSION___setup
+    return $?
+}
+export -f g4datasets_pro_setup
+
 # end

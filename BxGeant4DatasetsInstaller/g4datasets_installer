@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 in_debian_package=false
+no_system_dependencies=false
 
 check_in_debian_package="$1"
 if [ "x${check_in_debian_package}" == "x--debian-package" ]; then
@@ -75,6 +76,8 @@ function g4datasets_installer_parse_cl()
 	    elif [ ${opt} = "--datasets-list" ]; then
 		shift 1
 		g4datasets_list="$1"
+	    elif [ ${opt} = "--no-system-dependencies" ]; then
+		no_system_dependencies=true
 	    else
 		bxiw_log_error "Unsupported option '${opt}'!"
 		return 1
@@ -424,6 +427,7 @@ function g4datasets_installer_install()
 function g4datasets_installer_setup()
 {
     bxiw_log_trace "g4datasets_installer_setup: entering..."
+    bxiw_log_info "bxiw_setup_module_dir='${bxiw_setup_module_dir}'"
     local _bxsoftware_setup_dir="${bxiw_setup_module_dir}"
     local _bxsoftware_setup_script="${_bxsoftware_setup_dir}/${bxiw_package_name}@${bxiw_package_version}.bash"
     local _bxsoftware_underscored_version=$(bxiw_underscored_version ${bxiw_package_version})
@@ -456,14 +460,15 @@ if [ $? -ne 0 ]; then
     bxiw_exit 1 "Preparation failed!"
 fi
 
-g4datasets_installer_set_system_dependencies
+if [ ${no_system_dependencies} == false ]; then 
+    g4datasets_installer_set_system_dependencies
+    bxiw_install_system_dependencies
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "System dependencies installation failed!"
+    fi
+fi
 
 g4datasets_installer_print
-
-bxiw_install_system_dependencies
-if [ $? -ne 0 ]; then
-    bxiw_exit 1 "System dependencies installation failed!"
-fi
 
 g4datasets_installer_download
 if [ $? -ne 0 ]; then
