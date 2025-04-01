@@ -605,7 +605,7 @@ function bayeux_installer_get_url()
     elif [ "${_bayeux_version}" == "3.5.4" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.5" ]; then
-	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}-rc1.tar.gz"
+	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}-rc2.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.6" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.7" ]; then
