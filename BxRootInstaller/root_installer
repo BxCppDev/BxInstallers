@@ -88,6 +88,7 @@ function root_installer_parse_cl()
                 root_with_builtin_xrootd=true
             elif [ ${opt} = "--without-xrootd" ]; then
                 root_with_xrootd=false
+		root_with_builtin_xrootd=false
             elif [ ${opt} = "--with-builtin-xrootd" ]; then
                 root_with_xrootd=true
                 root_with_builtin_xrootd=true
@@ -542,7 +543,8 @@ function root_installer_install()
         else
             tbb_opts="-Dbuiltin_tbb=ON"
         fi
-        bxiw_message "info" "ROOT Python configuration..."
+        bxiw_message "info" "tbb_opts=${tbb_opts}"
+	bxiw_message "info" "ROOT Python configuration..."
 	python_opts=
 	if [ ${root_with_python} = true ]; then
 	    if [ "${bxiw_package_version}" \< "6.26.06" ]; then

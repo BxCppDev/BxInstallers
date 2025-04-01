@@ -49,6 +49,7 @@ bayeux_with_devtools=true
 bayeux_with_testing=false
 bayeux_with_werror=true
 bayeux_minimal_build=false
+no_system_dependencies=false
 
 function bayeux_installer_usage()
 {
@@ -179,6 +180,8 @@ function bayeux_installer_parse_cl()
 		bayeux_with_werror=true
 	    elif [ ${opt} = "--without-werror" ]; then
 		bayeux_with_werror=false
+	    elif [ ${opt} = "--no-system-dependencies" ]; then
+		no_system_dependencies=true
 	    else
 		bxiw_log_error "Unsupported option '${opt}'!"
 		return 1
@@ -738,6 +741,7 @@ function bayeux_installer_print()
     fi
     bxiw_log_info "bayeux_cxx_std            = '${bayeux_cxx_std}'"
     bxiw_log_info "bayeux_with_docs          = ${bayeux_with_docs}"
+    bxiw_log_info "no_system_dependencies    = ${no_system_dependencies}"
     return 0
 }
 
@@ -1238,14 +1242,17 @@ fi
 # bxiw_exit 1
 # echo >&2 "====> calling bayeux_installer_set_system_dependencies..."
 
-bayeux_installer_set_system_dependencies
+if [ ${no_system_dependencies} == false ]; then 
+
+    bayeux_installer_set_system_dependencies
+    
+    bxiw_install_system_dependencies
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "System dependencies installation failed!"
+    fi
+fi
 
 bayeux_installer_print
-
-bxiw_install_system_dependencies
-if [ $? -ne 0 ]; then
-    bxiw_exit 1 "System dependencies installation failed!"
-fi
 
 bayeux_check_dependencies
 if [ $? -ne 0 ]; then
