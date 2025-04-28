@@ -11,7 +11,7 @@ bxiw_app_name="bayeux_installer"
 bxiw_app_saved_opwd=$(pwd)
 bxiw_app_installer_prefix="$(pwd)"
 bxiw_package_name="bayeux"
-bxiw_default_package_version="3.5.4"
+bxiw_default_package_version="3.5.5"
 bxiw_supported_package_versions="3.4.2 3.4.3 3.4.4 3.5.0 3.5.1 3.5.2 3.5.3 3.5.4 3.5.5"
 bxiw_package_version=
 bxiw_source_git_path="https://github.com/BxCppDev/Bayeux"
@@ -49,6 +49,7 @@ bayeux_with_devtools=true
 bayeux_with_testing=false
 bayeux_with_werror=true
 bayeux_minimal_build=false
+no_system_dependencies=false
 
 function bayeux_installer_usage()
 {
@@ -179,6 +180,8 @@ function bayeux_installer_parse_cl()
 		bayeux_with_werror=true
 	    elif [ ${opt} = "--without-werror" ]; then
 		bayeux_with_werror=false
+	    elif [ ${opt} = "--no-system-dependencies" ]; then
+		no_system_dependencies=true
 	    else
 		bxiw_log_error "Unsupported option '${opt}'!"
 		return 1
@@ -602,7 +605,7 @@ function bayeux_installer_get_url()
     elif [ "${_bayeux_version}" == "3.5.4" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.5" ]; then
-	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}-rc1.tar.gz"
+	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.6" ]; then
 	echo "https://github.com/BxCppDev/Bayeux/archive/Bayeux-${_bayeux_version}.tar.gz"
     elif [ "${_bayeux_version}" == "3.5.7" ]; then
@@ -738,6 +741,7 @@ function bayeux_installer_print()
     fi
     bxiw_log_info "bayeux_cxx_std            = '${bayeux_cxx_std}'"
     bxiw_log_info "bayeux_with_docs          = ${bayeux_with_docs}"
+    bxiw_log_info "no_system_dependencies    = ${no_system_dependencies}"
     return 0
 }
 
@@ -851,7 +855,7 @@ function bayeux_installer_install()
 	       ${_bayeux_source_dir}/cmake/BayeuxDependencies.cmake
 	fi
 
-	# Patch for Qt5 flags obsolete intialization (Ubuntu22.04):
+	# Patch for Qt5 flags obsolete initialization (Ubuntu22.04):
 	if [ ! -f ${_bayeux_source_dir}/source/bxdatatools/src/configuration/ui/variant_registry_tree_model.cc ]; then
 	    mv -f ${_bayeux_source_dir}/source/bxdatatools/src/configuration/ui/variant_registry_tree_model.cc \
 	       ${_bayeux_source_dir}/source/bxdatatools/src/configuration/ui/variant_registry_tree_model.cc.orig
@@ -1238,14 +1242,17 @@ fi
 # bxiw_exit 1
 # echo >&2 "====> calling bayeux_installer_set_system_dependencies..."
 
-bayeux_installer_set_system_dependencies
+if [ ${no_system_dependencies} == false ]; then 
+
+    bayeux_installer_set_system_dependencies
+    
+    bxiw_install_system_dependencies
+    if [ $? -ne 0 ]; then
+	bxiw_exit 1 "System dependencies installation failed!"
+    fi
+fi
 
 bayeux_installer_print
-
-bxiw_install_system_dependencies
-if [ $? -ne 0 ]; then
-    bxiw_exit 1 "System dependencies installation failed!"
-fi
 
 bayeux_check_dependencies
 if [ $? -ne 0 ]; then

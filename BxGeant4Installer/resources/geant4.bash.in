@@ -21,3 +21,10 @@ function geant4___GEANT4_UVERSION___setup()
     return 0
 }
 export -f geant4___GEANT4_UVERSION___setup
+
+# function geant4_pro_setup()
+# {
+#     geant4___GEANT4_UVERSION___setup
+#     return $?
+# }
+# export -f geant4_pro_setup
