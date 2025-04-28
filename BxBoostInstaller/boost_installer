@@ -12,7 +12,7 @@ bxiw_package_name="boost"
 bxiw_default_package_version="1.71.0"
 bxiw_package_version=
 boost_libs=""
-bxiw_supported_package_versions="1.63.0 1.69.0 1.70.0 1.71.0 1.78.0"
+bxiw_supported_package_versions="1.63.0 1.69.0 1.70.0 1.71.0 1.78.0 1.79.0"
 
 function boost_installer_usage()
 {
@@ -162,6 +162,8 @@ function boost_installer_get_tarball()
     elif [ "x${_boost_version}" = "x1.71.0" ]; then
         echo "boost_$(echo ${_boost_version} | tr '.' '_').tar.bz2"
     elif [ "x${_boost_version}" = "x1.78.0" ]; then
+        echo "boost_$(echo ${_boost_version} | tr '.' '_').tar.bz2"
+    elif [ "x${_boost_version}" = "x1.79.0" ]; then
         echo "boost_$(echo ${_boost_version} | tr '.' '_').tar.bz2"
     else
         echo >&2 "[error] Unsupported version '${_boost_version}'!"

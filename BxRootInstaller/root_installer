@@ -548,6 +548,7 @@ function root_installer_install()
 		python_opts="-Dpyroot=ON"
 	    fi
 	    local _pythonExecutable=$(which python3)
+            bxiw_message "info" "Python executable = '${_pythonExecutable}'"
 	    if [ -x ${_pythonExecutable} ]; then
 		python_opts="${python_opts} -DPYTHON_EXECUTABLE=${_pythonExecutable}" 
 	    else 
